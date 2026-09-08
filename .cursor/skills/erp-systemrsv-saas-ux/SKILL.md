@@ -32,7 +32,8 @@ Referencia: sidebar clara colapsable (iconos / iconos+labels) + top bar limpia. 
 ## Módulos nav
 
 1. **Inicio** → `/admin`
-2. **Catálogo** → Productos · Listado de precios · Categorías · Marcas · Unidades · Ofertas
+2. **Catálogo** → Productos · Listado de precios · Categorías · Marcas · Ofertas
+   - Tipos de unidad viven dentro de **Listado de precios** (no menú aparte).
 
 ## Layout
 

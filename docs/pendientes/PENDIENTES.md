@@ -14,7 +14,7 @@
 | P17 | Specs UI (atributos + unidades variables) | Specs | hecho | v0.1.19 tipo+valor libres en wizard |
 | P18 | Filtro categoría incluye subcategorías | Filtros | hecho | v0.1.15 árbol en filtro |
 | P19 | Módulo Ofertas ERP (vincular price_kind=offer) | Ofertas | hecho | v0.1.18 seed + alta ERP + tienda DB |
-| P20 | Tipos de unidad UI dedicada | Unidades | hecho | `/admin/unidades` |
+| P20 | Tipos de unidad UI dedicada | Unidades | hecho | Integrado en Listado de precios (v0.1.21); `/admin/unidades` redirige |
 | P21 | Mega-menú topbar con imágenes / columnas | Topbar cats | hecho | v0.1.15 |
 | P22 | Import CSV / sync ERP externo | Catálogo | pendiente | |
 | P13 | ERP perfil solo sidebar | Pedido UX | hecho | v0.1.7 |
@@ -37,6 +37,7 @@
 
 ## Hechos recientes
 
+- Unidades dentro de Listado de precios; sin menú aparte (v0.1.21)
 - Listado precios: presentaciones con N unidades + precios (v0.1.20)
 - Productos por fases (Odoo) + specs libres + sin reseñas admin (v0.1.19)
 - Ofertas DB + seed 3 ejemplos + ERP publicar (v0.1.18)

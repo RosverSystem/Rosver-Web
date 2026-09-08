@@ -49,7 +49,19 @@ export const ADMIN_NAV: AdminNavEntry[] = [
         id: 'listado-precios',
         name: 'Listado de precios',
         link: '/admin/listado-precios',
-        keywords: ['precios', 'listado', 'tarifas', 'mayorista', 'oferta'],
+        keywords: [
+          'precios',
+          'listado',
+          'tarifas',
+          'mayorista',
+          'oferta',
+          'unidad',
+          'unidades',
+          'paquete',
+          'caja',
+          'presentacion',
+          'empaque',
+        ],
         Icon: Award,
       },
       {
@@ -65,13 +77,6 @@ export const ADMIN_NAV: AdminNavEntry[] = [
         link: '/admin/marcas',
         keywords: ['brand', 'proveedor', 'marca'],
         Icon: StarGrow,
-      },
-      {
-        id: 'unidades',
-        name: 'Unidades',
-        link: '/admin/unidades',
-        keywords: ['unidad', 'paquete', 'caja', 'empaque'],
-        Icon: Compass,
       },
       {
         id: 'ofertas',
@@ -104,7 +109,6 @@ export function isProductosGroupOpen(pathname: string) {
     pathname.startsWith('/admin/listado-precios') ||
     pathname.startsWith('/admin/categorias') ||
     pathname.startsWith('/admin/marcas') ||
-    pathname.startsWith('/admin/unidades') ||
     pathname.startsWith('/admin/ofertas')
   )
 }
@@ -120,10 +124,10 @@ export function searchAdminModules(query: string): AdminNavLeaf[] {
 
 export function adminPageTitle(pathname: string): string {
   if (pathname.startsWith('/admin/ofertas')) return 'Ofertas'
-  if (pathname.startsWith('/admin/unidades')) return 'Unidades'
   if (pathname.startsWith('/admin/marcas')) return 'Marcas'
   if (pathname.startsWith('/admin/categorias')) return 'Categorías'
   if (pathname.startsWith('/admin/listado-precios')) return 'Listado de precios'
+  if (pathname.startsWith('/admin/unidades')) return 'Listado de precios'
   if (pathname.startsWith('/admin/productos')) return 'Productos'
   return 'Inicio'
 }

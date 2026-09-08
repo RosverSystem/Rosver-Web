@@ -23,6 +23,7 @@ type UnitType = {
   id: string
   code: string
   name: string
+  isBase?: boolean
 }
 
 type Packaging = {
@@ -75,6 +76,8 @@ export function AdminPriceListPage() {
   const [packLabel, setPackLabel] = useState('')
   const [unitTypeId, setUnitTypeId] = useState('')
   const [contentQty, setContentQty] = useState('1')
+  const [newUnitName, setNewUnitName] = useState('')
+  const [editingUnitId, setEditingUnitId] = useState<string | null>(null)
 
   const [packagingId, setPackagingId] = useState('')
   const [priceKind, setPriceKind] = useState<'list' | 'wholesale' | 'offer'>('list')
@@ -84,18 +87,25 @@ export function AdminPriceListPage() {
 
   const selected = products.find((p) => p.id === selectedId) ?? null
 
+  async function loadUnitTypes() {
+    const units = await api<{ unitTypes: UnitType[] }>('/api/admin/unit-types')
+    setUnitTypes(units.unitTypes)
+    setUnitTypeId((prev) =>
+      units.unitTypes.some((u) => u.id === prev)
+        ? prev
+        : (units.unitTypes[0]?.id ?? ''),
+    )
+    return units.unitTypes
+  }
+
   async function loadProducts() {
     setLoading(true)
     try {
-      const [prod, units] = await Promise.all([
+      const [prod] = await Promise.all([
         api<{ products: ProductRow[] }>('/api/admin/products'),
-        api<{ unitTypes: UnitType[] }>('/api/admin/unit-types'),
+        loadUnitTypes(),
       ])
       setProducts(prod.products)
-      setUnitTypes(units.unitTypes)
-      if (!unitTypeId && units.unitTypes[0]) {
-        setUnitTypeId(units.unitTypes[0].id)
-      }
     } catch (e) {
       showMessages([
         e instanceof ApiError ? e.message : 'No se pudo cargar el listado',
@@ -154,6 +164,66 @@ export function AdminPriceListPage() {
         (p.brandName?.toLowerCase().includes(q) ?? false),
     )
   }, [products, query])
+
+  async function saveUnitType(e: React.FormEvent) {
+    e.preventDefault()
+    clear()
+    const name = newUnitName.trim()
+    if (!name) {
+      showMessages(['Escribe el nombre de la unidad (ej. Caja)'])
+      return
+    }
+    const wasEditing = Boolean(editingUnitId)
+    setBusy(true)
+    try {
+      if (editingUnitId) {
+        await api(`/api/admin/unit-types/${editingUnitId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ name }),
+        })
+      } else {
+        const created = await api<{ unitType: UnitType }>('/api/admin/unit-types', {
+          method: 'POST',
+          body: JSON.stringify({ name }),
+        })
+        if (created.unitType?.id) setUnitTypeId(created.unitType.id)
+      }
+      setNewUnitName('')
+      setEditingUnitId(null)
+      const list = await loadUnitTypes()
+      if (!wasEditing) {
+        const match = list.find((u) => u.name.toLowerCase() === name.toLowerCase())
+        if (match) setUnitTypeId(match.id)
+      }
+      showMessages([wasEditing ? 'Unidad actualizada' : 'Unidad creada'])
+    } catch (err) {
+      showMessages([
+        err instanceof ApiError ? err.message : 'No se pudo guardar la unidad',
+      ])
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function deleteUnitType(u: UnitType) {
+    clear()
+    if (!window.confirm(`¿Eliminar la unidad «${u.name}»?`)) return
+    setBusy(true)
+    try {
+      await api(`/api/admin/unit-types/${u.id}`, { method: 'DELETE' })
+      if (editingUnitId === u.id) {
+        setEditingUnitId(null)
+        setNewUnitName('')
+      }
+      await loadUnitTypes()
+    } catch (err) {
+      showMessages([
+        err instanceof ApiError ? err.message : 'No se pudo eliminar',
+      ])
+    } finally {
+      setBusy(false)
+    }
+  }
 
   async function addPresentation(e: React.FormEvent) {
     e.preventDefault()
@@ -318,6 +388,33 @@ export function AdminPriceListPage() {
           </p>
         </div>
 
+        <section className="space-y-3 rounded-2xl border border-rosver-line bg-white p-4 shadow-sm sm:p-5">
+          <h2 className="text-sm font-bold text-rosver-ink">Tipo de unidad rápida</h2>
+          <form
+            noValidate
+            onSubmit={saveUnitType}
+            className="grid gap-3 sm:grid-cols-[1fr_auto]"
+          >
+            <AdminField label="Nueva unidad" htmlFor="pl-unit-quick">
+              <AdminInput
+                id="pl-unit-quick"
+                value={newUnitName}
+                onChange={(e) => setNewUnitName(e.target.value)}
+                placeholder="Ej. Blíster"
+              />
+            </AdminField>
+            <div className="flex items-end">
+              <button
+                type="submit"
+                disabled={busy}
+                className="h-11 rounded-xl bg-rosver-ink px-5 text-sm font-semibold text-white hover:bg-rosver-red disabled:opacity-60"
+              >
+                Crear unidad
+              </button>
+            </div>
+          </form>
+        </section>
+
         {/* Presentaciones */}
         <section className="space-y-3 rounded-2xl border border-rosver-line bg-white p-4 shadow-sm sm:p-5">
           <h2 className="text-sm font-bold text-rosver-ink">Presentaciones</h2>
@@ -376,11 +473,7 @@ export function AdminPriceListPage() {
           </form>
           {unitTypes.length === 0 ? (
             <p className="text-xs text-rosver-muted">
-              Primero crea unidades en{' '}
-              <Link to="/admin/unidades" className="font-semibold text-rosver-red">
-                Unidades
-              </Link>
-              .
+              Crea primero un tipo de unidad (arriba).
             </p>
           ) : null}
           <ul className="divide-y divide-rosver-line rounded-xl border border-rosver-line">
@@ -573,22 +666,102 @@ export function AdminPriceListPage() {
       <AdminPageHeader
         title="Listado de precios"
         actions={
-          <div className="flex flex-wrap gap-2">
-            <Link
-              to="/admin/unidades"
-              className="rounded-full border border-rosver-line bg-white px-3 py-1.5 text-xs font-semibold text-rosver-ink hover:border-rosver-red/40 hover:text-rosver-red"
-            >
-              Unidades
-            </Link>
-            <Link
-              to="/admin/productos"
-              className="rounded-full border border-rosver-line bg-white px-3 py-1.5 text-xs font-semibold text-rosver-ink hover:border-rosver-red/40 hover:text-rosver-red"
-            >
-              Productos
-            </Link>
-          </div>
+          <Link
+            to="/admin/productos"
+            className="rounded-full border border-rosver-line bg-white px-3 py-1.5 text-xs font-semibold text-rosver-ink hover:border-rosver-red/40 hover:text-rosver-red"
+          >
+            Productos
+          </Link>
         }
       />
+
+      <section className="space-y-3 rounded-2xl border border-rosver-line bg-white p-4 shadow-sm sm:p-5">
+        <h2 className="text-sm font-bold text-rosver-ink">Tipos de unidad</h2>
+        <p className="text-xs text-rosver-muted">
+          Unidad, caja, paquete… luego las usas al armar presentaciones de cada
+          producto.
+        </p>
+        <form
+          noValidate
+          onSubmit={saveUnitType}
+          className="grid gap-3 sm:grid-cols-[1fr_auto]"
+        >
+          <AdminField
+            label={editingUnitId ? 'Editar nombre' : 'Nueva unidad'}
+            htmlFor="pl-unit-name"
+          >
+            <AdminInput
+              id="pl-unit-name"
+              value={newUnitName}
+              onChange={(e) => setNewUnitName(e.target.value)}
+              placeholder="Ej. Caja"
+            />
+          </AdminField>
+          <div className="flex items-end gap-2">
+            <button
+              type="submit"
+              disabled={busy}
+              className="h-11 rounded-xl bg-rosver-red px-5 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
+            >
+              {editingUnitId ? 'Guardar' : 'Crear'}
+            </button>
+            {editingUnitId ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingUnitId(null)
+                  setNewUnitName('')
+                }}
+                className="h-11 rounded-xl border border-rosver-line px-4 text-sm font-semibold text-rosver-muted"
+              >
+                Cancelar
+              </button>
+            ) : null}
+          </div>
+        </form>
+        <ul className="divide-y divide-rosver-line rounded-xl border border-rosver-line">
+          {unitTypes.length === 0 ? (
+            <li className="px-4 py-3 text-sm text-rosver-muted">
+              Sin tipos aún. Crea Unidad, Caja o Paquete.
+            </li>
+          ) : (
+            unitTypes.map((u) => (
+              <li
+                key={u.id}
+                className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-sm"
+              >
+                <div>
+                  <p className="font-semibold text-rosver-ink">{u.name}</p>
+                  <p className="text-xs text-rosver-muted">
+                    {u.code}
+                    {u.isBase ? ' · base' : ''}
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditingUnitId(u.id)
+                      setNewUnitName(u.name)
+                    }}
+                    className="text-xs font-semibold text-rosver-red"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void deleteUnitType(u)}
+                    className="text-xs font-semibold text-rosver-muted hover:text-rosver-red"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </li>
+            ))
+          )}
+        </ul>
+      </section>
 
       <AdminInput
         value={query}

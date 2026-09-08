@@ -20,7 +20,7 @@ Skill: `erp-systemrsv-saas-ux`.
 | Catálogo → Listado de precios | `/admin/listado-precios` |
 | Catálogo → Categorías | `/admin/categorias` |
 | Catálogo → Marcas | `/admin/marcas` |
-| Catálogo → Unidades | `/admin/unidades` |
+| Catálogo → Listado de precios | `/admin/listado-precios` (incluye tipos de unidad + presentaciones) |
 | Catálogo → Ofertas | `/admin/ofertas` |
 
 ## Layout estático

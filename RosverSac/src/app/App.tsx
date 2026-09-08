@@ -19,7 +19,6 @@ import {
   AdminOffersPage,
   AdminPriceListPage,
   AdminProductsPage,
-  AdminUnitTypesPage,
 } from '@/features/admin-catalog'
 import {
   AuthProvider,
@@ -40,7 +39,7 @@ import { ContactPage } from '@/features/contact'
 import { ClientQuotesPage, QuoteRequestPage } from '@/features/quotes'
 import { PageTransition } from '@/shared/ui/page-transition'
 import { WhatsAppFloatingButton } from '@/shared/ui/whatsapp-floating-button'
-import { BrowserRouter, Outlet, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 
 function PublicLayout() {
   return (
@@ -110,7 +109,10 @@ export function App() {
                 <Route path="listado-precios" element={<AdminPriceListPage />} />
                 <Route path="categorias" element={<AdminCategoriesPage />} />
                 <Route path="marcas" element={<AdminBrandsPage />} />
-                <Route path="unidades" element={<AdminUnitTypesPage />} />
+                <Route
+                  path="unidades"
+                  element={<Navigate to="/admin/listado-precios" replace />}
+                />
                 <Route path="ofertas" element={<AdminOffersPage />} />
               </Route>
             </Routes>
