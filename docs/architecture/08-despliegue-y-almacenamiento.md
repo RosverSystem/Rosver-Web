@@ -23,7 +23,8 @@ Infra de la web **Rosver SAC** y del ERP **SystemRSV**. Actualizar este archivo 
 | Entorno | `production` |
 | Servicio web (GitHub) | `Rosver-Web` (`0bb3658a-7121-4bc4-b492-0ee2d0938228`) |
 | Repo | `RosverSystem/Rosver-Web` · root `RosverSac` |
-| Dominio (servicio vacío `web`) | `web-production-e1349.up.railway.app` — preferir dominio del servicio GitHub |
+| URL pública (SPA) | https://rosver-web-production.up.railway.app (servicio `Rosver-Web`) |
+| Dominio (servicio vacío `web`) | `web-production-e1349.up.railway.app` — no usar; limpiar en dashboard |
 | Postgres | servicio `Postgres` (`058b448f-…`) — verificar volumen/health |
 
 - **Root directory:** `RosverSac`

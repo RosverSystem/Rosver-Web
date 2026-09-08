@@ -30,8 +30,9 @@ Corregir config en repo + mutation GraphQL `serviceInstanceUpdate` / `variableCo
 
 ## Cómo verificar
 
-- [ ] Push a `main` dispara (o se fuerza) redeploy del servicio `Rosver-Web`
-- [ ] Build logs: Node ≥20 y `npm run build` OK (sin `EBUSY`)
-- [ ] Deployment status `SUCCESS`
-- [ ] URL pública responde 200 en `/` y rutas SPA (ej. `/catalogo`)
-- [ ] Postgres: si sigue FAILED, revisar volumen / plan en dashboard
+- [x] Push a `main` (`3a74059`) con fix de build
+- [x] Redeploy `Rosver-Web` → status `SUCCESS` (buildCommand `npm run build` + Node 22)
+- [x] URL https://rosver-web-production.up.railway.app → 200, título `Rosver SAC`
+- [x] `/catalogo` → 200 (SPA fallback)
+- [ ] En dashboard: borrar servicios basura `humorous-enchantment` y vacío `web` si no se usan
+- [ ] Postgres: confirmar health / `DATABASE_URL` en dashboard
