@@ -27,7 +27,7 @@
 | P23 | UX ERP catálogo (cards + selects claros) | Pedido UX | hecho | v0.1.10; regla 14 |
 | P24 | Regla migraciones DB en cada cambio | Pedido reglas | hecho | Regla `15` |
 | P25 | Regla CRUD + vínculo inicio/menú | Pedido usuario | hecho | Regla 16 + v0.1.11 |
-| P26 | Subir imagen categoría a R2 (no solo URL) | Categorías home | hecho | v0.1.15 `/api/admin/uploads` |
+| P26 | Subir imagen categoría a R2 (no solo URL) | Categorías home | hecho | v0.1.15–0.1.16 botón Subir imagen |
 | P27 | Destacados home Postgres + Redis | Pedido lógica | hecho | Doc 05 + v0.1.12 + Redis Railway |
 | P28 | Volumen persistente Redis / Redis oficial template | Infra | recomendado | Hoy imagen `redis:7-alpine` sin volume |
 | P29 | Tendencia + calificaciones / reseñas | Pedido lógica | hecho | Doc 06 + v0.1.13 |

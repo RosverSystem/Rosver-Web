@@ -13,6 +13,9 @@ type Props = {
   className?: string
 }
 
+/**
+ * Subida a R2 (acción principal) + URL opcional si ya la tienes.
+ */
 export function AdminImageUpload({
   folder,
   value,
@@ -23,6 +26,7 @@ export function AdminImageUpload({
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
+  const [showUrl, setShowUrl] = useState(Boolean(value))
 
   async function onFile(file: File | undefined) {
     if (!file) return
@@ -36,6 +40,7 @@ export function AdminImageUpload({
         body: fd,
       })
       onChange(res.url)
+      setShowUrl(true)
     } catch (e) {
       onError(e instanceof ApiError ? e.message : 'No se pudo subir la imagen')
     } finally {
@@ -47,39 +52,73 @@ export function AdminImageUpload({
   return (
     <div className={cn('space-y-2', className)}>
       <p className="text-xs font-semibold text-rosver-ink">{label}</p>
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-start gap-3">
         {value ? (
           <img
             src={value}
             alt=""
-            width={56}
-            height={56}
-            className="size-14 rounded-xl border border-rosver-line object-cover"
+            width={72}
+            height={72}
+            className="size-[4.5rem] shrink-0 rounded-xl border border-rosver-line object-cover"
           />
         ) : (
-          <span className="flex size-14 items-center justify-center rounded-xl border border-dashed border-rosver-line bg-rosver-soft text-[10px] font-bold text-rosver-muted">
+          <span className="flex size-[4.5rem] shrink-0 items-center justify-center rounded-xl border border-dashed border-rosver-line bg-rosver-soft text-[10px] font-bold text-rosver-muted">
             Sin foto
           </span>
         )}
+
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <input
             ref={inputRef}
             type="file"
             accept="image/jpeg,image/png,image/webp,image/gif"
-            className="block w-full text-xs text-rosver-muted file:mr-3 file:rounded-lg file:border-0 file:bg-rosver-ink file:px-3 file:py-2 file:text-xs file:font-semibold file:text-white hover:file:bg-rosver-red"
+            className="sr-only"
             disabled={uploading}
             onChange={(e) => void onFile(e.target.files?.[0])}
           />
-          <input
-            type="url"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder="O pega una URL…"
-            className="h-9 w-full rounded-lg border border-rosver-line bg-white px-2.5 text-xs outline-none focus:border-rosver-red/40"
-          />
-          {uploading ? (
-            <p className="text-[11px] font-semibold text-rosver-muted">Subiendo…</p>
-          ) : null}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={uploading}
+              onClick={() => inputRef.current?.click()}
+              className="inline-flex min-h-11 items-center justify-center rounded-xl bg-rosver-red px-4 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
+            >
+              {uploading ? 'Subiendo…' : value ? 'Cambiar imagen' : 'Subir imagen'}
+            </button>
+            {value ? (
+              <button
+                type="button"
+                disabled={uploading}
+                onClick={() => {
+                  onChange('')
+                  setShowUrl(false)
+                }}
+                className="inline-flex min-h-11 items-center justify-center rounded-xl border border-rosver-line px-4 text-sm font-semibold text-rosver-muted hover:border-rosver-red/40 hover:text-rosver-red"
+              >
+                Quitar
+              </button>
+            ) : null}
+          </div>
+          <p className="text-[11px] text-rosver-muted">
+            JPG, PNG o WebP · máx. 2.5 MB
+          </p>
+          {!showUrl ? (
+            <button
+              type="button"
+              onClick={() => setShowUrl(true)}
+              className="self-start text-xs font-semibold text-rosver-muted underline-offset-2 hover:text-rosver-red hover:underline"
+            >
+              ¿Ya tienes una URL? Pégala aquí
+            </button>
+          ) : (
+            <input
+              type="url"
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder="https://… (opcional)"
+              className="h-10 w-full rounded-xl border border-rosver-line bg-white px-3 text-sm outline-none focus:border-rosver-red/40"
+            />
+          )}
         </div>
       </div>
     </div>

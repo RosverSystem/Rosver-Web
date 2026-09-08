@@ -298,15 +298,15 @@ export function AdminCategoriesPage() {
                     placeholder="Ej. Listas para obra y taller"
                   />
                 </AdminField>
-                <AdminField label="Imagen de la card" htmlFor="cat-image">
+                <div className="sm:col-span-2">
                   <AdminImageUpload
                     folder="categories"
                     value={form.imageUrl}
                     onChange={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
                     onError={(msg) => showMessages([msg])}
-                    label="Subir o pegar URL"
+                    label="Imagen de la card"
                   />
-                </AdminField>
+                </div>
                 <AdminField label="Punto 1" htmlFor="cat-p1">
                   <AdminInput
                     id="cat-p1"
