@@ -16,10 +16,24 @@ export function isUploadFolder(v: string): v is UploadFolder {
   return v === 'categories' || v === 'brands' || v === 'products'
 }
 
+function slugFileBase(name: string) {
+  return name
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60)
+}
+
 export async function uploadPublicImage(input: {
   file: File
   folder: UploadFolder
-}): Promise<{ ok: true; url: string; key: string } | { ok: false; error: string; status: 400 | 503 }> {
+  /** Nombre amigable para el archivo (sin extensión). */
+  displayName?: string
+}): Promise<
+  { ok: true; url: string; key: string } | { ok: false; error: string; status: 400 | 503 }
+> {
   if (!r2Enabled()) {
     return {
       ok: false,
@@ -51,7 +65,11 @@ export async function uploadPublicImage(input: {
           ? 'gif'
           : 'jpg'
 
-  const key = `${input.folder}/${randomUUID()}.${ext}`
+  const base =
+    (input.displayName && slugFileBase(input.displayName)) ||
+    slugFileBase(input.file.name.replace(/\.[^.]+$/, '')) ||
+    'imagen'
+  const key = `${input.folder}/${base}-${randomUUID().slice(0, 8)}.${ext}`
   const buf = Buffer.from(await input.file.arrayBuffer())
   const url = await putPublicObject({
     key,

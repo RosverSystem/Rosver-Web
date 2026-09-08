@@ -20,6 +20,12 @@ adminCatalogRoutes.post('/uploads', async (c) => {
   const body = await c.req.parseBody()
   const file = body.file
   const folderRaw = typeof body.folder === 'string' ? body.folder : ''
+  const displayName =
+    typeof body.name === 'string'
+      ? body.name
+      : typeof body.displayName === 'string'
+        ? body.displayName
+        : undefined
   if (!(file instanceof File)) {
     return c.json({ error: 'Adjunta una imagen (campo file).' }, 400)
   }
@@ -29,7 +35,11 @@ adminCatalogRoutes.post('/uploads', async (c) => {
       400,
     )
   }
-  const result = await uploadPublicImage({ file, folder: folderRaw })
+  const result = await uploadPublicImage({
+    file,
+    folder: folderRaw,
+    displayName: displayName?.trim() || undefined,
+  })
   if (!result.ok) {
     return c.json({ error: result.error }, result.status)
   }

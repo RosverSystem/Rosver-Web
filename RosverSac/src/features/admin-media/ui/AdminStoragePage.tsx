@@ -125,11 +125,23 @@ export function AdminStoragePage() {
   async function onUpload(file: File | undefined) {
     if (!file) return
     clear()
+    const suggested = file.name.replace(/\.[^.]+$/, '')
+    const name = window.prompt('Nombre para la imagen en R2', suggested)
+    if (name == null) {
+      if (inputRef.current) inputRef.current.value = ''
+      return
+    }
+    if (!name.trim()) {
+      showMessages(['Ponle un nombre a la imagen'])
+      if (inputRef.current) inputRef.current.value = ''
+      return
+    }
     setBusy(true)
     try {
       const fd = new FormData()
       fd.append('file', file)
       fd.append('folder', uploadFolder)
+      fd.append('name', name.trim())
       await api('/api/admin/storage/upload', { method: 'POST', body: fd })
       showMessages(['Archivo subido'])
       if (folderId !== uploadFolder && folderId !== 'all') {

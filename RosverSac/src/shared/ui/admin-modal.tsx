@@ -9,6 +9,9 @@ type Props = {
   footer?: ReactNode
   size?: 'md' | 'lg' | 'xl'
   className?: string
+  /** Capas anidadas (ej. picker encima de form). Default 80. */
+  layer?: number
+  closeOnEscape?: boolean
 }
 
 /**
@@ -22,20 +25,25 @@ export function AdminModal({
   footer,
   size = 'lg',
   className,
+  layer = 80,
+  closeOnEscape = true,
 }: Props) {
   useEffect(() => {
-    if (!open) return
+    if (!open || !closeOnEscape) return
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        onClose()
+      }
     }
-    document.addEventListener('keydown', onKey)
+    document.addEventListener('keydown', onKey, true)
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
     return () => {
-      document.removeEventListener('keydown', onKey)
+      document.removeEventListener('keydown', onKey, true)
       document.body.style.overflow = prev
     }
-  }, [open, onClose])
+  }, [open, onClose, closeOnEscape])
 
   if (!open) return null
 
@@ -43,7 +51,10 @@ export function AdminModal({
     size === 'md' ? 'max-w-lg' : size === 'xl' ? 'max-w-4xl' : 'max-w-2xl'
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center p-0 sm:items-center sm:p-4">
+    <div
+      className="fixed inset-0 flex items-end justify-center p-0 sm:items-center sm:p-4"
+      style={{ zIndex: layer }}
+    >
       <button
         type="button"
         aria-label="Cerrar"

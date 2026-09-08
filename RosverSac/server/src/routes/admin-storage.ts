@@ -102,6 +102,12 @@ adminStorageRoutes.post('/storage/upload', async (c) => {
   const body = await c.req.parseBody()
   const file = body.file
   const folderRaw = typeof body.folder === 'string' ? body.folder : 'products'
+  const displayName =
+    typeof body.name === 'string'
+      ? body.name
+      : typeof body.displayName === 'string'
+        ? body.displayName
+        : undefined
   if (!(file instanceof File)) {
     return c.json({ error: 'Adjunta una imagen (campo file).' }, 400)
   }
@@ -112,7 +118,6 @@ adminStorageRoutes.post('/storage/upload', async (c) => {
     )
   }
   if (folderRaw === 'avatars') {
-    // Reuse products upload path naming for library; keep avatars via existing profile
     return c.json(
       { error: 'Los avatares se suben desde el perfil. Usa products, categories o brands.' },
       400,
@@ -121,6 +126,7 @@ adminStorageRoutes.post('/storage/upload', async (c) => {
   const result = await uploadPublicImage({
     file,
     folder: folderRaw as 'products' | 'categories' | 'brands',
+    displayName: displayName?.trim() || undefined,
   })
   if (!result.ok) {
     return c.json({ error: result.error }, result.status)
