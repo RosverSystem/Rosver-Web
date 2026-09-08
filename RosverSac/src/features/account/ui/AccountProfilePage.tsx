@@ -113,34 +113,39 @@ export function AccountProfilePage() {
   return (
     <div className="rounded-2xl border border-rosver-line bg-white p-5 shadow-sm sm:p-6">
       <FloatingToasts toasts={toasts} onDismiss={dismiss} />
-      <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center">
-        <div className="relative">
-          <img
-            src={avatarUrl}
-            alt=""
-            width={88}
-            height={88}
-            className="size-[88px] rounded-full border border-rosver-line bg-rosver-soft object-cover"
-          />
-          <button
-            type="button"
-            disabled={uploading}
-            onClick={() => fileRef.current?.click()}
-            className="absolute -right-1 -bottom-1 inline-flex size-9 items-center justify-center rounded-full bg-rosver-red text-white shadow hover:bg-rosver-red-dark disabled:opacity-60"
-            aria-label="Subir foto"
-          >
-            <Camera size={16} color="currentColor" strokeWidth={2} />
-          </button>
-        </div>
-        <div>
-          <h2 className="font-display text-lg font-bold text-rosver-ink">
-            {user.fullName?.trim() || 'Tu perfil'}
-          </h2>
-          <p className="text-sm text-rosver-muted">{user.email}</p>
-          <p className="text-xs text-rosver-muted">
-            Cuenta {user.roleName.toLowerCase()} · Teléfono obligatorio para
-            contacto comercial
-          </p>
+      <div className="mb-5 rounded-2xl border border-rosver-line bg-rosver-soft/50 px-4 py-4 sm:px-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+          <div className="relative shrink-0">
+            <img
+              src={avatarUrl}
+              alt=""
+              width={88}
+              height={88}
+              className="size-[88px] rounded-full border-2 border-white bg-rosver-soft object-cover shadow-sm"
+            />
+            <button
+              type="button"
+              disabled={uploading}
+              onClick={() => fileRef.current?.click()}
+              className="absolute -right-1 -bottom-1 inline-flex size-9 items-center justify-center rounded-full bg-rosver-red text-white shadow hover:bg-rosver-red-dark disabled:opacity-60"
+              aria-label="Subir foto"
+            >
+              <Camera size={16} color="currentColor" strokeWidth={2} />
+            </button>
+          </div>
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold tracking-widest text-rosver-muted uppercase">
+              Datos de cuenta
+            </p>
+            <h2 className="font-display text-xl font-bold text-rosver-ink">
+              {user.fullName?.trim() || 'Tu perfil'}
+            </h2>
+            <p className="truncate text-sm text-rosver-muted">{user.email}</p>
+            <p className="mt-1 text-xs text-rosver-muted">
+              Cuenta {user.roleName.toLowerCase()} · Teléfono obligatorio para
+              contacto comercial
+            </p>
+          </div>
         </div>
       </div>
 
