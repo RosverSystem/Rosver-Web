@@ -11,6 +11,8 @@ import {
 } from '@/shared/ui/admin-field'
 import { AdminImageUpload } from '@/shared/ui/admin-image-upload'
 import { AdminModal } from '@/shared/ui/admin-modal'
+import { ProductCard, type Product } from '@/features/catalog'
+import { AdminWebPreview } from './AdminWebPreview'
 import { useEffect, useMemo, useState } from 'react'
 
 type ProductRow = {
@@ -637,6 +639,70 @@ export function AdminProductsPage() {
     resetWizard()
   }
 
+  const previewProduct: Product = useMemo(() => {
+    const brandName =
+      brands.find((b) => b.id === brandId)?.name?.trim() || 'Sin marca'
+    const defPack =
+      packagings.find((p) => p.isDefault) ?? packagings[0] ?? null
+    const packPrices = prices.filter(
+      (p) =>
+        p.isActive &&
+        (defPack ? p.packagingId === defPack.id : true),
+    )
+    const listP = packPrices.find((p) => p.priceKind === 'list')
+    const offerP = packPrices.find((p) => p.priceKind === 'offer')
+    const whP = packPrices.find((p) => p.priceKind === 'wholesale')
+    let price: number | null = listP?.amount ?? null
+    let originalPrice: number | undefined
+    if (offerP && listP && offerP.amount < listP.amount) {
+      price = offerP.amount
+      originalPrice = listP.amount
+    } else if (
+      listP?.compareAtAmount != null &&
+      listP.compareAtAmount > listP.amount
+    ) {
+      originalPrice = listP.compareAtAmount
+    }
+    if (availability === 'quote_only') price = null
+
+    return {
+      id: selectedId ?? 'preview',
+      slug: 'preview',
+      name: name.trim() || 'Nombre del producto',
+      sku: sku.trim() || 'SKU',
+      vendor: brandName,
+      category: categories.find((c) => c.id === categoryId)?.name ?? '',
+      price,
+      originalPrice,
+      wholesalePrice: whP?.amount,
+      featured,
+      rating,
+      reviewCount,
+      origin: origin.trim() || '—',
+      moq: Number(moq) || 1,
+      description: description.trim(),
+      imageUrl: imageUrl.trim() || undefined,
+    }
+  }, [
+    availability,
+    brandId,
+    brands,
+    categories,
+    categoryId,
+    description,
+    featured,
+    imageUrl,
+    moq,
+    name,
+    origin,
+    packagings,
+    prices,
+    rating,
+    reviewCount,
+    selectedId,
+    sku,
+  ])
+
   return (
     <div className="space-y-5">
       <FloatingToasts toasts={toasts} onDismiss={dismiss} />
@@ -714,6 +780,8 @@ export function AdminProductsPage() {
         size="xl"
         closeOnEscape={false}
       >
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(240px,280px)] lg:items-start">
+          <div className="min-w-0 space-y-4">
         <ol className="mb-4 flex flex-wrap gap-2">
           {STEPS.map((s) => {
             const active = step === s.id
@@ -1292,6 +1360,15 @@ export function AdminProductsPage() {
               </button>
             </div>
           </div>
+        </div>
+          </div>
+
+          <AdminWebPreview
+            label="Vista previa en la tienda"
+            className="lg:sticky lg:top-0"
+          >
+            <ProductCard product={previewProduct} preview />
+          </AdminWebPreview>
         </div>
       </AdminModal>
     </div>

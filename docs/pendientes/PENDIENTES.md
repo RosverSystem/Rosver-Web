@@ -36,9 +36,11 @@
 | P36 | Listado precios: tipo→cantidad→varios precios por presentación | Pedido UX | hecho | v0.1.24 flujo tipo ubicación |
 | P37 | CRUD completo presentaciones/precios/tipos + AdminSelect | Pedido reglas 14/16 | hecho | v0.1.26 |
 | P38 | Formularios ERP solo en AdminModal (regla 17) | Pedido UX ERP | hecho | v0.1.27 |
+| P39 | Vista previa tienda en producto/categoría ERP | Pedido UX | hecho | v0.1.28 |
 
 ## Hechos recientes
 
+- Preview ProductCard / CategoryHomeCard en modales ERP (v0.1.28)
 - Regla 17 + Ofertas/Categorías/Productos/Precios/Unidades en `AdminModal` (v0.1.27)
 - CRUD C/R/U/D presentaciones, precios y tipos de unidad + AdminSelect (v0.1.26)
 - Presentación: tipo + cantidad + precio en un paso (v0.1.25)

@@ -8,8 +8,15 @@ import { Link } from 'react-router-dom'
 
 /**
  * Card de catálogo estilo marketplace: marca, SKU, rating, precio, mayorista, CTA.
+ * `preview`: misma UI sin navegación ni carrito (ERP).
  */
-export function ProductCard({ product }: { product: Product }) {
+export function ProductCard({
+  product,
+  preview = false,
+}: {
+  product: Product
+  preview?: boolean
+}) {
   const { addItem } = useCart()
 
   const discountPercent =
@@ -21,17 +28,43 @@ export function ProductCard({ product }: { product: Product }) {
   const isOffer = Boolean(discountPercent && discountPercent > 0)
   const showFeatured = Boolean(product.featured) && !isOffer
 
+  const titleBlock = preview ? (
+    <p className="line-clamp-2 min-h-10 text-sm font-bold text-rosver-ink sm:text-[15px]">
+      {product.name}
+    </p>
+  ) : (
+    <Link
+      to={`/producto/${product.slug}`}
+      className="line-clamp-2 min-h-10 text-sm font-bold text-rosver-ink transition group-hover:text-rosver-red sm:text-[15px]"
+    >
+      {product.name}
+    </Link>
+  )
+
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl border border-rosver-line bg-white shadow-[0_10px_28px_-22px_rgba(17,17,17,0.35)] transition duration-300 hover:-translate-y-0.5 hover:border-rosver-ink/20 hover:shadow-[0_16px_36px_-18px_rgba(17,17,17,0.4)]">
       <div className="relative">
-        <Link to={`/producto/${product.slug}`} className="block bg-rosver-soft/40">
-          <ProductImage
-            src={product.imageUrl}
-            alt={product.name}
-            className="aspect-square"
-            imgClassName="transition-transform duration-500 ease-out group-hover:scale-[1.03]"
-          />
-        </Link>
+        {preview ? (
+          <div className="block bg-rosver-soft/40">
+            <ProductImage
+              src={product.imageUrl}
+              alt={product.name}
+              className="aspect-square"
+            />
+          </div>
+        ) : (
+          <Link
+            to={`/producto/${product.slug}`}
+            className="block bg-rosver-soft/40"
+          >
+            <ProductImage
+              src={product.imageUrl}
+              alt={product.name}
+              className="aspect-square"
+              imgClassName="transition-transform duration-500 ease-out group-hover:scale-[1.03]"
+            />
+          </Link>
+        )}
 
         <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-2 p-2.5">
           <div className="flex flex-wrap gap-1.5">
@@ -64,12 +97,7 @@ export function ProductCard({ product }: { product: Product }) {
           {product.vendor}
         </p>
 
-        <Link
-          to={`/producto/${product.slug}`}
-          className="line-clamp-2 min-h-10 text-sm font-bold text-rosver-ink transition group-hover:text-rosver-red sm:text-[15px]"
-        >
-          {product.name}
-        </Link>
+        {titleBlock}
 
         <p className="text-xs text-rosver-muted">SKU: {product.sku}</p>
 
@@ -113,8 +141,11 @@ export function ProductCard({ product }: { product: Product }) {
 
         <button
           type="button"
-          onClick={() => addItem(product.slug, 1)}
-          className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-rosver-red px-3 text-sm font-bold text-white transition hover:bg-rosver-red-dark"
+          disabled={preview}
+          onClick={() => {
+            if (!preview) addItem(product.slug, 1)
+          }}
+          className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-rosver-red px-3 text-sm font-bold text-white transition hover:bg-rosver-red-dark disabled:cursor-default disabled:opacity-90"
         >
           <IconBag className="size-4" />
           Agregar al carrito

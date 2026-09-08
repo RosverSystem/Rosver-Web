@@ -10,6 +10,9 @@ import {
 } from '@/shared/ui/admin-field'
 import { AdminImageUpload } from '@/shared/ui/admin-image-upload'
 import { AdminModal } from '@/shared/ui/admin-modal'
+import { CategoryHomeCard } from '@/features/catalog'
+import { IconWrench } from '@/shared/ui/icons'
+import { AdminWebPreview } from './AdminWebPreview'
 import { useEffect, useMemo, useState } from 'react'
 
 type Category = {
@@ -51,6 +54,18 @@ export function AdminCategoriesPage() {
   const [query, setQuery] = useState('')
 
   const isRoot = !form.parentId
+
+  const previewCategory = useMemo(
+    () => ({
+      name: form.name,
+      slug: 'preview',
+      tagline: form.tagline || undefined,
+      points: [form.point1, form.point2, form.point3].filter((p) => p.trim()),
+      imageUrl: form.imageUrl || undefined,
+      icon: IconWrench,
+    }),
+    [form.imageUrl, form.name, form.point1, form.point2, form.point3, form.tagline],
+  )
 
   const roots = useMemo(
     () => categories.filter((c) => !c.parentId),
@@ -372,7 +387,13 @@ export function AdminCategoriesPage() {
           </>
         }
       >
-        <form id="category-form" noValidate onSubmit={onSubmit} className="space-y-4">
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(260px,300px)] lg:items-start">
+          <form
+            id="category-form"
+            noValidate
+            onSubmit={onSubmit}
+            className="min-w-0 space-y-4"
+          >
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <AdminField label="Nombre" htmlFor="cat-name">
               <AdminInput
@@ -510,6 +531,28 @@ export function AdminCategoriesPage() {
             </label>
           )}
         </form>
+
+          <AdminWebPreview
+            label={
+              isRoot
+                ? 'Vista previa — inicio (Explora por categoría)'
+                : 'Vista previa — card de categoría'
+            }
+            className="lg:sticky lg:top-0"
+            wide
+          >
+            <CategoryHomeCard
+              category={previewCategory}
+              preview
+              className="mx-auto"
+            />
+            {isRoot && !form.showOnHome ? (
+              <p className="mt-3 text-center text-[11px] text-rosver-muted">
+                No aparecerá en el inicio hasta marcar «Mostrar en el inicio».
+              </p>
+            ) : null}
+          </AdminWebPreview>
+        </div>
       </AdminModal>
     </div>
   )
