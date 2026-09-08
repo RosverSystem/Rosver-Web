@@ -50,6 +50,9 @@ export type Product = {
   featured?: boolean
   /** Orden en carrusel Destacados (menor = primero) */
   featuredSort?: number
+  /** Sección Productos en tendencia */
+  trending?: boolean
+  trendingSort?: number
   rating: number
   reviewCount: number
   origin: string

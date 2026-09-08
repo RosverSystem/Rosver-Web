@@ -80,6 +80,50 @@ export const featuredCache = {
   },
 }
 
+const TRENDING_PREFIX = 'rosver:catalog:trending:v1:'
+
+export function trendingCacheKey(categorySlug?: string | null) {
+  const slug = categorySlug?.trim() || 'all'
+  return `${TRENDING_PREFIX}${slug}`
+}
+
+export const trendingCache = {
+  ttlSec: FEATURED_TTL_SEC,
+  keyFor: trendingCacheKey,
+  async get<T>(categorySlug?: string | null) {
+    return cacheGetJson<T>(trendingCacheKey(categorySlug))
+  },
+  async set(categorySlug: string | null | undefined, value: unknown) {
+    return cacheSetJson(trendingCacheKey(categorySlug), value, FEATURED_TTL_SEC)
+  },
+  async invalidateAll() {
+    const r = getClient()
+    if (!r) return
+    try {
+      let cursor = '0'
+      do {
+        const [next, keys] = await r.scan(
+          cursor,
+          'MATCH',
+          `${TRENDING_PREFIX}*`,
+          'COUNT',
+          50,
+        )
+        cursor = next
+        if (keys.length) await r.del(...keys)
+      } while (cursor !== '0')
+    } catch {
+      /* ignore */
+    }
+  },
+}
+
+/** Invalida destacados + tendencia (cambios de producto/precio/reseña). */
+export async function invalidateCatalogHomeCaches() {
+  await featuredCache.invalidate()
+  await trendingCache.invalidateAll()
+}
+
 export function redisStatus() {
   const r = getClient()
   return {

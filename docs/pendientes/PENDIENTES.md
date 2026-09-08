@@ -30,8 +30,10 @@
 | P26 | Subir imagen categoría a R2 (no solo URL) | Categorías home | pendiente | Hoy pide URL |
 | P27 | Destacados home Postgres + Redis | Pedido lógica | hecho | Doc 05 + v0.1.12 + Redis Railway |
 | P28 | Volumen persistente Redis / Redis oficial template | Infra | recomendado | Hoy imagen `redis:7-alpine` sin volume |
+| P29 | Tendencia + calificaciones / reseñas | Pedido lógica | hecho | Doc 06 + v0.1.13 |
+| P30 | Reseñas desde cuenta cliente (no solo admin) | Calificaciones | pendiente | API admin lista; falta UI `/cuenta` |
 
 ## Hechos recientes
 
+- Tendencia + reseñas + estrellas en cards (v0.1.13)
 - Destacados para ti: lógica 100% + Redis Railway (v0.1.12)
-- CRUD categorías/marcas + campos home + live taxonomía (v0.1.11)

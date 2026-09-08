@@ -23,6 +23,10 @@ type ProductRow = {
   visible: boolean
   featured: boolean
   featuredSort: number
+  trending: boolean
+  trendingSort: number
+  rating: number
+  reviewCount: number
 }
 
 type Brand = { id: string; name: string; sku: string }
@@ -72,6 +76,12 @@ export function AdminProductsPage() {
   const [createFeatured, setCreateFeatured] = useState(false)
   const [featuredBusy, setFeaturedBusy] = useState(false)
   const [featuredSortDraft, setFeaturedSortDraft] = useState('0')
+  const [trendingSortDraft, setTrendingSortDraft] = useState('0')
+  const [reviewRating, setReviewRating] = useState('5')
+  const [reviewTitle, setReviewTitle] = useState('')
+  const [reviews, setReviews] = useState<
+    { id: string; rating: number; title: string; body: string; visible: boolean }[]
+  >([])
 
   const [unitTypeId, setUnitTypeId] = useState('')
   const [contentQty, setContentQty] = useState('1')
@@ -125,11 +135,22 @@ export function AdminProductsPage() {
       const data = await api<{
         packagings: Packaging[]
         prices: Price[]
+        product?: ProductRow
       }>(`/api/admin/products/${id}`)
       setPackagings(data.packagings)
       setPrices(data.prices)
       const def = data.packagings.find((x) => x.isDefault) ?? data.packagings[0]
       if (def) setPackagingId(def.id)
+      const rev = await api<{
+        reviews: {
+          id: string
+          rating: number
+          title: string
+          body: string
+          visible: boolean
+        }[]
+      }>(`/api/admin/products/${id}/reviews`)
+      setReviews(rev.reviews)
     } catch (e) {
       showMessages([e instanceof ApiError ? e.message : 'No se pudo abrir el producto'])
     }
@@ -146,7 +167,8 @@ export function AdminProductsPage() {
   useEffect(() => {
     if (!selected) return
     setFeaturedSortDraft(String(selected.featuredSort ?? 0))
-  }, [selected?.id, selected?.featuredSort])
+    setTrendingSortDraft(String(selected.trendingSort ?? 0))
+  }, [selected?.id, selected?.featuredSort, selected?.trendingSort])
 
   async function createProduct(e: React.FormEvent) {
     e.preventDefault()
@@ -180,7 +202,7 @@ export function AdminProductsPage() {
     }
   }
 
-  async function saveFeatured(next: { featured?: boolean; featuredSort?: number }) {
+  async function saveProductFlags(next: Record<string, unknown>) {
     if (!selectedId) return
     setFeaturedBusy(true)
     clear()
@@ -190,9 +212,40 @@ export function AdminProductsPage() {
         body: JSON.stringify(next),
       })
       await loadList()
+      await loadDetail(selectedId)
     } catch (err) {
       showMessages([
-        err instanceof ApiError ? err.message : 'No se pudo actualizar el destacado',
+        err instanceof ApiError ? err.message : 'No se pudo actualizar el producto',
+      ])
+    } finally {
+      setFeaturedBusy(false)
+    }
+  }
+
+  async function addReview(e: React.FormEvent) {
+    e.preventDefault()
+    if (!selectedId) return
+    const rating = Number(reviewRating)
+    if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
+      showMessages(['La calificación debe ser de 1 a 5'])
+      return
+    }
+    setFeaturedBusy(true)
+    clear()
+    try {
+      await api(`/api/admin/products/${selectedId}/reviews`, {
+        method: 'POST',
+        body: JSON.stringify({
+          rating,
+          title: reviewTitle.trim() || undefined,
+        }),
+      })
+      setReviewTitle('')
+      await loadList()
+      await loadDetail(selectedId)
+    } catch (err) {
+      showMessages([
+        err instanceof ApiError ? err.message : 'No se pudo agregar la reseña',
       ])
     } finally {
       setFeaturedBusy(false)
@@ -416,6 +469,11 @@ export function AdminProductsPage() {
                           Inicio
                         </span>
                       ) : null}
+                      {p.trending ? (
+                        <span className="shrink-0 rounded-full bg-rosver-blue px-2 py-0.5 text-[10px] font-bold text-white">
+                          Tendencia
+                        </span>
+                      ) : null}
                     </button>
                   </li>
                 ))}
@@ -447,7 +505,7 @@ export function AdminProductsPage() {
                     checked={Boolean(selected.featured)}
                     disabled={featuredBusy}
                     onChange={(e) =>
-                      void saveFeatured({ featured: e.target.checked })
+                      void saveProductFlags({ featured: e.target.checked })
                     }
                     className="size-4 rounded border-rosver-line text-rosver-red"
                   />
@@ -467,7 +525,7 @@ export function AdminProductsPage() {
                       type="button"
                       disabled={featuredBusy}
                       onClick={() =>
-                        void saveFeatured({
+                        void saveProductFlags({
                           featuredSort: Number(featuredSortDraft) || 0,
                         })
                       }
@@ -476,6 +534,106 @@ export function AdminProductsPage() {
                       Guardar orden
                     </button>
                   </div>
+                ) : null}
+              </div>
+
+              <div className="rounded-xl border border-rosver-line bg-rosver-soft/40 p-3">
+                <p className="mb-2 text-sm font-semibold text-rosver-ink">
+                  Productos en tendencia
+                </p>
+                <label className="flex items-center gap-2 text-sm text-rosver-ink">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(selected.trending)}
+                    disabled={featuredBusy}
+                    onChange={(e) =>
+                      void saveProductFlags({ trending: e.target.checked })
+                    }
+                    className="size-4 rounded border-rosver-line text-rosver-red"
+                  />
+                  Incluir en tendencia (por categoría)
+                </label>
+                {selected.trending ? (
+                  <div className="mt-3 flex flex-wrap items-end gap-2">
+                    <AdminField label="Orden" htmlFor="trend-sort-edit">
+                      <AdminInput
+                        id="trend-sort-edit"
+                        value={trendingSortDraft}
+                        onChange={(e) => setTrendingSortDraft(e.target.value)}
+                        className="w-24"
+                      />
+                    </AdminField>
+                    <button
+                      type="button"
+                      disabled={featuredBusy}
+                      onClick={() =>
+                        void saveProductFlags({
+                          trendingSort: Number(trendingSortDraft) || 0,
+                        })
+                      }
+                      className="h-11 rounded-xl bg-rosver-ink px-4 text-sm font-semibold text-white hover:bg-rosver-red disabled:opacity-60"
+                    >
+                      Guardar orden
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="rounded-xl border border-rosver-line bg-rosver-soft/40 p-3">
+                <p className="mb-1 text-sm font-semibold text-rosver-ink">
+                  Calificaciones
+                </p>
+                <p className="mb-3 text-xs text-rosver-muted">
+                  Promedio {Number(selected.rating ?? 0).toFixed(1)} ·{' '}
+                  {selected.reviewCount ?? 0} reseñas
+                </p>
+                <form
+                  noValidate
+                  onSubmit={addReview}
+                  className="grid gap-3 sm:grid-cols-[5rem_1fr_auto]"
+                >
+                  <AdminField label="Estrellas" htmlFor="rev-rating">
+                    <AdminSelect
+                      id="rev-rating"
+                      value={reviewRating}
+                      onChange={(e) => setReviewRating(e.target.value)}
+                    >
+                      {[5, 4, 3, 2, 1].map((n) => (
+                        <option key={n} value={String(n)}>
+                          {n}
+                        </option>
+                      ))}
+                    </AdminSelect>
+                  </AdminField>
+                  <AdminField label="Título (opcional)" htmlFor="rev-title">
+                    <AdminInput
+                      id="rev-title"
+                      value={reviewTitle}
+                      onChange={(e) => setReviewTitle(e.target.value)}
+                      placeholder="Ej. Buena calidad"
+                    />
+                  </AdminField>
+                  <div className="flex items-end">
+                    <button
+                      type="submit"
+                      disabled={featuredBusy}
+                      className="h-11 w-full rounded-xl bg-rosver-red px-4 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
+                    >
+                      Agregar reseña
+                    </button>
+                  </div>
+                </form>
+                {reviews.length > 0 ? (
+                  <ul className="mt-3 max-h-40 space-y-1 overflow-y-auto text-xs text-rosver-muted">
+                    {reviews
+                      .filter((r) => r.visible)
+                      .slice(0, 8)
+                      .map((r) => (
+                        <li key={r.id}>
+                          {r.rating}★ {r.title || 'Sin título'}
+                        </li>
+                      ))}
+                  </ul>
                 ) : null}
               </div>
 

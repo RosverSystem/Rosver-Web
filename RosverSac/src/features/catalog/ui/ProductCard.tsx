@@ -1,12 +1,13 @@
 import type { Product } from '@/features/catalog/model/mocks'
 import { getWholesalePrice } from '@/features/catalog/model/mocks'
 import { ProductImage } from '@/features/catalog/ui/ProductImage'
+import { ProductRatingStars } from '@/features/catalog/ui/ProductRatingStars'
 import { useCart } from '@/features/cart'
 import { IconBag } from '@/shared/ui/icons'
 import { Link } from 'react-router-dom'
 
 /**
- * Card de catálogo estilo marketplace: marca, SKU, precio, mayorista, CTA carrito.
+ * Card de catálogo estilo marketplace: marca, SKU, rating, precio, mayorista, CTA.
  */
 export function ProductCard({ product }: { product: Product }) {
   const { addItem } = useCart()
@@ -71,6 +72,12 @@ export function ProductCard({ product }: { product: Product }) {
         </Link>
 
         <p className="text-xs text-rosver-muted">SKU: {product.sku}</p>
+
+        <ProductRatingStars
+          rating={product.rating}
+          reviewCount={product.reviewCount}
+          className="mt-0.5"
+        />
 
         <div className="mt-auto space-y-1 pt-2">
           {product.price !== null ? (

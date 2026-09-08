@@ -1,7 +1,8 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { pool } from '../db.js'
-import { featuredCache } from '../lib/redis.js'
+import { invalidateCatalogHomeCaches } from '../lib/redis.js'
+import { recalculateProductRating } from '../lib/product-ratings.js'
 import {
   requireAuth,
   requireRole,
@@ -409,6 +410,8 @@ adminCatalogRoutes.get('/products', async (c) => {
       reviewCount: r.review_count,
       featured: r.featured,
       featuredSort: Number(r.featured_sort ?? 0),
+      trending: Boolean(r.trending),
+      trendingSort: Number(r.trending_sort ?? 0),
       visible: r.visible,
       availability: r.availability,
       imageUrl: r.image_url,
@@ -459,6 +462,8 @@ adminCatalogRoutes.get('/products/:id', async (c) => {
       reviewCount: p.review_count,
       featured: p.featured,
       featuredSort: Number(p.featured_sort ?? 0),
+      trending: Boolean(p.trending),
+      trendingSort: Number(p.trending_sort ?? 0),
       visible: p.visible,
       availability: p.availability,
       imageUrl: p.image_url,
@@ -564,7 +569,7 @@ adminCatalogRoutes.post('/products', async (c) => {
       )
     }
     await client.query('COMMIT')
-    await featuredCache.invalidate()
+    await invalidateCatalogHomeCaches()
     return c.json({ product: { id: productId, sku: rows[0].sku, slug: rows[0].slug } }, 201)
   } catch (e) {
     await client.query('ROLLBACK')
@@ -589,9 +594,12 @@ adminCatalogRoutes.patch('/products/:id', async (c) => {
       availability: z.enum(['in_stock', 'quote_only', 'out_of_stock']).optional(),
       featured: z.boolean().optional(),
       featuredSort: z.number().int().min(0).max(9999).optional(),
+      trending: z.boolean().optional(),
+      trendingSort: z.number().int().min(0).max(9999).optional(),
       visible: z.boolean().optional(),
       imageUrl: z.string().nullable().optional(),
       rating: z.number().min(0).max(5).optional(),
+      reviewCount: z.number().int().min(0).optional(),
     })
     .safeParse(await c.req.json().catch(() => null))
   if (!body.success) return c.json({ error: 'Datos inválidos' }, 400)
@@ -609,9 +617,12 @@ adminCatalogRoutes.patch('/products/:id', async (c) => {
        availability = COALESCE($12, availability),
        featured = COALESCE($13, featured),
        featured_sort = COALESCE($14, featured_sort),
-       visible = COALESCE($15, visible),
-       image_url = CASE WHEN $16::boolean THEN $17 ELSE image_url END,
-       rating = COALESCE($18, rating),
+       trending = COALESCE($15, trending),
+       trending_sort = COALESCE($16, trending_sort),
+       visible = COALESCE($17, visible),
+       image_url = CASE WHEN $18::boolean THEN $19 ELSE image_url END,
+       rating = COALESCE($20, rating),
+       review_count = COALESCE($21, review_count),
        updated_at = now()
      WHERE id = $1
      RETURNING *`,
@@ -630,19 +641,26 @@ adminCatalogRoutes.patch('/products/:id', async (c) => {
       d.availability ?? null,
       d.featured ?? null,
       d.featuredSort ?? null,
+      d.trending ?? null,
+      d.trendingSort ?? null,
       d.visible ?? null,
       d.imageUrl !== undefined,
       d.imageUrl ?? null,
       d.rating ?? null,
+      d.reviewCount ?? null,
     ],
   )
   if (!rows[0]) return c.json({ error: 'Producto no encontrado' }, 404)
-  await featuredCache.invalidate()
+  await invalidateCatalogHomeCaches()
   return c.json({
     product: {
       id: rows[0].id,
       featured: rows[0].featured,
       featuredSort: rows[0].featured_sort,
+      trending: rows[0].trending,
+      trendingSort: rows[0].trending_sort,
+      rating: Number(rows[0].rating),
+      reviewCount: rows[0].review_count,
       visible: rows[0].visible,
       name: rows[0].name,
       sku: rows[0].sku,
@@ -653,12 +671,12 @@ adminCatalogRoutes.patch('/products/:id', async (c) => {
 adminCatalogRoutes.delete('/products/:id', async (c) => {
   const id = c.req.param('id')
   const { rows } = await pool.query(
-    `UPDATE products SET visible = false, featured = false, updated_at = now()
+    `UPDATE products SET visible = false, featured = false, trending = false, updated_at = now()
      WHERE id = $1 RETURNING id`,
     [id],
   )
   if (!rows[0]) return c.json({ error: 'Producto no encontrado' }, 404)
-  await featuredCache.invalidate()
+  await invalidateCatalogHomeCaches()
   return c.json({ ok: true, softDeleted: true })
 })
 
@@ -708,7 +726,7 @@ adminCatalogRoutes.post('/products/:id/packagings', async (c) => {
       ],
     )
     await client.query('COMMIT')
-    await featuredCache.invalidate()
+    await invalidateCatalogHomeCaches()
     return c.json({
       packaging: {
         id: rows[0].id,
@@ -788,7 +806,7 @@ adminCatalogRoutes.post('/products/:id/prices', async (c) => {
         return c.json({ error: 'Precio no encontrado' }, 404)
       }
       await client.query('COMMIT')
-      await featuredCache.invalidate()
+      await invalidateCatalogHomeCaches()
       return c.json({ price: mapPrice(rows[0]), mode: 'updated' })
     }
 
@@ -820,7 +838,7 @@ adminCatalogRoutes.post('/products/:id/prices', async (c) => {
       ],
     )
     await client.query('COMMIT')
-    await featuredCache.invalidate()
+    await invalidateCatalogHomeCaches()
     return c.json({ price: mapPrice(rows[0]), mode: 'created' }, 201)
   } catch (e) {
     await client.query('ROLLBACK')
@@ -846,3 +864,119 @@ function mapPrice(r: Record<string, unknown>) {
     notes: r.notes,
   }
 }
+
+/* ——— Reseñas / calificaciones ——— */
+adminCatalogRoutes.get('/products/:id/reviews', async (c) => {
+  const productId = c.req.param('id')
+  const { rows } = await pool.query(
+    `SELECT * FROM product_reviews
+     WHERE product_id = $1
+     ORDER BY created_at DESC
+     LIMIT 200`,
+    [productId],
+  )
+  return c.json({
+    reviews: rows.map((r) => ({
+      id: r.id,
+      productId: r.product_id,
+      userId: r.user_id,
+      rating: r.rating,
+      title: r.title,
+      body: r.body,
+      visible: r.visible,
+      createdAt: r.created_at,
+    })),
+  })
+})
+
+adminCatalogRoutes.post('/products/:id/reviews', async (c) => {
+  const productId = c.req.param('id')
+  const body = z
+    .object({
+      rating: z.number().int().min(1).max(5),
+      title: z.string().trim().max(120).optional(),
+      body: z.string().trim().max(2000).optional(),
+      visible: z.boolean().optional(),
+    })
+    .safeParse(await c.req.json().catch(() => null))
+  if (!body.success) return c.json({ error: 'Datos inválidos' }, 400)
+
+  const exists = await pool.query(`SELECT id FROM products WHERE id = $1`, [productId])
+  if (!exists.rows[0]) return c.json({ error: 'Producto no encontrado' }, 404)
+
+  const { rows } = await pool.query(
+    `INSERT INTO product_reviews (product_id, rating, title, body, visible)
+     VALUES ($1,$2,$3,$4,$5)
+     RETURNING *`,
+    [
+      productId,
+      body.data.rating,
+      body.data.title ?? '',
+      body.data.body ?? '',
+      body.data.visible ?? true,
+    ],
+  )
+  await recalculateProductRating(productId)
+  await invalidateCatalogHomeCaches()
+  return c.json(
+    {
+      review: {
+        id: rows[0].id,
+        rating: rows[0].rating,
+        title: rows[0].title,
+        body: rows[0].body,
+        visible: rows[0].visible,
+      },
+    },
+    201,
+  )
+})
+
+adminCatalogRoutes.patch('/reviews/:id', async (c) => {
+  const id = c.req.param('id')
+  const body = z
+    .object({
+      rating: z.number().int().min(1).max(5).optional(),
+      title: z.string().trim().max(120).optional(),
+      body: z.string().trim().max(2000).optional(),
+      visible: z.boolean().optional(),
+    })
+    .safeParse(await c.req.json().catch(() => null))
+  if (!body.success) return c.json({ error: 'Datos inválidos' }, 400)
+  const d = body.data
+  const { rows } = await pool.query(
+    `UPDATE product_reviews SET
+       rating = COALESCE($2, rating),
+       title = COALESCE($3, title),
+       body = COALESCE($4, body),
+       visible = COALESCE($5, visible),
+       updated_at = now()
+     WHERE id = $1
+     RETURNING *`,
+    [id, d.rating ?? null, d.title ?? null, d.body ?? null, d.visible ?? null],
+  )
+  if (!rows[0]) return c.json({ error: 'Reseña no encontrada' }, 404)
+  await recalculateProductRating(String(rows[0].product_id))
+  await invalidateCatalogHomeCaches()
+  return c.json({
+    review: {
+      id: rows[0].id,
+      rating: rows[0].rating,
+      visible: rows[0].visible,
+      productId: rows[0].product_id,
+    },
+  })
+})
+
+adminCatalogRoutes.delete('/reviews/:id', async (c) => {
+  const id = c.req.param('id')
+  const { rows } = await pool.query(
+    `UPDATE product_reviews SET visible = false, updated_at = now()
+     WHERE id = $1 RETURNING product_id`,
+    [id],
+  )
+  if (!rows[0]) return c.json({ error: 'Reseña no encontrada' }, 404)
+  await recalculateProductRating(String(rows[0].product_id))
+  await invalidateCatalogHomeCaches()
+  return c.json({ ok: true, softDeleted: true })
+})

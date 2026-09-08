@@ -12,6 +12,8 @@ export type StoreProductDto = {
   wholesalePrice?: number
   featured: boolean
   featuredSort: number
+  trending: boolean
+  trendingSort: number
   rating: number
   reviewCount: number
   origin: string
@@ -24,7 +26,8 @@ export type StoreProductDto = {
 
 const PRODUCT_SELECT = `
   SELECT p.id, p.code, p.sku, p.slug, p.name, p.description, p.origin,
-         p.moq, p.rating, p.review_count, p.featured, p.featured_sort, p.visible,
+         p.moq, p.rating, p.review_count, p.featured, p.featured_sort,
+         p.trending, p.trending_sort, p.visible,
          p.availability, p.image_url,
          b.name AS brand_name, b.sku AS brand_sku,
          c.slug AS category_slug, c.name AS category_name,
@@ -69,6 +72,8 @@ export function mapStoreProduct(r: Record<string, unknown>): StoreProductDto {
     wholesalePrice: r.wholesale_price != null ? Number(r.wholesale_price) : undefined,
     featured: Boolean(r.featured),
     featuredSort: Number(r.featured_sort ?? 0),
+    trending: Boolean(r.trending),
+    trendingSort: Number(r.trending_sort ?? 0),
     rating: Number(r.rating),
     reviewCount: Number(r.review_count),
     origin: String(r.origin ?? ''),
@@ -100,4 +105,66 @@ export async function queryFeaturedProducts(limit = 12): Promise<StoreProductDto
     [limit],
   )
   return rows.map((r) => mapStoreProduct(r as Record<string, unknown>))
+}
+
+/**
+ * Tendencia por categoría (slug) o todas.
+ * Prioridad: productos con trending=true; si ninguno, top por rating.
+ */
+export async function queryTrendingProducts(opts?: {
+  categorySlug?: string | null
+  limit?: number
+}): Promise<StoreProductDto[]> {
+  const limit = opts?.limit ?? 12
+  const slug = opts?.categorySlug?.trim() || null
+
+  const categoryFilter = slug
+    ? `AND c.slug = $2`
+    : ''
+
+  const params: unknown[] = [limit]
+  if (slug) params.push(slug)
+
+  const marked = await pool.query(
+    `${PRODUCT_SELECT}
+     WHERE p.visible = true AND p.trending = true
+     ${categoryFilter}
+     ORDER BY p.trending_sort ASC, p.rating DESC, p.review_count DESC, p.updated_at DESC
+     LIMIT $1`,
+    params,
+  )
+  if (marked.rows.length > 0) {
+    return marked.rows.map((r) => mapStoreProduct(r as Record<string, unknown>))
+  }
+
+  const fallback = await pool.query(
+    `${PRODUCT_SELECT}
+     WHERE p.visible = true
+     ${categoryFilter}
+     ORDER BY (p.rating * LN(p.review_count + 1)) DESC, p.updated_at DESC
+     LIMIT $1`,
+    params,
+  )
+  return fallback.rows.map((r) => mapStoreProduct(r as Record<string, unknown>))
+}
+
+export async function queryTrendingTabs(): Promise<
+  { slug: string; name: string; sortOrder: number }[]
+> {
+  const { rows } = await pool.query(
+    `SELECT c.slug, c.name, c.sort_order
+     FROM categories c
+     WHERE c.visible = true
+       AND c.parent_id IS NULL
+       AND EXISTS (
+         SELECT 1 FROM products p
+         WHERE p.category_id = c.id AND p.visible = true
+       )
+     ORDER BY c.sort_order, c.name`,
+  )
+  return rows.map((r) => ({
+    slug: String(r.slug),
+    name: String(r.name),
+    sortOrder: Number(r.sort_order ?? 0),
+  }))
 }

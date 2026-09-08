@@ -1,10 +1,12 @@
 import { Hono } from 'hono'
 import { pool } from '../db.js'
+import { featuredCache, invalidateCatalogHomeCaches, redisStatus, trendingCache } from '../lib/redis.js'
 import {
   queryFeaturedProducts,
   queryStoreProducts,
+  queryTrendingProducts,
+  queryTrendingTabs,
 } from '../lib/catalog-products.js'
-import { featuredCache, redisStatus } from '../lib/redis.js'
 
 /**
  * Catálogo público.
@@ -69,6 +71,55 @@ catalogRoutes.get('/featured', async (c) => {
   }
 })
 
+async function loadTrendingCached(categorySlug?: string | null) {
+  const cached = await trendingCache.get<{
+    updatedAt: string
+    category: string | null
+    products: unknown[]
+    tabs: unknown[]
+    source: string
+  }>(categorySlug)
+  if (cached?.products) {
+    return { ...cached, cache: 'hit' as const }
+  }
+  const [products, tabs] = await Promise.all([
+    queryTrendingProducts({ categorySlug, limit: 12 }),
+    queryTrendingTabs(),
+  ])
+  const payload = {
+    updatedAt: new Date().toISOString(),
+    category: categorySlug || null,
+    products,
+    tabs,
+    source: 'postgres',
+  }
+  await trendingCache.set(categorySlug, payload)
+  return { ...payload, cache: 'miss' as const }
+}
+
+catalogRoutes.get('/trending', async (c) => {
+  try {
+    const category = c.req.query('category') || null
+    const data = await loadTrendingCached(category)
+    return c.json({
+      ok: true,
+      ...data,
+      redis: redisStatus(),
+    })
+  } catch (err) {
+    console.error('catalog trending', err)
+    return c.json({
+      ok: true,
+      products: [],
+      tabs: [],
+      category: null,
+      updatedAt: new Date().toISOString(),
+      cache: 'error',
+      message: 'Tendencia no disponible',
+    })
+  }
+})
+
 catalogRoutes.get('/', async (c) => {
   try {
     const brands = await pool.query(
@@ -83,6 +134,7 @@ catalogRoutes.get('/', async (c) => {
 
     const mappedProducts = await queryStoreProducts(1000)
     const featuredBundle = await loadFeaturedCached()
+    const trendingBundle = await loadTrendingCached(null)
 
     const mappedCategories = categories.rows.map((r) => ({
       id: r.id,
@@ -118,6 +170,13 @@ catalogRoutes.get('/', async (c) => {
         updatedAt: featuredBundle.updatedAt,
         redis: redisStatus(),
       },
+      trending: trendingBundle.products,
+      trendingTabs: trendingBundle.tabs,
+      trendingMeta: {
+        cache: trendingBundle.cache,
+        updatedAt: trendingBundle.updatedAt,
+        redis: redisStatus(),
+      },
       message: liveProducts
         ? undefined
         : liveTaxonomy
@@ -135,6 +194,8 @@ catalogRoutes.get('/', async (c) => {
       updatedAt: new Date().toISOString(),
       products: [],
       featured: [],
+      trending: [],
+      trendingTabs: [],
       categories: [],
       brands: [],
       message: 'Catálogo DB no disponible; cliente usa mocks.',
