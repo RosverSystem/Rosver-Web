@@ -131,7 +131,7 @@ export function AdminTopBar({ onOpenMobileNav }: Props) {
   return (
     <header
       ref={wrapRef}
-      className="sticky top-0 z-30 shrink-0 border-b border-rosver-line bg-white/95 backdrop-blur-sm"
+      className="z-30 shrink-0 border-b border-rosver-line bg-white"
     >
       <div className="flex h-14 items-center gap-3 px-3 sm:gap-4 sm:px-5 lg:px-6">
         <button

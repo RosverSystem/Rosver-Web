@@ -16,6 +16,15 @@ Skill: `erp-systemrsv-saas-ux`.
 | Ítem | Ruta |
 | --- | --- |
 | Inicio | `/admin` |
-| Productos → Listado | `/admin/productos` |
-| Productos → Categorías | `/admin/categorias` |
-| Productos → Ofertas | `/admin/ofertas` |
+| Catálogo → Productos | `/admin/productos` |
+| Catálogo → Listado de precios | `/admin/listado-precios` |
+| Catálogo → Categorías | `/admin/categorias` |
+| Catálogo → Marcas | `/admin/marcas` |
+| Catálogo → Unidades | `/admin/unidades` |
+| Catálogo → Ofertas | `/admin/ofertas` |
+
+## Layout estático
+
+- Shell `h-dvh overflow-hidden`; solo el `main` hace scroll.
+- Sidebar y top bar no se mueven con el contenido.
+- Lenis (scroll suave) **desactivado** en `/admin`.

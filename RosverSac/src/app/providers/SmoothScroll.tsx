@@ -13,8 +13,10 @@ export function SmoothScroll() {
   const { pathname } = useLocation()
   const shellKey = routeShellKey(pathname)
 
+  const isAdmin = pathname === '/admin' || pathname.startsWith('/admin/')
+
   useEffect(() => {
-    if (prefersReducedMotion()) return
+    if (prefersReducedMotion() || isAdmin) return
 
     const lenis = new Lenis({ duration: 1.1, smoothWheel: true })
     lenisRef.current = lenis
@@ -30,15 +32,16 @@ export function SmoothScroll() {
       lenis.destroy()
       lenisRef.current = null
     }
-  }, [])
+  }, [isAdmin])
 
   useEffect(() => {
+    if (isAdmin) return
     if (lenisRef.current) {
       lenisRef.current.scrollTo(0, { immediate: true })
     } else {
       window.scrollTo(0, 0)
     }
-  }, [shellKey])
+  }, [shellKey, isAdmin])
 
   return null
 }

@@ -17,6 +17,7 @@ import {
   AdminBrandsPage,
   AdminCategoriesPage,
   AdminOffersPage,
+  AdminPriceListPage,
   AdminProductsPage,
   AdminUnitTypesPage,
 } from '@/features/admin-catalog'
@@ -106,6 +107,7 @@ export function App() {
               >
                 <Route index element={<AdminDashboardPage />} />
                 <Route path="productos" element={<AdminProductsPage />} />
+                <Route path="listado-precios" element={<AdminPriceListPage />} />
                 <Route path="categorias" element={<AdminCategoriesPage />} />
                 <Route path="marcas" element={<AdminBrandsPage />} />
                 <Route path="unidades" element={<AdminUnitTypesPage />} />

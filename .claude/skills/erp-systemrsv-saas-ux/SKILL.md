@@ -32,7 +32,12 @@ Referencia: sidebar clara colapsable (iconos / iconos+labels) + top bar limpia. 
 ## Módulos nav
 
 1. **Inicio** → `/admin`
-2. **Productos** → Listado `/admin/productos` · Categorías `/admin/categorias` · Ofertas `/admin/ofertas`
+2. **Catálogo** → Productos · Listado de precios · Categorías · Marcas · Unidades · Ofertas
+
+## Layout
+
+- Shell altura viewport (`h-dvh`); sidebar + topbar fijos; scroll solo en el contenido.
+- Sin Lenis en `/admin`.
 
 ## Anti-patrones
 

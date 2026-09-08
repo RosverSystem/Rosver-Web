@@ -22,7 +22,7 @@ export type AdminNavEntry =
   | ({ type: 'link' } & AdminNavLeaf)
   | ({ type: 'group' } & AdminNavGroup)
 
-/** Nav SystemRSV — catálogo: listado, categorías, marcas, ofertas. */
+/** Nav SystemRSV — productos, listado de precios, taxonomía. */
 export const ADMIN_NAV: AdminNavEntry[] = [
   {
     type: 'link',
@@ -35,15 +35,22 @@ export const ADMIN_NAV: AdminNavEntry[] = [
   {
     type: 'group',
     id: 'productos',
-    name: 'Productos',
+    name: 'Catálogo',
     Icon: Hardrive,
     children: [
       {
-        id: 'listado',
-        name: 'Listado',
+        id: 'productos',
+        name: 'Productos',
         link: '/admin/productos',
-        keywords: ['catalogo', 'sku', 'stock', 'productos', 'precios', 'unidades'],
+        keywords: ['catalogo', 'sku', 'stock', 'productos', 'ficha'],
         Icon: Hardrive,
+      },
+      {
+        id: 'listado-precios',
+        name: 'Listado de precios',
+        link: '/admin/listado-precios',
+        keywords: ['precios', 'listado', 'tarifas', 'mayorista', 'oferta'],
+        Icon: Award,
       },
       {
         id: 'categorias',
@@ -94,6 +101,7 @@ export function isAdminNavActive(pathname: string, link: string) {
 export function isProductosGroupOpen(pathname: string) {
   return (
     pathname.startsWith('/admin/productos') ||
+    pathname.startsWith('/admin/listado-precios') ||
     pathname.startsWith('/admin/categorias') ||
     pathname.startsWith('/admin/marcas') ||
     pathname.startsWith('/admin/unidades') ||
@@ -115,6 +123,7 @@ export function adminPageTitle(pathname: string): string {
   if (pathname.startsWith('/admin/unidades')) return 'Unidades'
   if (pathname.startsWith('/admin/marcas')) return 'Marcas'
   if (pathname.startsWith('/admin/categorias')) return 'Categorías'
-  if (pathname.startsWith('/admin/productos')) return 'Listado'
+  if (pathname.startsWith('/admin/listado-precios')) return 'Listado de precios'
+  if (pathname.startsWith('/admin/productos')) return 'Productos'
   return 'Inicio'
 }

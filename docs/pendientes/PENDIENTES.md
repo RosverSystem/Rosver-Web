@@ -37,6 +37,6 @@
 
 ## Hechos recientes
 
+- ERP shell fijo + Productos / Listado de precios (v0.1.17)
+- Subir imagen botón primario (v0.1.16)
 - Catálogo R2 + filtros subcats + empaques carrito + ofertas/unidades (v0.1.15)
-- Seed marcas home + slider DB (v0.1.14)
-- Tendencia + reseñas + estrellas en cards (v0.1.13)

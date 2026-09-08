@@ -342,13 +342,7 @@ export function AdminSidebar({
 
   return (
     <>
-      <div
-        className={cn(
-          'relative hidden lg:sticky lg:top-0 lg:flex lg:h-dvh lg:shrink-0',
-        )}
-      >
-        {rail}
-      </div>
+      <div className="relative hidden h-full shrink-0 lg:flex">{rail}</div>
 
       {mobileOpen ? (
         <div className="fixed inset-0 z-50 lg:hidden">
