@@ -26,24 +26,39 @@ import {
   RequireAuth,
 } from '@/features/auth'
 import { CartPage, CartProvider } from '@/features/cart'
-import { CatalogPage, HomePage, OffersPage, ProductPage } from '@/features/catalog'
+import {
+  CatalogPage,
+  CatalogProvider,
+  HomePage,
+  OffersPage,
+  ProductPage,
+} from '@/features/catalog'
 import { ContactPage } from '@/features/contact'
 import { ClientQuotesPage, QuoteRequestPage } from '@/features/quotes'
 import { PageTransition } from '@/shared/ui/page-transition'
 import { WhatsAppFloatingButton } from '@/shared/ui/whatsapp-floating-button'
-import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Outlet, Route, Routes } from 'react-router-dom'
 
-function PublicLayout({ children }: { children: React.ReactNode }) {
+function PublicLayout() {
   return (
     <div className="min-h-dvh max-w-[100vw] bg-white">
-      {/* overflow fuera del header: si el wrapper clippea, el menú de sesión se corta */}
       <PublicNavbar />
       <div className="max-w-[100vw] overflow-x-hidden">
-        <PageTransition>{children}</PageTransition>
+        <PageTransition>
+          <Outlet />
+        </PageTransition>
         <Footer />
       </div>
       <WhatsAppFloatingButton />
     </div>
+  )
+}
+
+function AccountGate() {
+  return (
+    <RequireAuth>
+      <AccountLayout />
+    </RequireAuth>
   )
 }
 
@@ -52,52 +67,48 @@ export function App() {
     <BrowserRouter>
       <AuthProvider>
         <CartProvider>
-          <DocumentTitle />
-          <SmoothScroll />
-          <IntroTransition />
-          <Routes>
-            <Route path="/" element={<PublicLayout><HomePage /></PublicLayout>} />
-            <Route path="/catalogo" element={<PublicLayout><CatalogPage /></PublicLayout>} />
-            <Route path="/catalogo/:categorySlug" element={<PublicLayout><CatalogPage /></PublicLayout>} />
-            <Route path="/ofertas" element={<PublicLayout><OffersPage /></PublicLayout>} />
-            <Route path="/producto/:slug" element={<PublicLayout><ProductPage /></PublicLayout>} />
-            <Route path="/carrito" element={<PublicLayout><CartPage /></PublicLayout>} />
-            <Route path="/contacto" element={<PublicLayout><ContactPage /></PublicLayout>} />
-            <Route path="/cotizar" element={<PublicLayout><QuoteRequestPage /></PublicLayout>} />
-            <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
-            <Route path="/registro" element={<AuthLayout><RegisterPage /></AuthLayout>} />
+          <CatalogProvider>
+            <DocumentTitle />
+            <SmoothScroll />
+            <IntroTransition />
+            <Routes>
+              <Route element={<PublicLayout />}>
+                <Route index element={<HomePage />} />
+                <Route path="catalogo" element={<CatalogPage />} />
+                <Route path="catalogo/:categorySlug" element={<CatalogPage />} />
+                <Route path="ofertas" element={<OffersPage />} />
+                <Route path="producto/:slug" element={<ProductPage />} />
+                <Route path="carrito" element={<CartPage />} />
+                <Route path="contacto" element={<ContactPage />} />
+                <Route path="cotizar" element={<QuoteRequestPage />} />
 
-            <Route
-              path="/cuenta"
-              element={
-                <RequireAuth>
-                  <PublicLayout>
-                    <AccountLayout />
-                  </PublicLayout>
-                </RequireAuth>
-              }
-            >
-              <Route index element={<AccountOverviewPage />} />
-              <Route path="pedidos" element={<AccountOrdersPage />} />
-              <Route path="pedidos/:id" element={<AccountOrderDetailPage />} />
-              <Route path="cotizaciones" element={<ClientQuotesPage />} />
-              <Route path="perfil" element={<AccountProfilePage />} />
-            </Route>
+                <Route path="cuenta" element={<AccountGate />}>
+                  <Route index element={<AccountOverviewPage />} />
+                  <Route path="pedidos" element={<AccountOrdersPage />} />
+                  <Route path="pedidos/:id" element={<AccountOrderDetailPage />} />
+                  <Route path="cotizaciones" element={<ClientQuotesPage />} />
+                  <Route path="perfil" element={<AccountProfilePage />} />
+                </Route>
+              </Route>
 
-            <Route
-              path="/admin"
-              element={
-                <RequireAdmin>
-                  <AdminShell />
-                </RequireAdmin>
-              }
-            >
-              <Route index element={<AdminDashboardPage />} />
-              <Route path="productos" element={<AdminProductsPage />} />
-              <Route path="categorias" element={<AdminCategoriesPage />} />
-              <Route path="ofertas" element={<AdminOffersPage />} />
-            </Route>
-          </Routes>
+              <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
+              <Route path="/registro" element={<AuthLayout><RegisterPage /></AuthLayout>} />
+
+              <Route
+                path="/admin"
+                element={
+                  <RequireAdmin>
+                    <AdminShell />
+                  </RequireAdmin>
+                }
+              >
+                <Route index element={<AdminDashboardPage />} />
+                <Route path="productos" element={<AdminProductsPage />} />
+                <Route path="categorias" element={<AdminCategoriesPage />} />
+                <Route path="ofertas" element={<AdminOffersPage />} />
+              </Route>
+            </Routes>
+          </CatalogProvider>
         </CartProvider>
       </AuthProvider>
     </BrowserRouter>

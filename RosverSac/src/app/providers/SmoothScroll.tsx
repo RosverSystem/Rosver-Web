@@ -1,21 +1,17 @@
 import { gsap, ScrollTrigger, prefersReducedMotion } from '@/shared/lib/gsap'
+import { routeShellKey } from '@/shared/ui/page-transition'
 import Lenis from 'lenis'
 import { useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 
 /**
- * Scroll suave (inercia) sincronizado con el ticker de GSAP para que
- * ScrollTrigger (reveals, contadores) siga leyendo
- * la posición real de scroll. Se desactiva por completo si el usuario
- * pide prefers-reduced-motion.
- *
- * También resetea el scroll al tope en cada cambio de ruta: al navegar por
- * SPA no hay recarga de documento, así que sin esto la página nueva se
- * queda en el scroll donde estabas (ej. link del footer).
+ * Scroll suave sincronizado con GSAP.
+ * Solo resetea al tope al cambiar de sección (no en tabs de /cuenta).
  */
 export function SmoothScroll() {
   const lenisRef = useRef<Lenis | null>(null)
   const { pathname } = useLocation()
+  const shellKey = routeShellKey(pathname)
 
   useEffect(() => {
     if (prefersReducedMotion()) return
@@ -42,7 +38,7 @@ export function SmoothScroll() {
     } else {
       window.scrollTo(0, 0)
     }
-  }, [pathname])
+  }, [shellKey])
 
   return null
 }

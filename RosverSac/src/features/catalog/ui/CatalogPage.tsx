@@ -6,7 +6,8 @@ import {
   type CatalogFilterState,
 } from '@/features/catalog/ui/FiltersPanel'
 import { ProductGrid } from '@/features/catalog/ui/ProductGrid'
-import { CATEGORIES, PRODUCTS, type Product } from '@/features/catalog/model/mocks'
+import { useCatalog } from '@/features/catalog/model/catalog-store'
+import type { Product } from '@/features/catalog/model/mocks'
 import { cn } from '@/shared/lib'
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
@@ -47,21 +48,25 @@ function sortProducts(products: Product[], sort: SortKey): Product[] {
 
 export function CatalogPage() {
   const { categorySlug } = useParams()
-  const category = CATEGORIES.find((c) => c.slug === categorySlug)
+  const { products, categories } = useCatalog()
+  const category = categories.find((c) => c.slug === categorySlug)
 
   const [filters, setFilters] = useState<CatalogFilterState>(EMPTY_FILTERS)
   const [sort, setSort] = useState<SortKey>('featured')
   const [page, setPage] = useState(1)
 
-  const visibleProducts = PRODUCTS.filter((p) => p.visible !== false)
+  const visibleProducts = useMemo(
+    () => products.filter((p) => p.visible !== false),
+    [products],
+  )
 
   const productCountBySlug = useMemo(
     () =>
-      CATEGORIES.reduce<Record<string, number>>((acc, c) => {
+      categories.reduce<Record<string, number>>((acc, c) => {
         acc[c.slug] = visibleProducts.filter((p) => p.category === c.slug).length
         return acc
       }, {}),
-    [visibleProducts],
+    [categories, visibleProducts],
   )
 
   const vendors = useMemo(
@@ -157,7 +162,7 @@ export function CatalogPage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[260px_1fr] lg:items-start">
         <FiltersPanel
-          categories={CATEGORIES}
+          categories={categories}
           activeSlug={categorySlug}
           productCountBySlug={productCountBySlug}
           vendors={vendors}

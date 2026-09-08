@@ -1,14 +1,12 @@
-import {
-  CATEGORIES,
-  PRODUCTS,
-  getWholesalePrice,
-} from '@/features/catalog/model/mocks'
+import { useCatalog } from '@/features/catalog/model/catalog-store'
+import { getWholesalePrice } from '@/features/catalog/model/mocks'
 import { ProductCard } from '@/features/catalog/ui/ProductCard'
 import { ProductImage } from '@/features/catalog/ui/ProductImage'
 import { useCart } from '@/features/cart'
 import { WHATSAPP_NUMBER } from '@/shared/lib'
 import { IconBag, IconWhatsApp } from '@/shared/ui/icons'
 import { ArrowRight } from 'cssvg-icons'
+import { useMemo } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 /**
@@ -17,8 +15,21 @@ import { Link, useParams } from 'react-router-dom'
 export function ProductPage() {
   const { slug } = useParams()
   const { addItem } = useCart()
-  const product = PRODUCTS.find((p) => p.slug === slug) ?? PRODUCTS[0]
-  const category = CATEGORIES.find((c) => c.slug === product.category)
+  const { products, categories } = useCatalog()
+  const product = useMemo(
+    () => products.find((p) => p.slug === slug) ?? products[0],
+    [products, slug],
+  )
+
+  if (!product) {
+    return (
+      <main className="mx-auto max-w-3xl px-4 py-16 text-center text-rosver-muted">
+        Producto no encontrado.
+      </main>
+    )
+  }
+
+  const category = categories.find((c) => c.slug === product.category)
   const wholesale = getWholesalePrice(product)
 
   const discountPercent =
@@ -26,7 +37,7 @@ export function ProductPage() {
       ? Math.round(100 - (product.price / product.originalPrice) * 100)
       : null
 
-  const related = PRODUCTS.filter(
+  const related = products.filter(
     (p) =>
       p.slug !== product.slug &&
       p.visible !== false &&
@@ -36,7 +47,7 @@ export function ProductPage() {
   const relatedFallback =
     related.length >= 2
       ? related
-      : PRODUCTS.filter((p) => p.slug !== product.slug && p.visible !== false).slice(
+      : products.filter((p) => p.slug !== product.slug && p.visible !== false).slice(
           0,
           4,
         )

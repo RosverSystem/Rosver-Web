@@ -8,7 +8,8 @@
 | P02 | Facebook login | UI login/registro | pendiente | Botón placeholder; no pedido aún como OAuth |
 | P03 | Pedidos / cotizaciones reales en `/cuenta` | Auth + cuenta | pendiente | Siguen mocks; falta API de pedidos/quotes |
 | P04 | UI admin roles/permisos | Auth RBAC | pendiente | API lista; falta pantalla en estilo ERP |
-| P10 | CRUD Productos ERP + API | Pedido ERP | pendiente | Listado/categorías/ofertas vacíos (shell colapsable v0.1.7) |
+| P10 | CRUD Productos ERP + API | Pedido ERP | pendiente | Listado/categorías/ofertas vacíos; al `live:true` en `/api/catalog` la tienda refresca sin F5 |
+| P15 | Catálogo vivo en tienda (sin F5) | Pedido UX SPA | parcial | Provider + `/api/catalog` listos; falta datos reales vía P10 |
 | P13 | ERP perfil solo sidebar + top limpio | Pedido UX refs | hecho | Sidebar colapsable; sin duplicar perfil en top (v0.1.7) |
 | P11 | Migrar resto módulos admin al estilo SystemRSV | ERP UX | cancelado | Nav reducida a Inicio+Productos; otros fuera hasta pedido |
 | P05 | Recuperación de contraseña | Auth | pendiente | No implementado |
@@ -30,4 +31,5 @@
 - ERP SaaS soft: Inicio + Productos (listado/categorías/ofertas) (v0.1.5)
 - Banner área cliente (v0.1.6)
 - ERP sidebar colapsable + perfil único (v0.1.7)
+- SPA cuenta sin flash + refresh catálogo (v0.1.8)
 

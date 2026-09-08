@@ -1,5 +1,6 @@
 import { CatalogPagination } from '@/features/catalog/ui/CatalogPagination'
 import { OfferCard } from '@/features/catalog/ui/OfferCard'
+import { useCatalog } from '@/features/catalog/model/catalog-store'
 import {
   discountPercent,
   getOfferProducts,
@@ -16,7 +17,8 @@ const PAGE_SIZE = 8
  * Vista Ofertas: cards horizontales (campaña, ahorro, carrito + WhatsApp).
  */
 export function OffersPage() {
-  const offers = useMemo(() => getOfferProducts(), [])
+  const { products, refresh, refreshing, live } = useCatalog()
+  const offers = useMemo(() => getOfferProducts(products), [products])
   const [page, setPage] = useState(1)
   const reduce = prefersReducedMotion()
 
@@ -64,12 +66,22 @@ export function OffersPage() {
             de <span className="font-bold text-rosver-ink">{offers.length}</span>{' '}
             ofertas
           </p>
-          <Link
-            to="/catalogo"
-            className="text-sm font-bold text-rosver-red transition hover:text-rosver-red-dark"
-          >
-            Ver catálogo completo →
-          </Link>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void refresh()}
+              disabled={refreshing}
+              className="text-sm font-semibold text-rosver-muted transition hover:text-rosver-ink disabled:opacity-60"
+            >
+              {refreshing ? 'Actualizando…' : live ? 'Actualizar' : 'Buscar novedades'}
+            </button>
+            <Link
+              to="/catalogo"
+              className="text-sm font-bold text-rosver-red transition hover:text-rosver-red-dark"
+            >
+              Ver catálogo completo →
+            </Link>
+          </div>
         </div>
 
         {offers.length ? (

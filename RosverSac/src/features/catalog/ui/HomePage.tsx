@@ -8,11 +8,13 @@ import { ProductCarousel } from '@/features/catalog/ui/ProductCarousel'
 import { PromoBanners } from '@/features/catalog/ui/PromoBanners'
 import { TrendingProducts } from '@/features/catalog/ui/TrendingProducts'
 import { ValueRibbon } from '@/features/catalog/ui/ValueRibbon'
-import { CATEGORIES, PRODUCTS } from '@/features/catalog/model/mocks'
+import { useCatalog } from '@/features/catalog/model/catalog-store'
 import { ScrollReveal } from '@/shared/ui/scroll-reveal'
+import { useMemo } from 'react'
 
 export function HomePage() {
-  const featured = PRODUCTS.slice(0, 8)
+  const { products, categories } = useCatalog()
+  const featured = useMemo(() => products.slice(0, 8), [products])
 
   return (
     <>
@@ -22,7 +24,7 @@ export function HomePage() {
       <main className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-12 overflow-x-hidden px-4 py-10 sm:gap-14 sm:py-12 sm:pb-28">
         <ValueRibbon />
 
-        <CategoryCarousel categories={CATEGORIES} />
+        <CategoryCarousel categories={categories} />
 
         <ProductCarousel
           products={featured}

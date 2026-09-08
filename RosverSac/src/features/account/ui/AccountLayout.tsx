@@ -1,6 +1,6 @@
 import { shortDisplayName, useAuth } from '@/features/auth'
 import { cn } from '@/shared/lib'
-import { Link, Outlet, useLocation } from 'react-router-dom'
+import { NavLink, Outlet } from 'react-router-dom'
 
 const TABS = [
   { name: 'Resumen', link: '/cuenta' },
@@ -10,7 +10,6 @@ const TABS = [
 ]
 
 export function AccountLayout() {
-  const { pathname } = useLocation()
   const { user, isAdmin } = useAuth()
   const greet = user ? shortDisplayName(user) : null
 
@@ -75,44 +74,41 @@ export function AccountLayout() {
 
           <div className="flex flex-wrap items-center gap-2 sm:justify-end">
             {isAdmin ? (
-              <Link
+              <NavLink
                 to="/admin"
                 className="rounded-full bg-rosver-blue px-4 py-2.5 text-xs font-bold text-white uppercase hover:brightness-110"
               >
                 SystemRSV
-              </Link>
+              </NavLink>
             ) : null}
-            <Link
+            <NavLink
               to="/cuenta/perfil"
               className="rounded-full bg-rosver-red px-4 py-2.5 text-xs font-bold text-white uppercase hover:bg-rosver-red-dark"
             >
               Editar perfil
-            </Link>
+            </NavLink>
           </div>
         </div>
       </section>
 
       <nav className="flex gap-1 overflow-x-auto rounded-2xl border border-rosver-line bg-rosver-soft p-1.5">
-        {TABS.map((tab) => {
-          const active =
-            tab.link === '/cuenta'
-              ? pathname === '/cuenta'
-              : pathname.startsWith(tab.link)
-          return (
-            <Link
-              key={tab.link}
-              to={tab.link}
-              className={cn(
+        {TABS.map((tab) => (
+          <NavLink
+            key={tab.link}
+            to={tab.link}
+            end={tab.link === '/cuenta'}
+            className={({ isActive }) =>
+              cn(
                 'shrink-0 rounded-xl px-3.5 py-2.5 text-sm font-bold uppercase transition',
-                active
+                isActive
                   ? 'bg-white text-rosver-red shadow-sm'
                   : 'text-rosver-muted hover:text-rosver-ink',
-              )}
-            >
-              {tab.name}
-            </Link>
-          )
-        })}
+              )
+            }
+          >
+            {tab.name}
+          </NavLink>
+        ))}
       </nav>
 
       <Outlet />
