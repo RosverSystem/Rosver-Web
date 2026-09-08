@@ -10,6 +10,8 @@ export type CatalogFilterState = {
   quoteOnly: boolean
   minRating: number | null
   vendors: string[]
+  priceMin: number | null
+  priceMax: number | null
 }
 
 export const EMPTY_FILTERS: CatalogFilterState = {
@@ -18,6 +20,8 @@ export const EMPTY_FILTERS: CatalogFilterState = {
   quoteOnly: false,
   minRating: null,
   vendors: [],
+  priceMin: null,
+  priceMax: null,
 }
 
 type Props = {
@@ -40,7 +44,7 @@ export function FiltersPanel({
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const items = categories
-    .filter((c) => c.visible !== false)
+    .filter((c) => c.visible !== false && !c.parentId)
     .slice()
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
 
@@ -121,6 +125,44 @@ export function FiltersPanel({
             checked={filters.onSale}
             onChange={(onSale) => onChange({ ...filters, onSale })}
           />
+        </FilterBlock>
+
+        <FilterBlock title="Rango de precio (S/)">
+          <div className="flex items-center gap-2 px-1">
+            <input
+              type="number"
+              min={0}
+              step={1}
+              inputMode="decimal"
+              placeholder="Mín"
+              value={filters.priceMin ?? ''}
+              onChange={(e) => {
+                const v = e.target.value
+                onChange({
+                  ...filters,
+                  priceMin: v === '' ? null : Number(v),
+                })
+              }}
+              className="h-9 w-full rounded-lg border border-rosver-line bg-white px-2 text-sm outline-none focus:border-rosver-red/40"
+            />
+            <span className="text-rosver-muted">–</span>
+            <input
+              type="number"
+              min={0}
+              step={1}
+              inputMode="decimal"
+              placeholder="Máx"
+              value={filters.priceMax ?? ''}
+              onChange={(e) => {
+                const v = e.target.value
+                onChange({
+                  ...filters,
+                  priceMax: v === '' ? null : Number(v),
+                })
+              }}
+              className="h-9 w-full rounded-lg border border-rosver-line bg-white px-2 text-sm outline-none focus:border-rosver-red/40"
+            />
+          </div>
         </FilterBlock>
 
         <FilterBlock title="Disponibilidad">

@@ -1,19 +1,130 @@
 import { Hono } from 'hono'
+import { pool } from '../db.js'
 
 /**
- * Catálogo público para la tienda.
- * Mientras no exista CRUD (P10), `live: false` y el cliente usa mocks del bundle.
- * Cuando el ERP publique productos, devolver `live: true` + arrays.
+ * Catálogo público.
+ * Si hay productos visibles en DB → live: true (tienda sin F5 vía CatalogProvider).
+ * Si no → live: false (cliente usa mocks del bundle).
  */
 export const catalogRoutes = new Hono()
 
-catalogRoutes.get('/', (c) =>
-  c.json({
-    ok: true,
-    live: false,
-    updatedAt: new Date().toISOString(),
-    products: [],
-    categories: [],
-    message: 'Catálogo vivo pendiente de CRUD ERP (P10). Cliente usa mocks.',
-  }),
-)
+catalogRoutes.get('/', async (c) => {
+  try {
+    const brands = await pool.query(
+      `SELECT id, code, sku, name, slug, logo_url, visible, sort_order
+       FROM brands WHERE visible = true ORDER BY sort_order, name`,
+    )
+    const categories = await pool.query(
+      `SELECT id, parent_id, code, sku, name, slug, icon_key, image_url,
+              visible, sort_order, show_in_nav
+       FROM categories WHERE visible = true ORDER BY sort_order, name`,
+    )
+    const products = await pool.query(
+      `SELECT p.id, p.code, p.sku, p.slug, p.name, p.description, p.origin,
+              p.moq, p.rating, p.review_count, p.featured, p.visible,
+              p.availability, p.image_url,
+              b.name AS brand_name, b.sku AS brand_sku,
+              c.slug AS category_slug, c.name AS category_name,
+              (
+                SELECT pr.amount FROM product_prices pr
+                JOIN product_packagings pk ON pk.id = pr.packaging_id
+                WHERE pr.product_id = p.id AND pr.is_active AND pr.price_kind = 'list'
+                ORDER BY pk.is_default DESC, pr.min_qty ASC
+                LIMIT 1
+              ) AS list_price,
+              (
+                SELECT pr.compare_at_amount FROM product_prices pr
+                JOIN product_packagings pk ON pk.id = pr.packaging_id
+                WHERE pr.product_id = p.id AND pr.is_active AND pr.price_kind = 'list'
+                ORDER BY pk.is_default DESC, pr.min_qty ASC
+                LIMIT 1
+              ) AS compare_at,
+              (
+                SELECT pr.amount FROM product_prices pr
+                WHERE pr.product_id = p.id AND pr.is_active AND pr.price_kind = 'wholesale'
+                ORDER BY pr.min_qty ASC
+                LIMIT 1
+              ) AS wholesale_price
+       FROM products p
+       LEFT JOIN brands b ON b.id = p.brand_id
+       LEFT JOIN categories c ON c.id = p.category_id
+       WHERE p.visible = true
+       ORDER BY p.featured DESC, p.name
+       LIMIT 1000`,
+    )
+
+    if (products.rows.length === 0) {
+      return c.json({
+        ok: true,
+        live: false,
+        updatedAt: new Date().toISOString(),
+        products: [],
+        categories: [],
+        brands: brands.rows.map(mapBrand),
+        message: 'Sin productos en DB; cliente usa mocks.',
+      })
+    }
+
+    return c.json({
+      ok: true,
+      live: true,
+      updatedAt: new Date().toISOString(),
+      brands: brands.rows.map(mapBrand),
+      categories: categories.rows.map((r) => ({
+        id: r.id,
+        parentId: r.parent_id,
+        slug: r.slug,
+        name: r.name,
+        imageUrl: r.image_url,
+        visible: r.visible,
+        sortOrder: r.sort_order,
+        showInNav: r.show_in_nav,
+      })),
+      products: products.rows.map((r) => ({
+        id: r.id,
+        slug: r.slug,
+        name: r.name,
+        sku: r.sku,
+        vendor: r.brand_name || r.brand_sku || 'Rosver',
+        category: r.category_slug || 'general',
+        price:
+          r.availability === 'quote_only' || r.list_price == null
+            ? null
+            : Number(r.list_price),
+        originalPrice: r.compare_at != null ? Number(r.compare_at) : undefined,
+        wholesalePrice: r.wholesale_price != null ? Number(r.wholesale_price) : undefined,
+        featured: r.featured,
+        rating: Number(r.rating),
+        reviewCount: r.review_count,
+        origin: r.origin,
+        moq: Number(r.moq),
+        description: r.description,
+        imageUrl: r.image_url || undefined,
+        visible: r.visible,
+        availability: r.availability,
+      })),
+    })
+  } catch (err) {
+    console.error('catalog GET', err)
+    return c.json({
+      ok: true,
+      live: false,
+      updatedAt: new Date().toISOString(),
+      products: [],
+      categories: [],
+      brands: [],
+      message: 'Catálogo DB no disponible; cliente usa mocks.',
+    })
+  }
+})
+
+function mapBrand(r: Record<string, unknown>) {
+  return {
+    id: r.id,
+    code: r.code,
+    sku: r.sku,
+    name: r.name,
+    slug: r.slug,
+    logoUrl: r.logo_url,
+  }
+}

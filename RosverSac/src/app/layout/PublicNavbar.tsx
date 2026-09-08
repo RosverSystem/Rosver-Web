@@ -1,11 +1,11 @@
 import { SessionAccountMenu } from '@/features/auth'
 import { useCart } from '@/features/cart'
-import { CATEGORIES } from '@/features/catalog/model/mocks'
+import { useCatalog } from '@/features/catalog'
 import { cn } from '@/shared/lib'
 import { IconBag, IconChevronDown, IconSearch } from '@/shared/ui/icons'
 import { Check, Compass, Message, Phone } from 'cssvg-icons'
 import { Heart, Menu, X } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 
 const NAV_LINKS = [
@@ -19,9 +19,24 @@ const NAV_LINKS = [
 export function PublicNavbar() {
   const { pathname } = useLocation()
   const { itemCount } = useCart()
+  const { categories } = useCatalog()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [categoriesOpen, setCategoriesOpen] = useState(false)
   const [query, setQuery] = useState('')
+
+  const navCategories = useMemo(() => {
+    const visible = categories.filter((c) => c.visible !== false && c.showInNav !== false)
+    const roots = visible.filter((c) => !c.parentId)
+    return roots
+      .slice()
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+      .map((root) => ({
+        root,
+        children: visible
+          .filter((c) => c.parentId === root.id)
+          .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
+      }))
+  }, [categories])
 
   const isHome = pathname === '/'
 
@@ -183,17 +198,32 @@ export function PublicNavbar() {
           })}
 
           {categoriesOpen ? (
-            <div className="absolute top-full left-6 z-30 w-64 border border-rosver-line bg-white py-2 text-rosver-ink shadow-[0_12px_24px_rgba(17,17,17,0.12)]">
-              {CATEGORIES.map((category) => (
-                <Link
-                  key={category.slug}
-                  to={`/catalogo/${category.slug}`}
-                  onClick={() => setCategoriesOpen(false)}
-                  className="flex items-center gap-2.5 px-4 py-2 text-sm transition hover:bg-rosver-soft hover:text-rosver-red"
-                >
-                  <category.icon className="size-4" />
-                  {category.name}
-                </Link>
+            <div className="absolute top-full left-6 z-30 max-h-[70vh] w-72 overflow-y-auto border border-rosver-line bg-white py-2 text-rosver-ink shadow-[0_12px_24px_rgba(17,17,17,0.12)]">
+              {navCategories.map(({ root, children }) => (
+                <div key={root.id} className="border-b border-rosver-line last:border-0">
+                  <Link
+                    to={`/catalogo/${root.slug}`}
+                    onClick={() => setCategoriesOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-semibold transition hover:bg-rosver-soft hover:text-rosver-red"
+                  >
+                    <root.icon className="size-4" />
+                    {root.name}
+                  </Link>
+                  {children.length ? (
+                    <div className="pb-1 pl-8">
+                      {children.map((ch) => (
+                        <Link
+                          key={ch.id}
+                          to={`/catalogo/${ch.slug}`}
+                          onClick={() => setCategoriesOpen(false)}
+                          className="block px-2 py-1.5 text-xs text-rosver-muted transition hover:text-rosver-red"
+                        >
+                          {ch.name}
+                        </Link>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
               ))}
             </div>
           ) : null}
@@ -231,17 +261,32 @@ export function PublicNavbar() {
           </ul>
           <div className="mt-3 border-t border-rosver-line pt-3">
             <p className="mb-2 text-xs font-bold text-rosver-muted uppercase">Categorías</p>
-            <div className="grid grid-cols-2 gap-2">
-              {CATEGORIES.map((category) => (
-                <Link
-                  key={category.slug}
-                  to={`/catalogo/${category.slug}`}
-                  onClick={() => setMobileOpen(false)}
-                  className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-semibold text-rosver-ink hover:bg-rosver-soft"
-                >
-                  <category.icon className="size-4 text-rosver-red" />
-                  {category.name}
-                </Link>
+            <div className="grid grid-cols-1 gap-2">
+              {navCategories.map(({ root, children }) => (
+                <div key={root.id}>
+                  <Link
+                    to={`/catalogo/${root.slug}`}
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-semibold text-rosver-ink hover:bg-rosver-soft"
+                  >
+                    <root.icon className="size-4 text-rosver-red" />
+                    {root.name}
+                  </Link>
+                  {children.length ? (
+                    <div className="ml-6 space-y-0.5">
+                      {children.map((ch) => (
+                        <Link
+                          key={ch.id}
+                          to={`/catalogo/${ch.slug}`}
+                          onClick={() => setMobileOpen(false)}
+                          className="block py-1 text-[11px] text-rosver-muted"
+                        >
+                          {ch.name}
+                        </Link>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
               ))}
             </div>
           </div>

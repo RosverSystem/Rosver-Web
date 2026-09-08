@@ -15,3 +15,5 @@ Ideas útiles **no pedidas** aún. No implementar solas; esperar OK del usuario.
 | R09 | Widgets KPIs en dashboard ERP | Valor gestión | media |
 | R10 | Command palette (⌘K) en top bar ERP | Productividad | parcial | Hay search ⌘K; palette full opcional |
 | R11 | Tooltips en sidebar colapsada | Accesibilidad iconos | baja |
+| R12 | Historial de precios (auditoría) en ERP | Compliance / márgenes | media |
+| R13 | Precio por lista/cliente (B2B tiers) | Mayorista avanzado | media |

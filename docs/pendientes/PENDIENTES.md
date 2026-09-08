@@ -4,32 +4,29 @@
 
 | ID | Ítem | Origen | Estado | Notas / bloqueo |
 | --- | --- | --- | --- | --- |
-| P01 | Google OAuth (Client ID + Secret) | Auth completo | bloqueado | Falta credenciales Google Cloud; redirect prod: `/api/auth/google/callback` |
-| P02 | Facebook login | UI login/registro | pendiente | Botón placeholder; no pedido aún como OAuth |
-| P03 | Pedidos / cotizaciones reales en `/cuenta` | Auth + cuenta | pendiente | Siguen mocks; falta API de pedidos/quotes |
-| P04 | UI admin roles/permisos | Auth RBAC | pendiente | API lista; falta pantalla en estilo ERP |
-| P10 | CRUD Productos ERP + API | Pedido ERP | pendiente | Listado/categorías/ofertas vacíos; al `live:true` en `/api/catalog` la tienda refresca sin F5 |
-| P15 | Catálogo vivo en tienda (sin F5) | Pedido UX SPA | parcial | Provider + `/api/catalog` listos; falta datos reales vía P10 |
-| P13 | ERP perfil solo sidebar + top limpio | Pedido UX refs | hecho | Sidebar colapsable; sin duplicar perfil en top (v0.1.7) |
-| P11 | Migrar resto módulos admin al estilo SystemRSV | ERP UX | cancelado | Nav reducida a Inicio+Productos; otros fuera hasta pedido |
-| P05 | Recuperación de contraseña | Auth | pendiente | No implementado |
-| P06 | Subida foto perfil a R2 | Perfil | hecho | `POST /api/profile/avatar` + `/api/media` (v0.1.4) |
-| P07 | 2FA UI en perfil (activar TOTP) | Auth TOTP | pendiente | API `/api/auth/2fa/*` lista; falta pantalla |
-| P08 | Header sesión visible | Login UX | hecho | Menú con primer nombre + logout interno (v0.1.2) |
-| P09 | CLI `railway` no autenticado en esta máquina | Deploy continuo | pendiente | Deploy vía GraphQL; opcional `railway login` |
-| P14 | Auto-deploy GitHub→Railway a veces usa commit viejo | Deploy ERP 0.1.7 | parcial | Forzar `commitSha` en GraphQL si falla |
-| P12 | Vars R2 en Railway prod | Avatar upload | hecho | `R2_*` upsert en Rosver-Web (v0.1.4) |
+| P01 | Google OAuth (Client ID + Secret) | Auth completo | bloqueado | Falta credenciales Google Cloud |
+| P02 | Facebook login | UI login/registro | pendiente | Botón placeholder |
+| P03 | Pedidos / cotizaciones reales en `/cuenta` | Auth + cuenta | pendiente | Siguen mocks |
+| P04 | UI admin roles/permisos | Auth RBAC | pendiente | API lista |
+| P10 | CRUD Productos ERP + API | Pedido ERP | parcial | v1: marcas/categorías/productos/empaques/precios (002 + admin UI). Falta form ficha completa, imágenes R2, ofertas |
+| P15 | Catálogo vivo en tienda (sin F5) | Pedido UX SPA | parcial | `live:true` cuando hay productos en DB |
+| P16 | Selector empaque + precio en carrito/ficha | Precios unidades | pendiente | Carrito aún por slug; falta packagingId |
+| P17 | Specs UI (atributos + unidades variables) | Specs | pendiente | Tablas `spec_*` listas; falta pantallas ERP/ficha dinámica |
+| P18 | Filtro categoría incluye subcategorías | Filtros | pendiente | Hoy filtra solo por slug exacto |
+| P19 | Módulo Ofertas ERP (vincular price_kind=offer) | Ofertas | pendiente | Página admin aún vacía |
+| P20 | Tipos de unidad UI dedicada | Unidades | pendiente | API POST lista; se crean desde listado o seed |
+| P21 | Mega-menú topbar con imágenes / columnas | Topbar cats | pendiente | Hoy lista raíz + hijos |
+| P22 | Import CSV / sync ERP externo | Catálogo | pendiente | |
+| P13 | ERP perfil solo sidebar | Pedido UX | hecho | v0.1.7 |
+| P05 | Recuperación de contraseña | Auth | pendiente | |
+| P06 | Avatar R2 | Perfil | hecho | |
+| P07 | 2FA UI perfil | Auth | pendiente | |
+| P08 | Header sesión | Login UX | hecho | |
+| P09 | CLI railway login | Deploy | pendiente | Deploy GraphQL OK |
+| P14 | Force commitSha deploy | Deploy | parcial | |
+| P12 | Vars R2 Railway | Avatar | hecho | |
 
-## Hechos recientes (referencia)
+## Hechos recientes
 
-- Auth API + deploy Railway unificado web+api
-- SMTP Hostinger configurado en Railway
-- Seed admin + cliente
-- Header sesión visible (v0.1.2)
-- Shell ERP SystemRSV (sidebar + top bar) + Productos vacío (v0.1.3)
-- Cuenta: pedidos/cotizaciones con fotos + avatar R2 (v0.1.4)
-- ERP SaaS soft: Inicio + Productos (listado/categorías/ofertas) (v0.1.5)
-- Banner área cliente (v0.1.6)
-- ERP sidebar colapsable + perfil único (v0.1.7)
 - SPA cuenta sin flash + refresh catálogo (v0.1.8)
-
+- Modelo precios/unidades + admin marcas/categorías/listado precios (v0.1.9)

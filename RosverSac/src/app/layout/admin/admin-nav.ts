@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import { Award, Compass, Hardrive, Home } from 'cssvg-icons'
+import { Award, Compass, Hardrive, Home, StarGrow } from 'cssvg-icons'
 
 type IconProps = { size?: number; color?: string; strokeWidth?: number }
 
@@ -22,7 +22,7 @@ export type AdminNavEntry =
   | ({ type: 'link' } & AdminNavLeaf)
   | ({ type: 'group' } & AdminNavGroup)
 
-/** Nav SystemRSV — solo Inicio + Productos (listado / categorías / ofertas). */
+/** Nav SystemRSV — catálogo: listado, categorías, marcas, ofertas. */
 export const ADMIN_NAV: AdminNavEntry[] = [
   {
     type: 'link',
@@ -42,15 +42,22 @@ export const ADMIN_NAV: AdminNavEntry[] = [
         id: 'listado',
         name: 'Listado',
         link: '/admin/productos',
-        keywords: ['catalogo', 'sku', 'stock', 'productos'],
+        keywords: ['catalogo', 'sku', 'stock', 'productos', 'precios', 'unidades'],
         Icon: Hardrive,
       },
       {
         id: 'categorias',
         name: 'Categorías',
         link: '/admin/categorias',
-        keywords: ['taxonomia', 'rubro', 'categoria'],
+        keywords: ['taxonomia', 'rubro', 'categoria', 'subcategoria'],
         Icon: Compass,
+      },
+      {
+        id: 'marcas',
+        name: 'Marcas',
+        link: '/admin/marcas',
+        keywords: ['brand', 'proveedor', 'marca'],
+        Icon: StarGrow,
       },
       {
         id: 'ofertas',
@@ -81,6 +88,7 @@ export function isProductosGroupOpen(pathname: string) {
   return (
     pathname.startsWith('/admin/productos') ||
     pathname.startsWith('/admin/categorias') ||
+    pathname.startsWith('/admin/marcas') ||
     pathname.startsWith('/admin/ofertas')
   )
 }
@@ -96,6 +104,7 @@ export function searchAdminModules(query: string): AdminNavLeaf[] {
 
 export function adminPageTitle(pathname: string): string {
   if (pathname.startsWith('/admin/ofertas')) return 'Ofertas'
+  if (pathname.startsWith('/admin/marcas')) return 'Marcas'
   if (pathname.startsWith('/admin/categorias')) return 'Categorías'
   if (pathname.startsWith('/admin/productos')) return 'Listado'
   return 'Inicio'

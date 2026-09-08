@@ -14,6 +14,7 @@ import {
   AccountProfilePage,
 } from '@/features/account'
 import {
+  AdminBrandsPage,
   AdminCategoriesPage,
   AdminOffersPage,
   AdminProductsPage,
@@ -105,6 +106,7 @@ export function App() {
                 <Route index element={<AdminDashboardPage />} />
                 <Route path="productos" element={<AdminProductsPage />} />
                 <Route path="categorias" element={<AdminCategoriesPage />} />
+                <Route path="marcas" element={<AdminBrandsPage />} />
                 <Route path="ofertas" element={<AdminOffersPage />} />
               </Route>
             </Routes>

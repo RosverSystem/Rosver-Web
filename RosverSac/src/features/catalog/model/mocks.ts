@@ -25,6 +25,9 @@ export type Category = {
   imageUrl?: string
   visible?: boolean
   sortOrder?: number
+  /** null/undefined = raíz (topbar); con padre = subcategoría */
+  parentId?: string | null
+  showInNav?: boolean
 }
 
 export type Product = {

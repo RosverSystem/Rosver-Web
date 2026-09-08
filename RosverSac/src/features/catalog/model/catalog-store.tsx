@@ -5,6 +5,7 @@ import {
   type Product,
 } from '@/features/catalog/model/mocks'
 import { api } from '@/shared/lib/api'
+import { IconWrench } from '@/shared/ui/icons'
 import {
   createContext,
   useCallback,
@@ -16,11 +17,22 @@ import {
 } from 'react'
 import { useLocation } from 'react-router-dom'
 
+type ApiCategory = {
+  id: string
+  slug: string
+  name: string
+  parentId?: string | null
+  imageUrl?: string
+  visible?: boolean
+  sortOrder?: number
+  showInNav?: boolean
+}
+
 type CatalogPayload = {
   live?: boolean
   updatedAt?: string
   products?: Product[]
-  categories?: Category[]
+  categories?: ApiCategory[]
 }
 
 type CatalogContextValue = {
@@ -33,6 +45,23 @@ type CatalogContextValue = {
 }
 
 const CatalogContext = createContext<CatalogContextValue | null>(null)
+
+function hydrateCategories(raw: ApiCategory[]): Category[] {
+  return raw.map((c) => {
+    const mock = CATEGORIES.find((m) => m.slug === c.slug)
+    return {
+      id: c.id,
+      slug: c.slug,
+      name: c.name,
+      icon: mock?.icon ?? IconWrench,
+      imageUrl: c.imageUrl ?? mock?.imageUrl,
+      visible: c.visible ?? true,
+      sortOrder: c.sortOrder ?? mock?.sortOrder ?? 0,
+      parentId: c.parentId ?? null,
+      showInNav: c.showInNav ?? true,
+    }
+  })
+}
 
 function wantsCatalogRefresh(pathname: string) {
   return (
@@ -60,12 +89,11 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
       if (data.live && Array.isArray(data.products) && data.products.length > 0) {
         setProducts(data.products)
         if (Array.isArray(data.categories) && data.categories.length > 0) {
-          setCategories(data.categories)
+          setCategories(hydrateCategories(data.categories))
         }
         setLive(true)
         setUpdatedAt(data.updatedAt ?? new Date().toISOString())
       } else {
-        // API aún no publica catálogo vivo → mocks del bundle (sin forzar F5 de layout)
         setProducts(PRODUCTS)
         setCategories(CATEGORIES)
         setLive(false)
@@ -99,7 +127,6 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     }
   }, [refresh])
 
-  // Poll suave en catálogo/ofertas (cuando haya API live, se ven altas sin F5)
   useEffect(() => {
     if (!pathname.startsWith('/catalogo') && !pathname.startsWith('/ofertas')) {
       return

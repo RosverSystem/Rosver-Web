@@ -4,12 +4,19 @@ import { fileURLToPath } from 'node:url'
 import { pool } from './db.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
+const sqlDir = path.resolve(here, '../sql')
 
 async function migrate() {
-  const sqlPath = path.resolve(here, '../sql/001_auth_rbac.sql')
-  const sql = await fs.readFile(sqlPath, 'utf8')
-  await pool.query(sql)
-  console.log('✓ Migración 001_auth_rbac aplicada')
+  const files = (await fs.readdir(sqlDir))
+    .filter((f) => /^\d+_.*\.sql$/i.test(f))
+    .sort((a, b) => a.localeCompare(b, 'en'))
+
+  for (const file of files) {
+    const sql = await fs.readFile(path.join(sqlDir, file), 'utf8')
+    await pool.query(sql)
+    console.log(`✓ Migración ${file} aplicada`)
+  }
+
   await pool.end()
 }
 

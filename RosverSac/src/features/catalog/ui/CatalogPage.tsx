@@ -26,6 +26,12 @@ function applyFilters(
     if (filters.quoteOnly && p.price !== null) return false
     if (filters.minRating != null && p.rating < filters.minRating) return false
     if (filters.vendors.length && !filters.vendors.includes(p.vendor)) return false
+    if (filters.priceMin != null && (p.price === null || p.price < filters.priceMin)) {
+      return false
+    }
+    if (filters.priceMax != null && (p.price === null || p.price > filters.priceMax)) {
+      return false
+    }
     return true
   })
 }

@@ -1,26 +1,39 @@
-# Feature: Admin — catálogo
+# Feature: admin-catalog (SystemRSV)
 
 **Slug:** `features/admin-catalog/`  
-**Estado:** activa (ERP SystemRSV — vistas vacías)
+**Estado:** activa (v1 precios / marcas / categorías)
 
 ## Propósito
 
-Gestión de productos, categorías y ofertas del catálogo público.
+Gestión ERP del catálogo: marcas, categorías/subcategorías, productos, empaques (unidad×contenido) y precios editables con “guardar como nuevo”.
 
-## Rutas (nav ERP)
+## Alcance
 
-| Ruta | Módulo |
+- Incluido: CRUD básico marcas/categorías; listado productos; empaques; upsert precios; API admin + `/api/catalog` live.
+- Fuera: import CSV, stock físico, UI specs completa, selector empaque en carrito tienda, módulo ofertas ERP.
+
+## API pública
+
+| Export | Descripción |
 | --- | --- |
-| `/admin/productos` | Listado |
-| `/admin/categorias` | Categorías |
-| `/admin/ofertas` | Ofertas |
+| `AdminProductsPage` | Listado + panel precios |
+| `AdminCategoriesPage` | Árbol categorías |
+| `AdminBrandsPage` | Marcas |
+| `AdminOffersPage` | Placeholder ofertas |
 
-## UX
+## Pantallas
 
-Skill `erp-systemrsv-saas-ux` · `docs/architecture/09-erp-systemrsv-ux.md`
+| Ruta | Notas |
+| --- | --- |
+| `/admin/productos` | Precios / empaques |
+| `/admin/categorias` | Raíz + sub |
+| `/admin/marcas` | SKU + code auto |
+| `/admin/ofertas` | Vacío |
 
 ## Verificación
 
-- [x] Rutas montadas en shell SaaS soft
-- [x] Vistas placeholder vacías
-- [ ] CRUD real + API + R2
+- [ ] Migración `002_catalog_core` aplicada
+- [ ] Crear marca → aparece en listado
+- [ ] Crear categoría raíz + sub
+- [ ] Crear producto → empaque → precio lista → Modificar / Guardar como nuevo
+- [ ] Con productos en DB, `/api/catalog` responde `live: true`
