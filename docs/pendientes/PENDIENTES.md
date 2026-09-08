@@ -11,7 +11,7 @@
 | P10 | CRUD Productos ERP + API | Pedido ERP | hecho | v0.1.15 ficha + imagen R2 + specs |
 | P15 | Catálogo vivo en tienda (sin F5) | Pedido UX SPA | hecho | Poll + live taxonomía/productos |
 | P16 | Selector empaque + precio en carrito/ficha | Precios unidades | hecho | v0.1.15 packagingId en carrito |
-| P17 | Specs UI (atributos + unidades variables) | Specs | hecho | Admin PUT specs + ficha dinámica |
+| P17 | Specs UI (atributos + unidades variables) | Specs | hecho | v0.1.19 tipo+valor libres en wizard |
 | P18 | Filtro categoría incluye subcategorías | Filtros | hecho | v0.1.15 árbol en filtro |
 | P19 | Módulo Ofertas ERP (vincular price_kind=offer) | Ofertas | hecho | v0.1.18 seed + alta ERP + tienda DB |
 | P20 | Tipos de unidad UI dedicada | Unidades | hecho | `/admin/unidades` |
@@ -31,12 +31,13 @@
 | P27 | Destacados home Postgres + Redis | Pedido lógica | hecho | Doc 05 + v0.1.12 + Redis Railway |
 | P28 | Volumen persistente Redis / Redis oficial template | Infra | recomendado | Hoy imagen `redis:7-alpine` sin volume |
 | P29 | Tendencia + calificaciones / reseñas | Pedido lógica | hecho | Doc 06 + v0.1.13 |
-| P30 | Reseñas desde cuenta cliente (no solo admin) | Calificaciones | pendiente | API admin lista; falta UI `/cuenta` |
+| P30 | Reseñas desde cuenta cliente (no solo admin) | Calificaciones | pendiente | Admin ya no carga reseñas en producto; falta UI `/cuenta` |
 | P31 | Slider marcas ↔ módulo marcas + seed | Pedido UI | hecho | v0.1.14 · migración `006` |
 | P32 | Galería multi-imagen producto | Productos | pendiente | Hoy 1 foto principal |
 
 ## Hechos recientes
 
+- Productos por fases (Odoo) + specs libres + sin reseñas admin (v0.1.19)
 - Ofertas DB + seed 3 ejemplos + ERP publicar (v0.1.18)
 - ERP shell fijo + Productos / Listado de precios (v0.1.17)
 - Subir imagen botón primario (v0.1.16)

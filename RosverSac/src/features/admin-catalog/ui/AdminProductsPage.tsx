@@ -10,7 +10,6 @@ import {
   AdminSelect,
 } from '@/shared/ui/admin-field'
 import { AdminImageUpload } from '@/shared/ui/admin-image-upload'
-import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 
 type ProductRow = {
@@ -56,66 +55,80 @@ type Price = {
   compareAtAmount: number | null
   isActive: boolean
 }
-
-const PRICE_KIND_LABEL: Record<string, string> = {
-  list: 'Precio de venta',
-  wholesale: 'Precio mayorista',
-  offer: 'Precio en oferta',
-  custom: 'Otro precio',
+type SpecAttr = {
+  id: string
+  key: string
+  name: string
+  unitHint?: string | null
+}
+type SpecRow = {
+  /** id temporal local o attributeId */
+  key: string
+  attributeId: string | null
+  typeName: string
+  value: string
+  unit: string
 }
 
+const STEPS = [
+  { id: 1, label: 'Datos' },
+  { id: 2, label: 'Detalle' },
+  { id: 3, label: 'Precios' },
+  { id: 4, label: 'Especs' },
+] as const
+
+const PRICE_KIND_LABEL: Record<string, string> = {
+  list: 'Venta',
+  wholesale: 'Mayorista',
+  offer: 'Oferta',
+  custom: 'Otro',
+}
+
+/**
+ * Alta/edición de productos por fases (estilo Odoo).
+ * Specs: el usuario define tipo + valor. Calificaciones: solo lectura (clientes).
+ */
 export function AdminProductsPage() {
   const { toasts, showMessages, dismiss, clear } = useFormToasts()
   const [products, setProducts] = useState<ProductRow[]>([])
   const [brands, setBrands] = useState<Brand[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [unitTypes, setUnitTypes] = useState<UnitType[]>([])
+  const [specAttrs, setSpecAttrs] = useState<SpecAttr[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [packagings, setPackagings] = useState<Packaging[]>([])
-  const [prices, setPrices] = useState<Price[]>([])
+  const [step, setStep] = useState(1)
+  const [mode, setMode] = useState<'list' | 'wizard'>('list')
   const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
   const [listQuery, setListQuery] = useState('')
 
   const [name, setName] = useState('')
   const [sku, setSku] = useState('')
   const [brandId, setBrandId] = useState('')
   const [categoryId, setCategoryId] = useState('')
-  const [createFeatured, setCreateFeatured] = useState(false)
-  const [featuredBusy, setFeaturedBusy] = useState(false)
-  const [featuredSortDraft, setFeaturedSortDraft] = useState('0')
-  const [trendingSortDraft, setTrendingSortDraft] = useState('0')
-  const [reviewRating, setReviewRating] = useState('5')
-  const [reviewTitle, setReviewTitle] = useState('')
-  const [reviews, setReviews] = useState<
-    { id: string; rating: number; title: string; body: string; visible: boolean }[]
-  >([])
+  const [description, setDescription] = useState('')
+  const [imageUrl, setImageUrl] = useState('')
+  const [origin, setOrigin] = useState('')
+  const [moq, setMoq] = useState('1')
+  const [availability, setAvailability] = useState('in_stock')
+  const [featured, setFeatured] = useState(false)
+  const [featuredSort, setFeaturedSort] = useState('0')
+  const [trending, setTrending] = useState(false)
+  const [trendingSort, setTrendingSort] = useState('0')
 
-  const [editName, setEditName] = useState('')
-  const [editSku, setEditSku] = useState('')
-  const [editBrandId, setEditBrandId] = useState('')
-  const [editCategoryId, setEditCategoryId] = useState('')
-  const [editDescription, setEditDescription] = useState('')
-  const [editOrigin, setEditOrigin] = useState('')
-  const [editMoq, setEditMoq] = useState('1')
-  const [editAvailability, setEditAvailability] = useState('in_stock')
-  const [editImageUrl, setEditImageUrl] = useState('')
-  const [specAttrs, setSpecAttrs] = useState<
-    { id: string; key: string; name: string; unitHint?: string | null }[]
-  >([])
-  const [specDrafts, setSpecDrafts] = useState<Record<string, string>>({})
-
+  const [packagings, setPackagings] = useState<Packaging[]>([])
+  const [prices, setPrices] = useState<Price[]>([])
   const [unitTypeId, setUnitTypeId] = useState('')
   const [contentQty, setContentQty] = useState('1')
-
   const [packagingId, setPackagingId] = useState('')
   const [priceKind, setPriceKind] = useState<'list' | 'wholesale' | 'offer'>('list')
   const [minQty, setMinQty] = useState('1')
   const [amount, setAmount] = useState('')
   const [compareAt, setCompareAt] = useState('')
-  const [editPriceId, setEditPriceId] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
 
-  const selected = products.find((p) => p.id === selectedId) ?? null
+  const [specRows, setSpecRows] = useState<SpecRow[]>([])
+  const [rating, setRating] = useState(0)
+  const [reviewCount, setReviewCount] = useState(0)
 
   const filteredProducts = useMemo(() => {
     const q = listQuery.trim().toLowerCase()
@@ -131,16 +144,18 @@ export function AdminProductsPage() {
   async function loadList() {
     setLoading(true)
     try {
-      const [p, b, c, u] = await Promise.all([
+      const [p, b, c, u, a] = await Promise.all([
         api<{ products: ProductRow[] }>('/api/admin/products'),
         api<{ brands: Brand[] }>('/api/admin/brands'),
         api<{ categories: Category[] }>('/api/admin/categories'),
         api<{ unitTypes: UnitType[] }>('/api/admin/unit-types'),
+        api<{ attributes: SpecAttr[] }>('/api/admin/spec-attributes'),
       ])
       setProducts(p.products)
       setBrands(b.brands)
       setCategories(c.categories)
       setUnitTypes(u.unitTypes)
+      setSpecAttrs(a.attributes)
       if (!unitTypeId && u.unitTypes[0]) setUnitTypeId(u.unitTypes[0].id)
     } catch (e) {
       showMessages([
@@ -156,206 +171,278 @@ export function AdminProductsPage() {
       const data = await api<{
         packagings: Packaging[]
         prices: Price[]
-        product?: ProductRow & {
-          brandId?: string | null
-          categoryId?: string | null
-        }
+        product?: ProductRow
         specs?: {
           attributeId: string
+          key: string
+          name: string
+          unitHint?: string | null
           valueText: string | null
           valueNumber: number | null
+          unit: string | null
         }[]
       }>(`/api/admin/products/${id}`)
       setPackagings(data.packagings)
       setPrices(data.prices)
       const def = data.packagings.find((x) => x.isDefault) ?? data.packagings[0]
       if (def) setPackagingId(def.id)
-      if (data.product) {
-        setEditName(data.product.name)
-        setEditSku(data.product.sku)
-        setEditBrandId(data.product.brandId ?? '')
-        setEditCategoryId(data.product.categoryId ?? '')
-        setEditDescription(data.product.description ?? '')
-        setEditOrigin(data.product.origin ?? '')
-        setEditMoq(String(data.product.moq ?? 1))
-        setEditAvailability(data.product.availability || 'in_stock')
-        setEditImageUrl(data.product.imageUrl ?? '')
+      const p = data.product
+      if (p) {
+        setName(p.name)
+        setSku(p.sku)
+        setBrandId(p.brandId ?? '')
+        setCategoryId(p.categoryId ?? '')
+        setDescription(p.description ?? '')
+        setImageUrl(p.imageUrl ?? '')
+        setOrigin(p.origin ?? '')
+        setMoq(String(p.moq ?? 1))
+        setAvailability(p.availability || 'in_stock')
+        setFeatured(Boolean(p.featured))
+        setFeaturedSort(String(p.featuredSort ?? 0))
+        setTrending(Boolean(p.trending))
+        setTrendingSort(String(p.trendingSort ?? 0))
+        setRating(Number(p.rating ?? 0))
+        setReviewCount(Number(p.reviewCount ?? 0))
       }
-      const drafts: Record<string, string> = {}
+      // Solo specs que YA tienen valor (no listar tipos vacíos por defecto)
+      const loaded: SpecRow[] = []
       for (const s of data.specs ?? []) {
-        drafts[s.attributeId] =
+        const value =
           s.valueText?.trim() ||
           (s.valueNumber != null ? String(s.valueNumber) : '')
+        if (!value) continue
+        loaded.push({
+          key: s.attributeId,
+          attributeId: s.attributeId,
+          typeName: s.name,
+          value,
+          unit: s.unit ?? s.unitHint ?? '',
+        })
       }
-      setSpecDrafts(drafts)
-      const rev = await api<{
-        reviews: {
-          id: string
-          rating: number
-          title: string
-          body: string
-          visible: boolean
-        }[]
-      }>(`/api/admin/products/${id}/reviews`)
-      setReviews(rev.reviews)
+      setSpecRows(loaded)
     } catch (e) {
-      showMessages([e instanceof ApiError ? e.message : 'No se pudo abrir el producto'])
+      showMessages([
+        e instanceof ApiError ? e.message : 'No se pudo abrir el producto',
+      ])
     }
   }
 
   useEffect(() => {
     void loadList()
-    void api<{ attributes: { id: string; key: string; name: string; unitHint?: string | null }[] }>(
-      '/api/admin/spec-attributes',
-    )
-      .then((d) => setSpecAttrs(d.attributes))
-      .catch(() => undefined)
   }, [])
 
-  useEffect(() => {
-    if (selectedId) void loadDetail(selectedId)
-  }, [selectedId])
+  function resetWizard() {
+    setSelectedId(null)
+    setStep(1)
+    setName('')
+    setSku('')
+    setBrandId('')
+    setCategoryId('')
+    setDescription('')
+    setImageUrl('')
+    setOrigin('')
+    setMoq('1')
+    setAvailability('in_stock')
+    setFeatured(false)
+    setFeaturedSort('0')
+    setTrending(false)
+    setTrendingSort('0')
+    setPackagings([])
+    setPrices([])
+    setSpecRows([])
+    setRating(0)
+    setReviewCount(0)
+    setAmount('')
+    setCompareAt('')
+  }
 
-  useEffect(() => {
-    if (!selected) return
-    setFeaturedSortDraft(String(selected.featuredSort ?? 0))
-    setTrendingSortDraft(String(selected.trendingSort ?? 0))
-  }, [selected?.id, selected?.featuredSort, selected?.trendingSort])
+  function startCreate() {
+    resetWizard()
+    setMode('wizard')
+    setStep(1)
+  }
 
-  async function createProduct(e: React.FormEvent) {
-    e.preventDefault()
+  async function startEdit(id: string) {
+    setMode('wizard')
+    setStep(1)
+    setSelectedId(id)
+    await loadDetail(id)
+  }
+
+  async function saveStep1() {
     clear()
     if (!name.trim() || !sku.trim()) {
-      showMessages(['Completa el nombre y el código del producto'])
-      return
+      showMessages(['Completa nombre y código del producto'])
+      return false
     }
     setBusy(true)
     try {
-      const res = await api<{ product: { id: string } }>('/api/admin/products', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: name.trim(),
-          sku: sku.trim(),
-          brandId: brandId || null,
-          categoryId: categoryId || null,
-          featured: createFeatured,
-          featuredSort: createFeatured ? Number(featuredSortDraft) || 0 : 0,
-        }),
-      })
-      setName('')
-      setSku('')
-      setCreateFeatured(false)
+      if (selectedId) {
+        await api(`/api/admin/products/${selectedId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            name: name.trim(),
+            sku: sku.trim(),
+            brandId: brandId || null,
+            categoryId: categoryId || null,
+            description,
+            imageUrl: imageUrl.trim() || null,
+          }),
+        })
+      } else {
+        const res = await api<{ product: { id: string } }>('/api/admin/products', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: name.trim(),
+            sku: sku.trim(),
+            brandId: brandId || null,
+            categoryId: categoryId || null,
+            description,
+            imageUrl: imageUrl.trim() || undefined,
+            featured,
+            featuredSort: featured ? Number(featuredSort) || 0 : 0,
+          }),
+        })
+        setSelectedId(res.product.id)
+        await loadDetail(res.product.id)
+      }
       await loadList()
-      setSelectedId(res.product.id)
+      return true
     } catch (err) {
-      showMessages([err instanceof ApiError ? err.message : 'No se pudo crear'])
+      showMessages([
+        err instanceof ApiError ? err.message : 'No se pudo guardar',
+      ])
+      return false
     } finally {
       setBusy(false)
     }
   }
 
-  async function saveProductDetails(e: React.FormEvent) {
-    e.preventDefault()
-    if (!selectedId) return
-    clear()
-    if (!editName.trim() || !editSku.trim()) {
-      showMessages(['Completa nombre y código del producto'])
-      return
+  async function saveStep2() {
+    if (!selectedId) {
+      showMessages(['Primero guarda los datos del producto'])
+      return false
     }
     setBusy(true)
+    clear()
     try {
       await api(`/api/admin/products/${selectedId}`, {
         method: 'PATCH',
         body: JSON.stringify({
-          name: editName.trim(),
-          sku: editSku.trim(),
-          brandId: editBrandId || null,
-          categoryId: editCategoryId || null,
-          description: editDescription,
-          origin: editOrigin,
-          moq: Number(editMoq) || 1,
-          availability: editAvailability,
-          imageUrl: editImageUrl.trim() || null,
+          origin,
+          moq: Number(moq) || 1,
+          availability,
+          featured,
+          featuredSort: Number(featuredSort) || 0,
+          trending,
+          trendingSort: Number(trendingSort) || 0,
         }),
       })
-      const specsPayload = specAttrs
-        .map((a) => {
-          const raw = (specDrafts[a.id] ?? '').trim()
-          if (!raw) return null
-          const asNum = Number(raw.replace(',', '.'))
-          if (Number.isFinite(asNum) && raw.match(/^[\d.,]+$/)) {
-            return {
-              attributeId: a.id,
-              valueNumber: asNum,
-              unit: a.unitHint ?? undefined,
-            }
+      await loadList()
+      return true
+    } catch (err) {
+      showMessages([
+        err instanceof ApiError ? err.message : 'No se pudo guardar el detalle',
+      ])
+      return false
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function saveStep4() {
+    if (!selectedId) return false
+    setBusy(true)
+    clear()
+    try {
+      const payload: {
+        attributeId: string
+        valueText?: string
+        valueNumber?: number
+        unit?: string
+      }[] = []
+
+      for (const row of specRows) {
+        const value = row.value.trim()
+        if (!value || !row.typeName.trim()) continue
+
+        let attributeId = row.attributeId
+        if (!attributeId) {
+          const existing = specAttrs.find(
+            (a) => a.name.toLowerCase() === row.typeName.trim().toLowerCase(),
+          )
+          if (existing) {
+            attributeId = existing.id
+          } else {
+            const created = await api<{ attribute: SpecAttr }>(
+              '/api/admin/spec-attributes',
+              {
+                method: 'POST',
+                body: JSON.stringify({
+                  name: row.typeName.trim(),
+                  unitHint: row.unit.trim() || null,
+                }),
+              },
+            )
+            attributeId = created.attribute.id
+            setSpecAttrs((prev) => [...prev, created.attribute])
           }
-          return { attributeId: a.id, valueText: raw, unit: a.unitHint ?? undefined }
-        })
-        .filter(Boolean)
+        }
+
+        const asNum = Number(value.replace(',', '.'))
+        if (Number.isFinite(asNum) && /^[\d.,]+$/.test(value)) {
+          payload.push({
+            attributeId,
+            valueNumber: asNum,
+            unit: row.unit.trim() || undefined,
+          })
+        } else {
+          payload.push({
+            attributeId,
+            valueText: value,
+            unit: row.unit.trim() || undefined,
+          })
+        }
+      }
+
       await api(`/api/admin/products/${selectedId}/specs`, {
         method: 'PUT',
-        body: JSON.stringify({ specs: specsPayload }),
+        body: JSON.stringify({ specs: payload }),
       })
-      await loadList()
-      await loadDetail(selectedId)
-      showMessages(['Producto actualizado'])
+      showMessages(['Especificaciones guardadas'])
+      return true
     } catch (err) {
       showMessages([
-        err instanceof ApiError ? err.message : 'No se pudo guardar el producto',
+        err instanceof ApiError ? err.message : 'No se pudieron guardar las especs',
       ])
+      return false
     } finally {
       setBusy(false)
     }
   }
 
-  async function saveProductFlags(next: Record<string, unknown>) {
-    if (!selectedId) return
-    setFeaturedBusy(true)
-    clear()
-    try {
-      await api(`/api/admin/products/${selectedId}`, {
-        method: 'PATCH',
-        body: JSON.stringify(next),
-      })
-      await loadList()
-      await loadDetail(selectedId)
-    } catch (err) {
-      showMessages([
-        err instanceof ApiError ? err.message : 'No se pudo actualizar el producto',
-      ])
-    } finally {
-      setFeaturedBusy(false)
-    }
-  }
-
-  async function addReview(e: React.FormEvent) {
-    e.preventDefault()
-    if (!selectedId) return
-    const rating = Number(reviewRating)
-    if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
-      showMessages(['La calificación debe ser de 1 a 5'])
+  async function goNext() {
+    if (step === 1) {
+      const ok = await saveStep1()
+      if (ok) setStep(2)
       return
     }
-    setFeaturedBusy(true)
-    clear()
-    try {
-      await api(`/api/admin/products/${selectedId}/reviews`, {
-        method: 'POST',
-        body: JSON.stringify({
-          rating,
-          title: reviewTitle.trim() || undefined,
-        }),
-      })
-      setReviewTitle('')
-      await loadList()
-      await loadDetail(selectedId)
-    } catch (err) {
-      showMessages([
-        err instanceof ApiError ? err.message : 'No se pudo agregar la reseña',
-      ])
-    } finally {
-      setFeaturedBusy(false)
+    if (step === 2) {
+      const ok = await saveStep2()
+      if (ok) setStep(3)
+      return
+    }
+    if (step === 3) {
+      setStep(4)
+      return
+    }
+    if (step === 4) {
+      const ok = await saveStep4()
+      if (ok) {
+        setMode('list')
+        resetWizard()
+        await loadList()
+      }
     }
   }
 
@@ -383,10 +470,10 @@ export function AdminProductsPage() {
     }
   }
 
-  async function savePrice(saveAsNew: boolean) {
+  async function savePrice() {
     clear()
     if (!selectedId || !packagingId) {
-      showMessages(['Elige un producto y una presentación'])
+      showMessages(['Elige una presentación'])
       return
     }
     const amt = Number(amount)
@@ -399,33 +486,531 @@ export function AdminProductsPage() {
       await api(`/api/admin/products/${selectedId}/prices`, {
         method: 'POST',
         body: JSON.stringify({
-          id: editPriceId || undefined,
           packagingId,
           priceKind,
           minQty: Number(minQty) || 1,
           amount: amt,
           compareAtAmount: compareAt ? Number(compareAt) : null,
-          saveAsNew: saveAsNew || !editPriceId,
+          saveAsNew: true,
         }),
       })
       setAmount('')
       setCompareAt('')
-      setEditPriceId(null)
       await loadDetail(selectedId)
     } catch (err) {
-      showMessages([err instanceof ApiError ? err.message : 'No se pudo guardar el precio'])
+      showMessages([
+        err instanceof ApiError ? err.message : 'No se pudo guardar el precio',
+      ])
     } finally {
       setBusy(false)
     }
   }
 
-  function pickPrice(p: Price) {
-    setEditPriceId(p.id)
-    setPackagingId(p.packagingId)
-    setPriceKind(p.priceKind as 'list' | 'wholesale' | 'offer')
-    setMinQty(String(p.minQty))
-    setAmount(String(p.amount))
-    setCompareAt(p.compareAtAmount != null ? String(p.compareAtAmount) : '')
+  async function softDelete(id: string, productName: string) {
+    if (!window.confirm(`¿Ocultar el producto «${productName}»?`)) return
+    try {
+      await api(`/api/admin/products/${id}`, { method: 'DELETE' })
+      if (selectedId === id) {
+        setMode('list')
+        resetWizard()
+      }
+      await loadList()
+    } catch (err) {
+      showMessages([
+        err instanceof ApiError ? err.message : 'No se pudo eliminar',
+      ])
+    }
+  }
+
+  if (mode === 'wizard') {
+    return (
+      <div className="space-y-5">
+        <FloatingToasts toasts={toasts} onDismiss={dismiss} />
+        <AdminPageHeader
+          title={selectedId ? 'Editar producto' : 'Nuevo producto'}
+          actions={
+            <button
+              type="button"
+              onClick={() => {
+                setMode('list')
+                resetWizard()
+              }}
+              className="rounded-full border border-rosver-line bg-white px-3 py-1.5 text-xs font-semibold text-rosver-muted hover:text-rosver-red"
+            >
+              Volver al listado
+            </button>
+          }
+        />
+
+        {/* Stepper */}
+        <ol className="flex flex-wrap gap-2">
+          {STEPS.map((s) => {
+            const active = step === s.id
+            const done = step > s.id
+            return (
+              <li key={s.id}>
+                <button
+                  type="button"
+                  disabled={!selectedId && s.id > 1}
+                  onClick={() => {
+                    if (selectedId || s.id === 1) setStep(s.id)
+                  }}
+                  className={cn(
+                    'inline-flex min-h-10 items-center gap-2 rounded-full px-3 text-xs font-bold transition sm:px-4 sm:text-sm',
+                    active && 'bg-rosver-red text-white',
+                    done && !active && 'bg-rosver-ink text-white',
+                    !active &&
+                      !done &&
+                      'bg-white text-rosver-muted ring-1 ring-rosver-line',
+                    !selectedId && s.id > 1 && 'opacity-40',
+                  )}
+                >
+                  <span className="flex size-5 items-center justify-center rounded-full bg-black/10 text-[10px]">
+                    {s.id}
+                  </span>
+                  {s.label}
+                </button>
+              </li>
+            )
+          })}
+        </ol>
+
+        <div className="rounded-2xl border border-rosver-line bg-white p-4 shadow-sm sm:p-6">
+          {step === 1 ? (
+            <div className="space-y-4">
+              <p className="text-sm font-semibold text-rosver-ink">
+                Fase 1 — Datos principales
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <AdminField label="Nombre" htmlFor="w-name">
+                  <AdminInput
+                    id="w-name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Ej. Taladro 20V"
+                  />
+                </AdminField>
+                <AdminField label="Código producto" htmlFor="w-sku">
+                  <AdminInput
+                    id="w-sku"
+                    value={sku}
+                    onChange={(e) => setSku(e.target.value)}
+                    placeholder="SKU"
+                    className="uppercase"
+                  />
+                </AdminField>
+                <AdminField label="Marca" htmlFor="w-brand">
+                  <AdminSelect
+                    id="w-brand"
+                    value={brandId}
+                    onChange={(e) => setBrandId(e.target.value)}
+                  >
+                    <option value="">Sin marca</option>
+                    {brands.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name}
+                      </option>
+                    ))}
+                  </AdminSelect>
+                </AdminField>
+                <AdminField label="Categoría" htmlFor="w-cat">
+                  <AdminSelect
+                    id="w-cat"
+                    value={categoryId}
+                    onChange={(e) => setCategoryId(e.target.value)}
+                  >
+                    <option value="">Elegir categoría</option>
+                    {categories.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.parentId ? `· ${c.name}` : c.name}
+                      </option>
+                    ))}
+                  </AdminSelect>
+                </AdminField>
+                <AdminField label="Descripción" htmlFor="w-desc" className="sm:col-span-2">
+                  <textarea
+                    id="w-desc"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    rows={3}
+                    className="w-full rounded-xl border border-rosver-line bg-white px-3 py-2 text-sm outline-none focus:border-rosver-red/40"
+                  />
+                </AdminField>
+              </div>
+              <AdminImageUpload
+                folder="products"
+                value={imageUrl}
+                onChange={setImageUrl}
+                onError={(msg) => showMessages([msg])}
+                label="Foto del producto"
+              />
+            </div>
+          ) : null}
+
+          {step === 2 ? (
+            <div className="space-y-4">
+              <p className="text-sm font-semibold text-rosver-ink">
+                Fase 2 — Detalle comercial
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <AdminField label="Origen" htmlFor="w-origin">
+                  <AdminInput
+                    id="w-origin"
+                    value={origin}
+                    onChange={(e) => setOrigin(e.target.value)}
+                    placeholder="Ej. China"
+                  />
+                </AdminField>
+                <AdminField label="MOQ (pedido mínimo)" htmlFor="w-moq">
+                  <AdminInput
+                    id="w-moq"
+                    value={moq}
+                    onChange={(e) => setMoq(e.target.value)}
+                  />
+                </AdminField>
+                <AdminField label="Disponibilidad" htmlFor="w-avail">
+                  <AdminSelect
+                    id="w-avail"
+                    value={availability}
+                    onChange={(e) => setAvailability(e.target.value)}
+                  >
+                    <option value="in_stock">En stock</option>
+                    <option value="quote_only">Solo cotización</option>
+                    <option value="out_of_stock">Sin stock</option>
+                  </AdminSelect>
+                </AdminField>
+              </div>
+              <div className="space-y-3 rounded-xl border border-rosver-line bg-rosver-soft/40 p-3">
+                <label className="flex items-center gap-2 text-sm text-rosver-ink">
+                  <input
+                    type="checkbox"
+                    checked={featured}
+                    onChange={(e) => setFeatured(e.target.checked)}
+                    className="size-4 rounded border-rosver-line text-rosver-red"
+                  />
+                  Destacado en el inicio
+                </label>
+                {featured ? (
+                  <AdminField label="Orden en carrusel" htmlFor="w-fs">
+                    <AdminInput
+                      id="w-fs"
+                      value={featuredSort}
+                      onChange={(e) => setFeaturedSort(e.target.value)}
+                      className="w-28"
+                    />
+                  </AdminField>
+                ) : null}
+                <label className="flex items-center gap-2 text-sm text-rosver-ink">
+                  <input
+                    type="checkbox"
+                    checked={trending}
+                    onChange={(e) => setTrending(e.target.checked)}
+                    className="size-4 rounded border-rosver-line text-rosver-red"
+                  />
+                  Producto en tendencia
+                </label>
+                {trending ? (
+                  <AdminField label="Orden tendencia" htmlFor="w-ts">
+                    <AdminInput
+                      id="w-ts"
+                      value={trendingSort}
+                      onChange={(e) => setTrendingSort(e.target.value)}
+                      className="w-28"
+                    />
+                  </AdminField>
+                ) : null}
+              </div>
+              <div className="rounded-xl border border-dashed border-rosver-line bg-rosver-soft/30 px-4 py-3 text-sm text-rosver-muted">
+                Calificación:{' '}
+                <span className="font-semibold text-rosver-ink">
+                  {rating.toFixed(1)} · {reviewCount} reseñas
+                </span>
+                <span className="mt-1 block text-xs">
+                  La pone el cliente desde su cuenta. Aquí solo se muestra el promedio.
+                </span>
+              </div>
+            </div>
+          ) : null}
+
+          {step === 3 ? (
+            <div className="space-y-5">
+              <p className="text-sm font-semibold text-rosver-ink">
+                Fase 3 — Presentaciones y precios
+              </p>
+              <form
+                noValidate
+                onSubmit={addPackaging}
+                className="grid gap-3 rounded-xl border border-rosver-line p-3 sm:grid-cols-3"
+              >
+                <AdminField label="Tipo de unidad" htmlFor="w-unit">
+                  <AdminSelect
+                    id="w-unit"
+                    value={unitTypeId}
+                    onChange={(e) => setUnitTypeId(e.target.value)}
+                  >
+                    {unitTypes.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name}
+                      </option>
+                    ))}
+                  </AdminSelect>
+                </AdminField>
+                <AdminField label="Cantidad por presentación" htmlFor="w-qty">
+                  <AdminInput
+                    id="w-qty"
+                    value={contentQty}
+                    onChange={(e) => setContentQty(e.target.value)}
+                  />
+                </AdminField>
+                <div className="flex items-end">
+                  <button
+                    type="submit"
+                    disabled={busy}
+                    className="h-11 w-full rounded-xl bg-rosver-ink text-sm font-semibold text-white hover:bg-rosver-red disabled:opacity-60"
+                  >
+                    Agregar presentación
+                  </button>
+                </div>
+              </form>
+              <ul className="divide-y divide-rosver-line rounded-xl border border-rosver-line">
+                {packagings.length === 0 ? (
+                  <li className="px-4 py-3 text-sm text-rosver-muted">
+                    Sin presentaciones aún
+                  </li>
+                ) : (
+                  packagings.map((pk) => (
+                    <li
+                      key={pk.id}
+                      className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm"
+                    >
+                      <span className="font-medium text-rosver-ink">
+                        {pk.label || `${pk.unitName} × ${pk.contentQty}`}
+                        {pk.isDefault ? (
+                          <span className="ml-2 text-[10px] font-bold text-rosver-red">
+                            Default
+                          </span>
+                        ) : null}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setPackagingId(pk.id)}
+                        className={cn(
+                          'text-xs font-semibold',
+                          packagingId === pk.id
+                            ? 'text-rosver-red'
+                            : 'text-rosver-muted',
+                        )}
+                      >
+                        Usar para precio
+                      </button>
+                    </li>
+                  ))
+                )}
+              </ul>
+              <div className="grid gap-3 rounded-xl border border-rosver-line p-3 sm:grid-cols-4">
+                <AdminField label="Tipo de precio" htmlFor="w-pk">
+                  <AdminSelect
+                    id="w-pk"
+                    value={priceKind}
+                    onChange={(e) =>
+                      setPriceKind(e.target.value as 'list' | 'wholesale' | 'offer')
+                    }
+                  >
+                    <option value="list">Venta</option>
+                    <option value="wholesale">Mayorista</option>
+                    <option value="offer">Oferta</option>
+                  </AdminSelect>
+                </AdminField>
+                <AdminField label="Desde (cant.)" htmlFor="w-min">
+                  <AdminInput
+                    id="w-min"
+                    value={minQty}
+                    onChange={(e) => setMinQty(e.target.value)}
+                  />
+                </AdminField>
+                <AdminField label="Monto S/" htmlFor="w-amt">
+                  <AdminInput
+                    id="w-amt"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                  />
+                </AdminField>
+                <AdminField label="Antes S/ (opcional)" htmlFor="w-cmp">
+                  <AdminInput
+                    id="w-cmp"
+                    value={compareAt}
+                    onChange={(e) => setCompareAt(e.target.value)}
+                  />
+                </AdminField>
+              </div>
+              <button
+                type="button"
+                onClick={() => void savePrice()}
+                disabled={busy}
+                className="h-11 rounded-xl bg-rosver-red px-5 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
+              >
+                Guardar precio
+              </button>
+              <ul className="divide-y divide-rosver-line rounded-xl border border-rosver-line text-sm">
+                {prices.filter((p) => p.isActive).length === 0 ? (
+                  <li className="px-4 py-3 text-rosver-muted">Sin precios activos</li>
+                ) : (
+                  prices
+                    .filter((p) => p.isActive)
+                    .map((p) => (
+                      <li
+                        key={p.id}
+                        className="flex justify-between gap-2 px-4 py-2.5"
+                      >
+                        <span>
+                          {PRICE_KIND_LABEL[p.priceKind] ?? p.priceKind} · desde{' '}
+                          {p.minQty}
+                        </span>
+                        <span className="font-bold text-rosver-red">
+                          S/ {p.amount.toFixed(2)}
+                        </span>
+                      </li>
+                    ))
+                )}
+              </ul>
+            </div>
+          ) : null}
+
+          {step === 4 ? (
+            <div className="space-y-4">
+              <p className="text-sm font-semibold text-rosver-ink">
+                Fase 4 — Especificaciones
+              </p>
+              <p className="text-sm text-rosver-muted">
+                Tú defines el tipo (ej. Material, Voltaje) y su descripción o valor.
+                No hay campos fijos obligatorios.
+              </p>
+              <div className="space-y-3">
+                {specRows.map((row, idx) => (
+                  <div
+                    key={row.key}
+                    className="grid gap-2 rounded-xl border border-rosver-line p-3 sm:grid-cols-[1fr_1fr_6rem_auto]"
+                  >
+                    <AdminField label="Tipo" htmlFor={`spec-t-${idx}`}>
+                      <AdminInput
+                        id={`spec-t-${idx}`}
+                        list="spec-type-suggestions"
+                        value={row.typeName}
+                        onChange={(e) => {
+                          const typeName = e.target.value
+                          const match = specAttrs.find(
+                            (a) =>
+                              a.name.toLowerCase() === typeName.trim().toLowerCase(),
+                          )
+                          setSpecRows((rows) =>
+                            rows.map((r, i) =>
+                              i === idx
+                                ? {
+                                    ...r,
+                                    typeName,
+                                    attributeId: match?.id ?? null,
+                                    unit: match?.unitHint ?? r.unit,
+                                  }
+                                : r,
+                            ),
+                          )
+                        }}
+                        placeholder="Ej. Material"
+                      />
+                    </AdminField>
+                    <AdminField label="Descripción / valor" htmlFor={`spec-v-${idx}`}>
+                      <AdminInput
+                        id={`spec-v-${idx}`}
+                        value={row.value}
+                        onChange={(e) =>
+                          setSpecRows((rows) =>
+                            rows.map((r, i) =>
+                              i === idx ? { ...r, value: e.target.value } : r,
+                            ),
+                          )
+                        }
+                        placeholder="Ej. Acero inoxidable"
+                      />
+                    </AdminField>
+                    <AdminField label="Unidad" htmlFor={`spec-u-${idx}`}>
+                      <AdminInput
+                        id={`spec-u-${idx}`}
+                        value={row.unit}
+                        onChange={(e) =>
+                          setSpecRows((rows) =>
+                            rows.map((r, i) =>
+                              i === idx ? { ...r, unit: e.target.value } : r,
+                            ),
+                          )
+                        }
+                        placeholder="mm"
+                      />
+                    </AdminField>
+                    <div className="flex items-end">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setSpecRows((rows) => rows.filter((_, i) => i !== idx))
+                        }
+                        className="h-11 text-xs font-semibold text-rosver-muted hover:text-rosver-red"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <datalist id="spec-type-suggestions">
+                {specAttrs.map((a) => (
+                  <option key={a.id} value={a.name} />
+                ))}
+              </datalist>
+              <button
+                type="button"
+                onClick={() =>
+                  setSpecRows((rows) => [
+                    ...rows,
+                    {
+                      key: `new-${Date.now()}`,
+                      attributeId: null,
+                      typeName: '',
+                      value: '',
+                      unit: '',
+                    },
+                  ])
+                }
+                className="h-11 rounded-xl border border-rosver-line px-4 text-sm font-semibold text-rosver-ink hover:border-rosver-red/40 hover:text-rosver-red"
+              >
+                + Agregar especificación
+              </button>
+            </div>
+          ) : null}
+
+          <div className="mt-6 flex flex-wrap justify-between gap-3 border-t border-rosver-line pt-4">
+            <button
+              type="button"
+              disabled={step === 1 || busy}
+              onClick={() => setStep((s) => Math.max(1, s - 1))}
+              className="h-11 rounded-xl border border-rosver-line px-5 text-sm font-semibold text-rosver-muted disabled:opacity-40"
+            >
+              Anterior
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void goNext()}
+              className="h-11 rounded-xl bg-rosver-red px-5 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
+            >
+              {busy
+                ? 'Guardando…'
+                : step === 4
+                  ? 'Guardar y cerrar'
+                  : 'Guardar y continuar'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -434,612 +1019,68 @@ export function AdminProductsPage() {
       <AdminPageHeader
         title="Productos"
         actions={
-          <Link
-            to="/admin/marcas"
-            className="rounded-full border border-rosver-line bg-white px-3 py-1.5 text-xs font-semibold text-rosver-ink hover:border-rosver-red/40 hover:text-rosver-red"
+          <button
+            type="button"
+            onClick={startCreate}
+            className="rounded-full bg-rosver-red px-4 py-2 text-xs font-semibold text-white hover:bg-rosver-red-dark"
           >
-            Ver marcas
-          </Link>
+            Nuevo producto
+          </button>
         }
       />
 
-      <form
-        noValidate
-        onSubmit={createProduct}
-        className="rounded-2xl border border-rosver-line bg-white p-4 shadow-sm sm:p-5"
-      >
-        <p className="mb-4 text-sm font-semibold text-rosver-ink">Nuevo producto</p>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <AdminField label="Nombre" htmlFor="prod-name" className="lg:col-span-2">
-            <AdminInput
-              id="prod-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ej. Taladro 20V"
-            />
-          </AdminField>
-          <AdminField label="Código producto" htmlFor="prod-sku">
-            <AdminInput
-              id="prod-sku"
-              value={sku}
-              onChange={(e) => setSku(e.target.value)}
-              placeholder="SKU"
-              className="uppercase"
-            />
-          </AdminField>
-          <AdminField label="Marca" htmlFor="prod-brand">
-            <AdminSelect
-              id="prod-brand"
-              value={brandId}
-              onChange={(e) => setBrandId(e.target.value)}
-            >
-              <option value="">Sin marca</option>
-              {brands.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </AdminSelect>
-          </AdminField>
-          <AdminField label="Categoría" htmlFor="prod-cat">
-            <AdminSelect
-              id="prod-cat"
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-            >
-              <option value="">Elegir categoría</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.parentId ? `Dentro de menú · ${c.name}` : c.name}
-                </option>
-              ))}
-            </AdminSelect>
-          </AdminField>
-        </div>
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <label className="flex items-center gap-2 text-sm text-rosver-ink">
-            <input
-              type="checkbox"
-              checked={createFeatured}
-              onChange={(e) => setCreateFeatured(e.target.checked)}
-              className="size-4 rounded border-rosver-line text-rosver-red"
-            />
-            Destacado en el inicio
-          </label>
-          {createFeatured ? (
-            <AdminField label="Orden en el carrusel" htmlFor="prod-feat-sort">
-              <AdminInput
-                id="prod-feat-sort"
-                value={featuredSortDraft}
-                onChange={(e) => setFeaturedSortDraft(e.target.value)}
-                placeholder="0"
-                className="w-24"
-              />
-            </AdminField>
-          ) : null}
-          <button
-            type="submit"
-            disabled={busy}
-            className="h-11 rounded-xl bg-rosver-ink px-5 text-sm font-semibold text-white hover:bg-rosver-red disabled:opacity-60"
-          >
-            {busy ? 'Creando…' : 'Crear producto'}
-          </button>
-        </div>
-      </form>
+      <AdminInput
+        value={listQuery}
+        onChange={(e) => setListQuery(e.target.value)}
+        placeholder="Buscar producto…"
+        className="max-w-md"
+      />
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
-        <section className="overflow-hidden rounded-2xl border border-rosver-line bg-white shadow-sm">
-          <div className="border-b border-rosver-line p-3">
-            <AdminInput
-              value={listQuery}
-              onChange={(e) => setListQuery(e.target.value)}
-              placeholder="Buscar en el listado…"
-            />
-          </div>
-          <div className="max-h-[28rem] overflow-y-auto">
-            {loading ? (
-              <AdminEmptyState title="Cargando…" />
-            ) : filteredProducts.length === 0 ? (
-              <AdminEmptyState
-                title="No hay productos"
-                detail="Crea una marca y una categoría, luego agrega tu primer producto."
-              />
-            ) : (
-              <ul className="divide-y divide-rosver-line">
-                {filteredProducts.map((p) => (
-                  <li key={p.id}>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedId(p.id)}
-                      className={cn(
-                        'flex w-full items-start gap-3 px-4 py-3 text-left transition',
-                        selectedId === p.id
-                          ? 'bg-rosver-red/8 ring-inset ring-1 ring-rosver-red/20'
-                          : 'hover:bg-rosver-soft/70',
-                      )}
-                    >
-                      <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl bg-rosver-soft text-xs font-bold text-rosver-ink">
-                        {p.sku.slice(0, 2)}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-semibold text-rosver-ink">
-                          {p.name}
-                        </span>
-                        <span className="mt-0.5 block text-xs text-rosver-muted">
-                          {p.sku}
-                          {p.brandName ? ` · ${p.brandName}` : ''}
-                          {p.categoryName ? ` · ${p.categoryName}` : ''}
-                        </span>
-                      </span>
-                      {p.featured ? (
-                        <span className="shrink-0 rounded-full bg-rosver-yellow px-2 py-0.5 text-[10px] font-bold text-rosver-ink">
-                          Inicio
-                        </span>
-                      ) : null}
-                      {p.trending ? (
-                        <span className="shrink-0 rounded-full bg-rosver-blue px-2 py-0.5 text-[10px] font-bold text-white">
-                          Tendencia
-                        </span>
-                      ) : null}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </section>
-
-        <section className="rounded-2xl border border-rosver-line bg-white p-4 shadow-sm sm:p-5">
-          {!selected ? (
-            <AdminEmptyState
-              title="Elige un producto"
-              detail="Selecciona uno a la izquierda para ver presentaciones y precios."
-            />
-          ) : (
-            <div className="space-y-5">
-              <div>
-                <h3 className="text-lg font-semibold text-rosver-ink">{selected.name}</h3>
-                <p className="text-sm text-rosver-muted">{selected.sku}</p>
-              </div>
-
-              <form
-                noValidate
-                onSubmit={saveProductDetails}
-                className="space-y-3 rounded-xl border border-rosver-line p-3"
+      <div className="overflow-hidden rounded-2xl border border-rosver-line bg-white shadow-sm">
+        {loading ? (
+          <AdminEmptyState title="Cargando…" />
+        ) : filteredProducts.length === 0 ? (
+          <AdminEmptyState
+            title="Todavía no hay productos"
+            detail="Usa «Nuevo producto» y completa las fases."
+          />
+        ) : (
+          <ul className="divide-y divide-rosver-line">
+            {filteredProducts.map((p) => (
+              <li
+                key={p.id}
+                className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
               >
-                <p className="text-sm font-semibold text-rosver-ink">Ficha del producto</p>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <AdminField label="Nombre" htmlFor="edit-name">
-                    <AdminInput
-                      id="edit-name"
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                    />
-                  </AdminField>
-                  <AdminField label="Código" htmlFor="edit-sku">
-                    <AdminInput
-                      id="edit-sku"
-                      value={editSku}
-                      onChange={(e) => setEditSku(e.target.value)}
-                      className="uppercase"
-                    />
-                  </AdminField>
-                  <AdminField label="Marca" htmlFor="edit-brand">
-                    <AdminSelect
-                      id="edit-brand"
-                      value={editBrandId}
-                      onChange={(e) => setEditBrandId(e.target.value)}
-                    >
-                      <option value="">Sin marca</option>
-                      {brands.map((b) => (
-                        <option key={b.id} value={b.id}>
-                          {b.name}
-                        </option>
-                      ))}
-                    </AdminSelect>
-                  </AdminField>
-                  <AdminField label="Categoría" htmlFor="edit-cat">
-                    <AdminSelect
-                      id="edit-cat"
-                      value={editCategoryId}
-                      onChange={(e) => setEditCategoryId(e.target.value)}
-                    >
-                      <option value="">Elegir categoría</option>
-                      {categories.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.parentId ? `· ${c.name}` : c.name}
-                        </option>
-                      ))}
-                    </AdminSelect>
-                  </AdminField>
-                  <AdminField label="Origen" htmlFor="edit-origin">
-                    <AdminInput
-                      id="edit-origin"
-                      value={editOrigin}
-                      onChange={(e) => setEditOrigin(e.target.value)}
-                      placeholder="Ej. China"
-                    />
-                  </AdminField>
-                  <AdminField label="MOQ" htmlFor="edit-moq">
-                    <AdminInput
-                      id="edit-moq"
-                      value={editMoq}
-                      onChange={(e) => setEditMoq(e.target.value)}
-                    />
-                  </AdminField>
-                  <AdminField label="Disponibilidad" htmlFor="edit-avail">
-                    <AdminSelect
-                      id="edit-avail"
-                      value={editAvailability}
-                      onChange={(e) => setEditAvailability(e.target.value)}
-                    >
-                      <option value="in_stock">En stock</option>
-                      <option value="quote_only">Solo cotización</option>
-                      <option value="out_of_stock">Sin stock</option>
-                    </AdminSelect>
-                  </AdminField>
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-rosver-ink">{p.name}</p>
+                  <p className="text-xs text-rosver-muted">
+                    {p.sku}
+                    {p.brandName ? ` · ${p.brandName}` : ''}
+                    {p.categoryName ? ` · ${p.categoryName}` : ''}
+                    {' · '}
+                    {Number(p.rating).toFixed(1)}★ ({p.reviewCount})
+                  </p>
                 </div>
-                <AdminField label="Descripción" htmlFor="edit-desc">
-                  <textarea
-                    id="edit-desc"
-                    value={editDescription}
-                    onChange={(e) => setEditDescription(e.target.value)}
-                    rows={3}
-                    className="w-full rounded-xl border border-rosver-line bg-white px-3 py-2 text-sm outline-none focus:border-rosver-red/40"
-                  />
-                </AdminField>
-                <AdminImageUpload
-                  folder="products"
-                  value={editImageUrl}
-                  onChange={setEditImageUrl}
-                  onError={(msg) => showMessages([msg])}
-                  label="Foto del producto"
-                />
-                {specAttrs.length > 0 ? (
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-rosver-ink">
-                      Especificaciones
-                    </p>
-                    <div className="grid gap-2 sm:grid-cols-2">
-                      {specAttrs.map((a) => (
-                        <AdminField key={a.id} label={a.name} htmlFor={`spec-${a.id}`}>
-                          <AdminInput
-                            id={`spec-${a.id}`}
-                            value={specDrafts[a.id] ?? ''}
-                            onChange={(e) =>
-                              setSpecDrafts((d) => ({
-                                ...d,
-                                [a.id]: e.target.value,
-                              }))
-                            }
-                            placeholder={a.unitHint ?? ''}
-                          />
-                        </AdminField>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-                <button
-                  type="submit"
-                  disabled={busy}
-                  className="h-10 rounded-xl bg-rosver-ink px-4 text-sm font-semibold text-white hover:bg-rosver-red disabled:opacity-60"
-                >
-                  {busy ? 'Guardando…' : 'Guardar ficha'}
-                </button>
-              </form>
-
-              <div className="rounded-xl border border-rosver-line bg-rosver-soft/40 p-3">
-                <p className="mb-2 text-sm font-semibold text-rosver-ink">
-                  Destacados para ti (inicio)
-                </p>
-                <label className="flex items-center gap-2 text-sm text-rosver-ink">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(selected.featured)}
-                    disabled={featuredBusy}
-                    onChange={(e) =>
-                      void saveProductFlags({ featured: e.target.checked })
-                    }
-                    className="size-4 rounded border-rosver-line text-rosver-red"
-                  />
-                  Mostrar en el carrusel del inicio
-                </label>
-                {selected.featured ? (
-                  <div className="mt-3 flex flex-wrap items-end gap-2">
-                    <AdminField label="Orden" htmlFor="feat-sort-edit">
-                      <AdminInput
-                        id="feat-sort-edit"
-                        value={featuredSortDraft}
-                        onChange={(e) => setFeaturedSortDraft(e.target.value)}
-                        className="w-24"
-                      />
-                    </AdminField>
-                    <button
-                      type="button"
-                      disabled={featuredBusy}
-                      onClick={() =>
-                        void saveProductFlags({
-                          featuredSort: Number(featuredSortDraft) || 0,
-                        })
-                      }
-                      className="h-11 rounded-xl bg-rosver-red px-4 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
-                    >
-                      Guardar orden
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="rounded-xl border border-rosver-line bg-rosver-soft/40 p-3">
-                <p className="mb-2 text-sm font-semibold text-rosver-ink">
-                  Productos en tendencia
-                </p>
-                <label className="flex items-center gap-2 text-sm text-rosver-ink">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(selected.trending)}
-                    disabled={featuredBusy}
-                    onChange={(e) =>
-                      void saveProductFlags({ trending: e.target.checked })
-                    }
-                    className="size-4 rounded border-rosver-line text-rosver-red"
-                  />
-                  Incluir en tendencia (por categoría)
-                </label>
-                {selected.trending ? (
-                  <div className="mt-3 flex flex-wrap items-end gap-2">
-                    <AdminField label="Orden" htmlFor="trend-sort-edit">
-                      <AdminInput
-                        id="trend-sort-edit"
-                        value={trendingSortDraft}
-                        onChange={(e) => setTrendingSortDraft(e.target.value)}
-                        className="w-24"
-                      />
-                    </AdminField>
-                    <button
-                      type="button"
-                      disabled={featuredBusy}
-                      onClick={() =>
-                        void saveProductFlags({
-                          trendingSort: Number(trendingSortDraft) || 0,
-                        })
-                      }
-                      className="h-11 rounded-xl bg-rosver-ink px-4 text-sm font-semibold text-white hover:bg-rosver-red disabled:opacity-60"
-                    >
-                      Guardar orden
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="rounded-xl border border-rosver-line bg-rosver-soft/40 p-3">
-                <p className="mb-1 text-sm font-semibold text-rosver-ink">
-                  Calificaciones
-                </p>
-                <p className="mb-3 text-xs text-rosver-muted">
-                  Promedio {Number(selected.rating ?? 0).toFixed(1)} ·{' '}
-                  {selected.reviewCount ?? 0} reseñas
-                </p>
-                <form
-                  noValidate
-                  onSubmit={addReview}
-                  className="grid gap-3 sm:grid-cols-[5rem_1fr_auto]"
-                >
-                  <AdminField label="Estrellas" htmlFor="rev-rating">
-                    <AdminSelect
-                      id="rev-rating"
-                      value={reviewRating}
-                      onChange={(e) => setReviewRating(e.target.value)}
-                    >
-                      {[5, 4, 3, 2, 1].map((n) => (
-                        <option key={n} value={String(n)}>
-                          {n}
-                        </option>
-                      ))}
-                    </AdminSelect>
-                  </AdminField>
-                  <AdminField label="Título (opcional)" htmlFor="rev-title">
-                    <AdminInput
-                      id="rev-title"
-                      value={reviewTitle}
-                      onChange={(e) => setReviewTitle(e.target.value)}
-                      placeholder="Ej. Buena calidad"
-                    />
-                  </AdminField>
-                  <div className="flex items-end">
-                    <button
-                      type="submit"
-                      disabled={featuredBusy}
-                      className="h-11 w-full rounded-xl bg-rosver-red px-4 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
-                    >
-                      Agregar reseña
-                    </button>
-                  </div>
-                </form>
-                {reviews.length > 0 ? (
-                  <ul className="mt-3 max-h-40 space-y-1 overflow-y-auto text-xs text-rosver-muted">
-                    {reviews
-                      .filter((r) => r.visible)
-                      .slice(0, 8)
-                      .map((r) => (
-                        <li key={r.id}>
-                          {r.rating}★ {r.title || 'Sin título'}
-                        </li>
-                      ))}
-                  </ul>
-                ) : null}
-              </div>
-
-              <div>
-                <h4 className="mb-3 text-sm font-semibold text-rosver-ink">
-                  Presentaciones de venta
-                </h4>
-                <div className="mb-3 flex flex-wrap gap-2">
-                  {packagings.map((pk) => (
-                    <button
-                      key={pk.id}
-                      type="button"
-                      onClick={() => setPackagingId(pk.id)}
-                      className={cn(
-                        'rounded-full px-3 py-1.5 text-xs font-semibold ring-1 transition',
-                        packagingId === pk.id
-                          ? 'bg-rosver-red text-white ring-rosver-red'
-                          : 'bg-rosver-soft text-rosver-ink ring-transparent hover:ring-rosver-line',
-                      )}
-                    >
-                      {pk.label || `${pk.unitName} de ${pk.contentQty}`}
-                      {pk.isDefault ? ' · habitual' : ''}
-                    </button>
-                  ))}
-                </div>
-                <form
-                  noValidate
-                  onSubmit={addPackaging}
-                  className="grid gap-3 rounded-xl bg-rosver-soft/50 p-3 sm:grid-cols-[1fr_7rem_auto]"
-                >
-                  <AdminField label="Tipo" htmlFor="pk-unit">
-                    <AdminSelect
-                      id="pk-unit"
-                      value={unitTypeId}
-                      onChange={(e) => setUnitTypeId(e.target.value)}
-                    >
-                      {unitTypes.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.name}
-                        </option>
-                      ))}
-                    </AdminSelect>
-                  </AdminField>
-                  <AdminField label="Cantidad" htmlFor="pk-qty">
-                    <AdminInput
-                      id="pk-qty"
-                      value={contentQty}
-                      onChange={(e) => setContentQty(e.target.value)}
-                      inputMode="decimal"
-                    />
-                  </AdminField>
-                  <div className="flex items-end">
-                    <button
-                      type="submit"
-                      className="h-11 w-full rounded-xl border border-rosver-red px-3 text-sm font-semibold text-rosver-red hover:bg-rosver-red hover:text-white"
-                    >
-                      Agregar
-                    </button>
-                  </div>
-                </form>
-              </div>
-
-              <div>
-                <h4 className="mb-3 text-sm font-semibold text-rosver-ink">Precios</h4>
-                <ul className="mb-3 max-h-36 space-y-1 overflow-y-auto">
-                  {prices.filter((p) => p.isActive).length === 0 ? (
-                    <li className="rounded-xl bg-rosver-soft/60 px-3 py-2 text-sm text-rosver-muted">
-                      Aún no hay precios. Completa el formulario de abajo.
-                    </li>
-                  ) : (
-                    prices
-                      .filter((p) => p.isActive)
-                      .map((p) => (
-                        <li key={p.id}>
-                          <button
-                            type="button"
-                            onClick={() => pickPrice(p)}
-                            className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm hover:bg-rosver-soft"
-                          >
-                            <span>
-                              <span className="font-medium text-rosver-ink">
-                                {PRICE_KIND_LABEL[p.priceKind] ?? p.priceKind}
-                              </span>
-                              <span className="text-rosver-muted">
-                                {' '}
-                                · desde {p.minQty} · S/ {p.amount.toFixed(2)}
-                              </span>
-                            </span>
-                            <span className="text-xs font-semibold text-rosver-red">
-                              Editar
-                            </span>
-                          </button>
-                        </li>
-                      ))
-                  )}
-                </ul>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <AdminField label="Presentación" htmlFor="pr-pack" className="sm:col-span-2">
-                    <AdminSelect
-                      id="pr-pack"
-                      value={packagingId}
-                      onChange={(e) => setPackagingId(e.target.value)}
-                    >
-                      <option value="">Elegir presentación</option>
-                      {packagings.map((pk) => (
-                        <option key={pk.id} value={pk.id}>
-                          {pk.label || `${pk.unitName} de ${pk.contentQty}`}
-                        </option>
-                      ))}
-                    </AdminSelect>
-                  </AdminField>
-                  <AdminField label="Tipo de precio" htmlFor="pr-kind">
-                    <AdminSelect
-                      id="pr-kind"
-                      value={priceKind}
-                      onChange={(e) =>
-                        setPriceKind(e.target.value as 'list' | 'wholesale' | 'offer')
-                      }
-                    >
-                      <option value="list">Precio de venta</option>
-                      <option value="wholesale">Precio mayorista</option>
-                      <option value="offer">Precio en oferta</option>
-                    </AdminSelect>
-                  </AdminField>
-                  <AdminField label="Cantidad mínima" htmlFor="pr-min">
-                    <AdminInput
-                      id="pr-min"
-                      value={minQty}
-                      onChange={(e) => setMinQty(e.target.value)}
-                      inputMode="decimal"
-                    />
-                  </AdminField>
-                  <AdminField label="Precio (S/)" htmlFor="pr-amt">
-                    <AdminInput
-                      id="pr-amt"
-                      value={amount}
-                      onChange={(e) => setAmount(e.target.value)}
-                      inputMode="decimal"
-                    />
-                  </AdminField>
-                  <AdminField label="Precio anterior (opcional)" htmlFor="pr-cmp">
-                    <AdminInput
-                      id="pr-cmp"
-                      value={compareAt}
-                      onChange={(e) => setCompareAt(e.target.value)}
-                      inputMode="decimal"
-                      placeholder="Para mostrar tachado"
-                    />
-                  </AdminField>
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="flex gap-3">
                   <button
                     type="button"
-                    disabled={busy}
-                    onClick={() => void savePrice(false)}
-                    className="h-11 rounded-xl bg-rosver-red px-4 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
+                    onClick={() => void startEdit(p.id)}
+                    className="text-xs font-semibold text-rosver-red"
                   >
-                    {editPriceId ? 'Guardar cambios' : 'Guardar precio'}
+                    Editar
                   </button>
                   <button
                     type="button"
-                    disabled={busy || !editPriceId}
-                    onClick={() => void savePrice(true)}
-                    className="h-11 rounded-xl border border-rosver-ink px-4 text-sm font-semibold text-rosver-ink disabled:opacity-40"
+                    onClick={() => void softDelete(p.id, p.name)}
+                    className="text-xs font-semibold text-rosver-muted hover:text-rosver-red"
                   >
-                    Guardar como precio nuevo
+                    Ocultar
                   </button>
                 </div>
-              </div>
-            </div>
-          )}
-        </section>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   )

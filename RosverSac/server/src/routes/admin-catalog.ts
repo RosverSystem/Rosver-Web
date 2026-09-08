@@ -621,6 +621,33 @@ adminCatalogRoutes.get('/spec-attributes', async (c) => {
   return c.json({ attributes: rows })
 })
 
+adminCatalogRoutes.post('/spec-attributes', async (c) => {
+  const body = z
+    .object({
+      name: z.string().trim().min(1).max(80),
+      key: z.string().trim().min(1).max(60).optional(),
+      valueType: z.enum(['text', 'number', 'measure']).optional(),
+      unitHint: z.string().trim().max(20).optional().nullable(),
+    })
+    .safeParse(await c.req.json().catch(() => null))
+  if (!body.success) return c.json({ error: 'Datos inválidos' }, 400)
+  const name = body.data.name
+  const key = body.data.key || slugify(name)
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO spec_attributes (key, name, value_type, unit_hint, sort_order)
+       VALUES ($1,$2,$3,$4,50)
+       ON CONFLICT (key) DO UPDATE SET name = EXCLUDED.name
+       RETURNING id, key, name, value_type AS "valueType", unit_hint AS "unitHint",
+                 sort_order AS "sortOrder"`,
+      [key, name, body.data.valueType ?? 'text', body.data.unitHint ?? null],
+    )
+    return c.json({ attribute: rows[0] }, 201)
+  } catch {
+    return c.json({ error: 'No se pudo crear el tipo de especificación.' }, 409)
+  }
+})
+
 adminCatalogRoutes.put('/products/:id/specs', async (c) => {
   const productId = c.req.param('id')
   const body = z
