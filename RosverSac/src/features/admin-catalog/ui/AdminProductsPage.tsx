@@ -127,6 +127,7 @@ export function AdminProductsPage() {
   const [minQty, setMinQty] = useState('1')
   const [amount, setAmount] = useState('')
   const [compareAt, setCompareAt] = useState('')
+  const [editingPriceId, setEditingPriceId] = useState<string | null>(null)
 
   const [specRows, setSpecRows] = useState<SpecRow[]>([])
   const [rating, setRating] = useState(0)
@@ -539,20 +540,75 @@ export function AdminProductsPage() {
       await api(`/api/admin/products/${selectedId}/prices`, {
         method: 'POST',
         body: JSON.stringify({
+          id: editingPriceId ?? undefined,
           packagingId,
           priceKind,
           minQty: Number(minQty) || 1,
           amount: amt,
           compareAtAmount: compareAt ? Number(compareAt) : null,
+          saveAsNew: false,
         }),
       })
       setAmount('')
       setCompareAt('')
+      setMinQty('1')
+      setEditingPriceId(null)
       await loadDetail(selectedId)
-      showMessages(['Precio agregado'])
+      showMessages([editingPriceId ? 'Precio actualizado' : 'Precio agregado'])
     } catch (err) {
       showMessages([
         err instanceof ApiError ? err.message : 'No se pudo guardar el precio',
+      ])
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function startEditPrice(p: Price) {
+    setPackagingId(p.packagingId)
+    setEditingPriceId(p.id)
+    setPriceKind(p.priceKind as 'list' | 'wholesale' | 'offer')
+    setAmount(String(p.amount))
+    setMinQty(String(p.minQty))
+    setCompareAt(
+      p.compareAtAmount != null ? String(p.compareAtAmount) : '',
+    )
+  }
+
+  async function removePrice(id: string) {
+    if (!selectedId) return
+    clear()
+    setBusy(true)
+    try {
+      await api(`/api/admin/products/${selectedId}/prices/${id}`, {
+        method: 'DELETE',
+      })
+      setEditingPriceId(null)
+      await loadDetail(selectedId)
+    } catch (err) {
+      showMessages([
+        err instanceof ApiError ? err.message : 'No se pudo quitar el precio',
+      ])
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function removePackaging(id: string) {
+    if (!selectedId) return
+    if (!window.confirm('¿Eliminar esta presentación y sus precios?')) return
+    clear()
+    setBusy(true)
+    try {
+      await api(`/api/admin/products/${selectedId}/packagings/${id}`, {
+        method: 'DELETE',
+      })
+      await loadDetail(selectedId)
+    } catch (err) {
+      showMessages([
+        err instanceof ApiError
+          ? err.message
+          : 'No se pudo eliminar la presentación',
       ])
     } finally {
       setBusy(false)
@@ -673,11 +729,19 @@ export function AdminProductsPage() {
                     onChange={(e) => setCategoryId(e.target.value)}
                   >
                     <option value="">Elegir categoría</option>
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.parentId ? `· ${c.name}` : c.name}
-                      </option>
-                    ))}
+                    {categories.map((c) => {
+                      const parent = c.parentId
+                        ? categories.find((x) => x.id === c.parentId)
+                        : null
+                      const label = parent
+                        ? `Dentro de ${parent.name}: ${c.name}`
+                        : c.name
+                      return (
+                        <option key={c.id} value={c.id}>
+                          {label}
+                        </option>
+                      )
+                    })}
                   </AdminSelect>
                 </AdminField>
                 <AdminField label="Descripción" htmlFor="w-desc" className="sm:col-span-2">
@@ -817,7 +881,7 @@ export function AdminProductsPage() {
                     )}
                   </AdminSelect>
                 </AdminField>
-                <AdminField label="Cantidad" htmlFor="w-qty">
+                <AdminField label="Unidades por presentación" htmlFor="w-qty">
                   <AdminInput
                     id="w-qty"
                     value={contentQty}
@@ -825,7 +889,7 @@ export function AdminProductsPage() {
                     placeholder="1, 12…"
                   />
                 </AdminField>
-                <AdminField label="Precio venta S/" htmlFor="w-list">
+                <AdminField label="Precio de venta (S/)" htmlFor="w-list">
                   <AdminInput
                     id="w-list"
                     inputMode="decimal"
@@ -834,13 +898,13 @@ export function AdminProductsPage() {
                     placeholder="200.00"
                   />
                 </AdminField>
-                <AdminField label="Mayorista S/ (opc.)" htmlFor="w-wh">
+                <AdminField label="Precio mayorista (S/)" htmlFor="w-wh">
                   <AdminInput
                     id="w-wh"
                     inputMode="decimal"
                     value={wholesaleAmount}
                     onChange={(e) => setWholesaleAmount(e.target.value)}
-                    placeholder="184.00"
+                    placeholder="Opcional"
                   />
                 </AdminField>
                 <div className="flex items-end">
@@ -880,28 +944,57 @@ export function AdminProductsPage() {
                             {pk.label || `${pk.unitName} × ${pk.contentQty}`}
                             {pk.isDefault ? (
                               <span className="ml-2 text-[10px] font-bold text-rosver-red">
-                                Default
+                                Principal
                               </span>
                             ) : null}
                           </button>
-                          <span className="text-xs text-rosver-muted">
-                            {packagingId === pk.id
-                              ? 'Seleccionada'
-                              : 'Clic para + precios'}
-                          </span>
+                          <div className="flex gap-3">
+                            <button
+                              type="button"
+                              onClick={() => setPackagingId(pk.id)}
+                              className="text-xs font-semibold text-rosver-red"
+                            >
+                              Precios
+                            </button>
+                            <button
+                              type="button"
+                              disabled={busy}
+                              onClick={() => void removePackaging(pk.id)}
+                              className="text-xs font-semibold text-rosver-muted hover:text-rosver-red"
+                            >
+                              Eliminar
+                            </button>
+                          </div>
                         </div>
                         {pkPrices.length > 0 ? (
                           <ul className="mt-2 space-y-1">
                             {pkPrices.map((p) => (
                               <li
                                 key={p.id}
-                                className="flex justify-between text-xs text-rosver-muted"
+                                className="flex flex-wrap items-center justify-between gap-2 text-xs text-rosver-muted"
                               >
                                 <span>
                                   {PRICE_KIND_LABEL[p.priceKind] ?? p.priceKind}
+                                  <span className="ml-2 font-bold text-rosver-red">
+                                    S/ {p.amount.toFixed(2)}
+                                  </span>
                                 </span>
-                                <span className="font-bold text-rosver-red">
-                                  S/ {p.amount.toFixed(2)}
+                                <span className="flex gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => startEditPrice(p)}
+                                    className="font-semibold text-rosver-red"
+                                  >
+                                    Editar
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={busy}
+                                    onClick={() => void removePrice(p.id)}
+                                    className="font-semibold text-rosver-muted hover:text-rosver-red"
+                                  >
+                                    Quitar
+                                  </button>
                                 </span>
                               </li>
                             ))}
@@ -924,10 +1017,11 @@ export function AdminProductsPage() {
                   className="grid gap-3 rounded-xl border border-dashed border-rosver-line p-3 sm:grid-cols-4"
                 >
                   <p className="sm:col-span-4 text-xs font-semibold text-rosver-muted">
-                    Precio extra para la presentación seleccionada (oferta,
-                    otro mayorista…)
+                    {editingPriceId
+                      ? 'Editando precio'
+                      : 'Precio extra para la presentación seleccionada'}
                   </p>
-                  <AdminField label="Tipo" htmlFor="w-pk">
+                  <AdminField label="Tipo de precio" htmlFor="w-pk">
                     <AdminSelect
                       id="w-pk"
                       value={priceKind}
@@ -942,28 +1036,42 @@ export function AdminProductsPage() {
                       <option value="offer">Oferta</option>
                     </AdminSelect>
                   </AdminField>
-                  <AdminField label="Desde" htmlFor="w-min">
+                  <AdminField label="Desde (unidades)" htmlFor="w-min">
                     <AdminInput
                       id="w-min"
                       value={minQty}
                       onChange={(e) => setMinQty(e.target.value)}
                     />
                   </AdminField>
-                  <AdminField label="Monto S/" htmlFor="w-amt">
+                  <AdminField label="Precio (S/)" htmlFor="w-amt">
                     <AdminInput
                       id="w-amt"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                     />
                   </AdminField>
-                  <div className="flex items-end">
+                  <div className="flex flex-wrap items-end gap-2">
                     <button
                       type="submit"
                       disabled={busy}
-                      className="h-11 w-full rounded-xl bg-rosver-ink text-sm font-semibold text-white hover:bg-rosver-red disabled:opacity-60"
+                      className="h-11 flex-1 rounded-xl bg-rosver-ink text-sm font-semibold text-white hover:bg-rosver-red disabled:opacity-60"
                     >
-                      Agregar precio
+                      {editingPriceId ? 'Guardar' : 'Agregar precio'}
                     </button>
+                    {editingPriceId ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingPriceId(null)
+                          setAmount('')
+                          setCompareAt('')
+                          setMinQty('1')
+                        }}
+                        className="h-11 rounded-xl border border-rosver-line px-3 text-xs font-semibold text-rosver-muted"
+                      >
+                        Cancelar
+                      </button>
+                    ) : null}
                   </div>
                 </form>
               ) : null}

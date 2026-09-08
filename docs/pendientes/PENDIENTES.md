@@ -34,9 +34,11 @@
 | P30 | Reseñas desde cuenta cliente (no solo admin) | Calificaciones | pendiente | Admin ya no carga reseñas en producto; falta UI `/cuenta` |
 | P31 | Slider marcas ↔ módulo marcas + seed | Pedido UI | hecho | v0.1.14 · migración `006` |
 | P36 | Listado precios: tipo→cantidad→varios precios por presentación | Pedido UX | hecho | v0.1.24 flujo tipo ubicación |
+| P37 | CRUD completo presentaciones/precios/tipos + AdminSelect | Pedido reglas 14/16 | hecho | v0.1.26 |
 
 ## Hechos recientes
 
+- CRUD C/R/U/D presentaciones, precios y tipos de unidad + AdminSelect (v0.1.26)
 - Presentación: tipo + cantidad + precio en un paso (v0.1.25)
 - Listado precios: presentación (tipo+cantidad) → varios precios (v0.1.24)
 - Marcas en modal + selector R2 con búsqueda y nombre al subir (v0.1.23)

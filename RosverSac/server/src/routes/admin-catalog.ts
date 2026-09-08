@@ -1084,6 +1084,69 @@ adminCatalogRoutes.delete('/products/:id/packagings/:packagingId', async (c) => 
   return c.json({ ok: true })
 })
 
+adminCatalogRoutes.patch('/products/:id/packagings/:packagingId', async (c) => {
+  const productId = c.req.param('id')
+  const packagingId = c.req.param('packagingId')
+  const body = z
+    .object({
+      unitTypeId: z.string().uuid().optional(),
+      contentQty: z.number().positive().optional(),
+      label: z.string().trim().max(120).optional().nullable(),
+      isDefault: z.boolean().optional(),
+    })
+    .safeParse(await c.req.json().catch(() => null))
+  if (!body.success) return c.json({ error: 'Datos inválidos' }, 400)
+  const d = body.data
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    if (d.isDefault) {
+      await client.query(
+        `UPDATE product_packagings SET is_default = false WHERE product_id = $1`,
+        [productId],
+      )
+    }
+    const { rows } = await client.query(
+      `UPDATE product_packagings SET
+         unit_type_id = COALESCE($3, unit_type_id),
+         content_qty = COALESCE($4, content_qty),
+         label = CASE WHEN $5::boolean THEN $6 ELSE label END,
+         is_default = COALESCE($7, is_default)
+       WHERE id = $1 AND product_id = $2
+       RETURNING *`,
+      [
+        packagingId,
+        productId,
+        d.unitTypeId ?? null,
+        d.contentQty ?? null,
+        d.label !== undefined,
+        d.label ?? null,
+        d.isDefault ?? null,
+      ],
+    )
+    if (!rows[0]) {
+      await client.query('ROLLBACK')
+      return c.json({ error: 'Presentación no encontrada' }, 404)
+    }
+    await client.query('COMMIT')
+    await invalidateCatalogHomeCaches()
+    return c.json({
+      packaging: {
+        id: rows[0].id,
+        unitTypeId: rows[0].unit_type_id,
+        contentQty: Number(rows[0].content_qty),
+        label: rows[0].label,
+        isDefault: rows[0].is_default,
+      },
+    })
+  } catch {
+    await client.query('ROLLBACK')
+    return c.json({ error: 'No se pudo actualizar la presentación.' }, 409)
+  } finally {
+    client.release()
+  }
+})
+
 /**
  * Guardar precio:
  * - sin id / saveAsNew → INSERT (nuevo listado)

@@ -1,5 +1,12 @@
 import { USERS, type Role } from '@/features/admin-users/model/mocks'
+import { AdminSelect } from '@/shared/ui/admin-field'
 import { WireBlock } from '@/shared/ui/wireframe'
+
+const ROLE_LABEL: Record<Role, string> = {
+  client: 'Cliente',
+  sales: 'Ventas',
+  admin: 'Administrador',
+}
 
 const ROLES: Role[] = ['client', 'sales', 'admin']
 
@@ -27,17 +34,14 @@ export function AdminUsersPage() {
                     {user.name}
                   </td>
                   <td className="py-2.5 text-rosver-muted">{user.email}</td>
-                  <td className="py-2.5">
-                    <select
-                      defaultValue={user.role}
-                      className="rounded-lg border border-rosver-line px-2.5 py-1.5 text-sm outline-none focus:border-rosver-red/50"
-                    >
+                  <td className="py-2.5 min-w-[10rem]">
+                    <AdminSelect defaultValue={user.role} aria-label="Rol">
                       {ROLES.map((role) => (
                         <option key={role} value={role}>
-                          {role}
+                          {ROLE_LABEL[role]}
                         </option>
                       ))}
-                    </select>
+                    </AdminSelect>
                   </td>
                 </tr>
               ))}

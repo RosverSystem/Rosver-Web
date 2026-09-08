@@ -82,10 +82,14 @@ export function AdminPriceListPage() {
   const [wholesaleAmount, setWholesaleAmount] = useState('')
 
   const [packagingId, setPackagingId] = useState('')
+  const [editPackQty, setEditPackQty] = useState('1')
+  const [editPackLabel, setEditPackLabel] = useState('')
+  const [editPackUnitId, setEditPackUnitId] = useState('')
   const [priceKind, setPriceKind] = useState<'list' | 'wholesale' | 'offer'>('list')
   const [amount, setAmount] = useState('')
   const [compareAt, setCompareAt] = useState('')
   const [minQty, setMinQty] = useState('1')
+  const [editingPriceId, setEditingPriceId] = useState<string | null>(null)
 
   const selected = products.find((p) => p.id === selectedId) ?? null
   const activePack = packagings.find((p) => p.id === packagingId) ?? null
@@ -139,6 +143,17 @@ export function AdminPriceListPage() {
         (data.packagings.find((x) => x.isDefault) ?? data.packagings[0])?.id ??
         ''
       setPackagingId(def)
+      const pack = data.packagings.find((x) => x.id === def)
+      if (pack) {
+        setEditPackQty(String(pack.contentQty))
+        setEditPackLabel(pack.label ?? '')
+        setEditPackUnitId(pack.unitTypeId)
+      }
+      setEditingPriceId(null)
+      setAmount('')
+      setCompareAt('')
+      setMinQty('1')
+      setPriceKind('list')
     } catch (e) {
       showMessages([
         e instanceof ApiError ? e.message : 'No se pudo abrir el producto',
@@ -198,10 +213,51 @@ export function AdminPriceListPage() {
         const match = list.find((u) => u.name.toLowerCase() === name.toLowerCase())
         if (match) setUnitTypeId(match.id)
       }
-      showMessages(['Tipo de unidad creado — ahora pon la cantidad'])
+      showMessages(['Tipo creado — ahora indica las unidades'])
     } catch (err) {
       showMessages([
         err instanceof ApiError ? err.message : 'No se pudo crear el tipo',
+      ])
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function renameUnitType(id: string, currentName: string) {
+    clear()
+    const next = window.prompt('Nuevo nombre del tipo', currentName)?.trim()
+    if (!next || next === currentName) return
+    setBusy(true)
+    try {
+      await api(`/api/admin/unit-types/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ name: next }),
+      })
+      await loadUnitTypes()
+      if (selectedId) await loadDetail(selectedId, packagingId || undefined)
+      showMessages(['Tipo actualizado'])
+    } catch (err) {
+      showMessages([
+        err instanceof ApiError ? err.message : 'No se pudo renombrar',
+      ])
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function removeUnitType(id: string, name: string) {
+    clear()
+    if (!window.confirm(`¿Eliminar el tipo «${name}»?`)) return
+    setBusy(true)
+    try {
+      await api(`/api/admin/unit-types/${id}`, { method: 'DELETE' })
+      await loadUnitTypes()
+      showMessages(['Tipo eliminado'])
+    } catch (err) {
+      showMessages([
+        err instanceof ApiError
+          ? err.message
+          : 'No se pudo eliminar (puede estar en uso)',
       ])
     } finally {
       setBusy(false)
@@ -284,6 +340,74 @@ export function AdminPriceListPage() {
     }
   }
 
+  function selectPackaging(pk: Packaging) {
+    setPackagingId(pk.id)
+    setEditPackQty(String(pk.contentQty))
+    setEditPackLabel(pk.label ?? '')
+    setEditPackUnitId(pk.unitTypeId)
+    setEditingPriceId(null)
+    setAmount('')
+    setCompareAt('')
+    setMinQty('1')
+    setPriceKind('list')
+  }
+
+  async function updatePresentation(e: React.FormEvent) {
+    e.preventDefault()
+    clear()
+    if (!selectedId || !packagingId) return
+    const qty = Number(editPackQty)
+    if (!Number.isFinite(qty) || qty <= 0) {
+      showMessages(['Indica cuántas unidades lleva'])
+      return
+    }
+    if (!editPackUnitId) {
+      showMessages(['Elige el tipo de unidad'])
+      return
+    }
+    setBusy(true)
+    try {
+      await api(`/api/admin/products/${selectedId}/packagings/${packagingId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          unitTypeId: editPackUnitId,
+          contentQty: qty,
+          label: editPackLabel.trim() || null,
+        }),
+      })
+      await loadDetail(selectedId, packagingId)
+      showMessages(['Presentación actualizada'])
+    } catch (err) {
+      showMessages([
+        err instanceof ApiError
+          ? err.message
+          : 'No se pudo actualizar la presentación',
+      ])
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function setDefaultPresentation() {
+    if (!selectedId || !packagingId) return
+    clear()
+    setBusy(true)
+    try {
+      await api(`/api/admin/products/${selectedId}/packagings/${packagingId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ isDefault: true }),
+      })
+      await loadDetail(selectedId, packagingId)
+      showMessages(['Marcada como principal'])
+    } catch (err) {
+      showMessages([
+        err instanceof ApiError ? err.message : 'No se pudo actualizar',
+      ])
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function removePresentation(id: string) {
     if (!selectedId) return
     clear()
@@ -326,7 +450,7 @@ export function AdminPriceListPage() {
     }
     const min = Number(minQty)
     if (!Number.isFinite(min) || min <= 0) {
-      showMessages(['«Desde» debe ser mayor a 0 (usa 1 para el precio base)'])
+      showMessages(['La cantidad mínima debe ser mayor a 0'])
       return
     }
     const compare = compareAt.trim() === '' ? null : Number(compareAt)
@@ -339,18 +463,21 @@ export function AdminPriceListPage() {
       await api(`/api/admin/products/${selectedId}/prices`, {
         method: 'POST',
         body: JSON.stringify({
+          id: editingPriceId ?? undefined,
           packagingId,
           priceKind,
           minQty: min,
           amount: amt,
           compareAtAmount: compare,
+          saveAsNew: false,
         }),
       })
       await loadDetail(selectedId, packagingId)
       setAmount('')
       setCompareAt('')
       setMinQty('1')
-      showMessages(['Precio agregado a esta presentación'])
+      setEditingPriceId(null)
+      showMessages([editingPriceId ? 'Precio actualizado' : 'Precio agregado'])
     } catch (err) {
       showMessages([
         err instanceof ApiError ? err.message : 'No se pudo guardar el precio',
@@ -358,6 +485,16 @@ export function AdminPriceListPage() {
     } finally {
       setBusy(false)
     }
+  }
+
+  function startEditPrice(pr: Price) {
+    setEditingPriceId(pr.id)
+    setPriceKind(pr.priceKind as 'list' | 'wholesale' | 'offer')
+    setAmount(String(pr.amount))
+    setMinQty(String(pr.minQty))
+    setCompareAt(
+      pr.compareAtAmount != null ? String(pr.compareAtAmount) : '',
+    )
   }
 
   async function removePrice(id: string) {
@@ -419,23 +556,57 @@ export function AdminPriceListPage() {
             </p>
           </div>
 
-          <div className="flex flex-col gap-2 rounded-xl border border-dashed border-rosver-line bg-rosver-soft/30 p-3 sm:flex-row sm:items-end">
-            <AdminField label="¿Falta un tipo? Créalo" htmlFor="pl-new-unit" className="flex-1">
-              <AdminInput
-                id="pl-new-unit"
-                value={newUnitName}
-                onChange={(e) => setNewUnitName(e.target.value)}
-                placeholder="Ej. Caja"
-              />
-            </AdminField>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void createUnitTypeInline()}
-              className="h-11 rounded-xl border border-rosver-line bg-white px-4 text-sm font-semibold text-rosver-ink hover:border-rosver-red/40 disabled:opacity-60"
-            >
-              Crear tipo
-            </button>
+          <div className="space-y-2 rounded-xl border border-dashed border-rosver-line bg-rosver-soft/30 p-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+              <AdminField
+                label="¿Falta un tipo? Créalo"
+                htmlFor="pl-new-unit"
+                className="flex-1"
+              >
+                <AdminInput
+                  id="pl-new-unit"
+                  value={newUnitName}
+                  onChange={(e) => setNewUnitName(e.target.value)}
+                  placeholder="Ej. Caja"
+                />
+              </AdminField>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void createUnitTypeInline()}
+                className="h-11 rounded-xl border border-rosver-line bg-white px-4 text-sm font-semibold text-rosver-ink hover:border-rosver-red/40 disabled:opacity-60"
+              >
+                Crear tipo
+              </button>
+            </div>
+            {unitTypes.length > 0 ? (
+              <ul className="flex flex-wrap gap-2">
+                {unitTypes.map((u) => (
+                  <li
+                    key={u.id}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-rosver-line bg-white px-2.5 py-1 text-xs"
+                  >
+                    <span className="font-semibold text-rosver-ink">{u.name}</span>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void renameUnitType(u.id, u.name)}
+                      className="font-semibold text-rosver-red"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void removeUnitType(u.id, u.name)}
+                      className="font-semibold text-rosver-muted hover:text-rosver-red"
+                    >
+                      Borrar
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
 
           <form
@@ -460,7 +631,7 @@ export function AdminPriceListPage() {
                 )}
               </AdminSelect>
             </AdminField>
-            <AdminField label="Cantidad" htmlFor="pl-qty">
+            <AdminField label="Unidades por presentación" htmlFor="pl-qty">
               <AdminInput
                 id="pl-qty"
                 inputMode="decimal"
@@ -477,7 +648,7 @@ export function AdminPriceListPage() {
                 placeholder="Ej. Caja x12"
               />
             </AdminField>
-            <AdminField label="Precio venta S/" htmlFor="pl-list">
+            <AdminField label="Precio de venta (S/)" htmlFor="pl-list">
               <AdminInput
                 id="pl-list"
                 inputMode="decimal"
@@ -486,13 +657,13 @@ export function AdminPriceListPage() {
                 placeholder="200.00"
               />
             </AdminField>
-            <AdminField label="Mayorista S/ (opc.)" htmlFor="pl-wh">
+            <AdminField label="Precio mayorista (S/)" htmlFor="pl-wh">
               <AdminInput
                 id="pl-wh"
                 inputMode="decimal"
                 value={wholesaleAmount}
                 onChange={(e) => setWholesaleAmount(e.target.value)}
-                placeholder="184.00"
+                placeholder="Opcional"
               />
             </AdminField>
             <div className="flex items-end">
@@ -507,17 +678,11 @@ export function AdminPriceListPage() {
           </form>
         </section>
 
-        {/* 2 — Lista de presentaciones (ubicaciones) */}
+        {/* 2 — Lista de presentaciones */}
         <section className="space-y-3 rounded-2xl border border-rosver-line bg-white p-4 shadow-sm sm:p-5">
-          <div>
-            <h2 className="text-sm font-bold text-rosver-ink">
-              2. Presentaciones de este producto
-            </h2>
-            <p className="mt-1 text-xs text-rosver-muted">
-              Selecciona una para configurarle varios precios (venta, mayorista,
-              oferta…) sobre esa misma cantidad.
-            </p>
-          </div>
+          <h2 className="text-sm font-bold text-rosver-ink">
+            2. Presentaciones
+          </h2>
 
           {packagings.length === 0 ? (
             <p className="rounded-xl border border-rosver-line px-4 py-6 text-center text-sm text-rosver-muted">
@@ -531,69 +696,120 @@ export function AdminPriceListPage() {
                 ).length
                 const active = packagingId === pk.id
                 return (
-                  <li key={pk.id}>
+                  <li
+                    key={pk.id}
+                    className={cn(
+                      'flex items-start justify-between gap-2 rounded-xl border px-4 py-3 transition',
+                      active
+                        ? 'border-rosver-red bg-rosver-red/5 ring-1 ring-rosver-red/30'
+                        : 'border-rosver-line bg-white hover:border-rosver-red/35',
+                    )}
+                  >
                     <button
                       type="button"
-                      onClick={() => setPackagingId(pk.id)}
-                      className={cn(
-                        'flex w-full items-start justify-between gap-2 rounded-xl border px-4 py-3 text-left transition',
-                        active
-                          ? 'border-rosver-red bg-rosver-red/5 ring-1 ring-rosver-red/30'
-                          : 'border-rosver-line bg-white hover:border-rosver-red/35',
-                      )}
+                      onClick={() => selectPackaging(pk)}
+                      className="min-w-0 flex-1 text-left"
                     >
-                      <div>
-                        <p className="font-semibold text-rosver-ink">
-                          {packagingTitle(pk)}
-                          {pk.isDefault ? (
-                            <span className="ml-2 text-[10px] font-bold text-rosver-red">
-                              Principal
-                            </span>
-                          ) : null}
-                        </p>
-                        <p className="text-xs text-rosver-muted">
-                          {count === 0
-                            ? 'Sin precios aún'
-                            : `${count} precio${count === 1 ? '' : 's'}`}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          void removePresentation(pk.id)
-                        }}
-                        className="text-xs font-semibold text-rosver-muted hover:text-rosver-red"
-                      >
-                        Eliminar
-                      </button>
+                      <p className="font-semibold text-rosver-ink">
+                        {packagingTitle(pk)}
+                        {pk.isDefault ? (
+                          <span className="ml-2 text-[10px] font-bold text-rosver-red">
+                            Principal
+                          </span>
+                        ) : null}
+                      </p>
+                      <p className="text-xs text-rosver-muted">
+                        {count === 0
+                          ? 'Sin precios'
+                          : `${count} precio${count === 1 ? '' : 's'}`}
+                      </p>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void removePresentation(pk.id)}
+                      className="shrink-0 text-xs font-semibold text-rosver-muted hover:text-rosver-red"
+                    >
+                      Eliminar
                     </button>
                   </li>
                 )
               })}
             </ul>
           )}
+
+          {activePack ? (
+            <form
+              noValidate
+              onSubmit={updatePresentation}
+              className="grid gap-3 rounded-xl border border-rosver-line bg-rosver-soft/30 p-3 sm:grid-cols-2 lg:grid-cols-4"
+            >
+              <p className="sm:col-span-2 lg:col-span-4 text-xs font-semibold text-rosver-ink">
+                Editar presentación seleccionada
+              </p>
+              <AdminField label="Tipo de unidad" htmlFor="pl-edit-unit">
+                <AdminSelect
+                  id="pl-edit-unit"
+                  value={editPackUnitId}
+                  onChange={(e) => setEditPackUnitId(e.target.value)}
+                >
+                  {unitTypes.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))}
+                </AdminSelect>
+              </AdminField>
+              <AdminField label="Unidades por presentación" htmlFor="pl-edit-qty">
+                <AdminInput
+                  id="pl-edit-qty"
+                  value={editPackQty}
+                  onChange={(e) => setEditPackQty(e.target.value)}
+                />
+              </AdminField>
+              <AdminField label="Nombre" htmlFor="pl-edit-label">
+                <AdminInput
+                  id="pl-edit-label"
+                  value={editPackLabel}
+                  onChange={(e) => setEditPackLabel(e.target.value)}
+                />
+              </AdminField>
+              <div className="flex flex-wrap items-end gap-2">
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="h-11 rounded-xl bg-rosver-ink px-4 text-sm font-semibold text-white hover:bg-rosver-red disabled:opacity-60"
+                >
+                  Guardar
+                </button>
+                {!activePack.isDefault ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void setDefaultPresentation()}
+                    className="h-11 rounded-xl border border-rosver-line px-3 text-xs font-semibold text-rosver-ink"
+                  >
+                    Hacer principal
+                  </button>
+                ) : null}
+              </div>
+            </form>
+          ) : null}
         </section>
 
         {/* 3 — Precios de la presentación seleccionada */}
         <section className="space-y-3 rounded-2xl border border-rosver-line bg-white p-4 shadow-sm sm:p-5">
           <div>
             <h2 className="text-sm font-bold text-rosver-ink">
-              3. Precios de esta presentación
+              3. Precios
             </h2>
             {activePack ? (
               <p className="mt-1 text-xs text-rosver-muted">
-                Configurando:{' '}
-                <span className="font-semibold text-rosver-ink">
-                  {packagingTitle(activePack)}
-                </span>
-                . Puedes agregar varios (venta S/ 200, mayorista S/ 184, oferta…).
-                Usa «Desde 1» para el precio de esa presentación.
+                {packagingTitle(activePack)}
               </p>
             ) : (
               <p className="mt-1 text-xs text-rosver-muted">
-                Selecciona una presentación arriba.
+                Selecciona una presentación.
               </p>
             )}
           </div>
@@ -629,7 +845,7 @@ export function AdminPriceListPage() {
                     placeholder="0.00"
                   />
                 </AdminField>
-                <AdminField label="Tachado (oferta)" htmlFor="pl-cmp">
+                <AdminField label="Precio tachado" htmlFor="pl-cmp">
                   <AdminInput
                     id="pl-cmp"
                     inputMode="decimal"
@@ -638,7 +854,7 @@ export function AdminPriceListPage() {
                     placeholder="Opcional"
                   />
                 </AdminField>
-                <AdminField label="Desde (cantidad)" htmlFor="pl-min">
+                <AdminField label="Desde (unidades)" htmlFor="pl-min">
                   <AdminInput
                     id="pl-min"
                     inputMode="decimal"
@@ -646,22 +862,35 @@ export function AdminPriceListPage() {
                     onChange={(e) => setMinQty(e.target.value)}
                   />
                 </AdminField>
-                <div className="flex items-end">
+                <div className="flex flex-wrap items-end gap-2">
                   <button
                     type="submit"
                     disabled={busy}
-                    className="h-11 w-full rounded-xl bg-rosver-red text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
+                    className="h-11 flex-1 rounded-xl bg-rosver-red text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
                   >
-                    Agregar precio
+                    {editingPriceId ? 'Guardar cambios' : 'Agregar precio'}
                   </button>
+                  {editingPriceId ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingPriceId(null)
+                        setAmount('')
+                        setCompareAt('')
+                        setMinQty('1')
+                      }}
+                      className="h-11 rounded-xl border border-rosver-line px-3 text-xs font-semibold text-rosver-muted"
+                    >
+                      Cancelar
+                    </button>
+                  ) : null}
                 </div>
               </form>
 
               <ul className="divide-y divide-rosver-line rounded-xl border border-rosver-line">
                 {pricesForPack.length === 0 ? (
                   <li className="px-4 py-4 text-sm text-rosver-muted">
-                    Esta presentación aún no tiene precios. Agrega al menos
-                    Venta.
+                    Sin precios. Agrega al menos Venta.
                   </li>
                 ) : (
                   pricesForPack.map((pr) => (
@@ -687,6 +916,13 @@ export function AdminPriceListPage() {
                         <span className="font-bold text-rosver-red">
                           S/ {pr.amount.toFixed(2)}
                         </span>
+                        <button
+                          type="button"
+                          onClick={() => startEditPrice(pr)}
+                          className="text-xs font-semibold text-rosver-red"
+                        >
+                          Editar
+                        </button>
                         <button
                           type="button"
                           disabled={busy}
