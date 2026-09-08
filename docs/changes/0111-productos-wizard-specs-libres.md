@@ -2,7 +2,8 @@
 
 **Fecha:** 2026-09-08  
 **Tipo:** feature  
-**Versión:** 0.1.19
+**Versión:** 0.1.19  
+**Deploy:** https://rosver-web-production.up.railway.app (`5ef91d3`)
 
 ## Qué cambió
 

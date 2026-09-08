@@ -33,10 +33,11 @@
 | P29 | Tendencia + calificaciones / reseñas | Pedido lógica | hecho | Doc 06 + v0.1.13 |
 | P30 | Reseñas desde cuenta cliente (no solo admin) | Calificaciones | pendiente | Admin ya no carga reseñas en producto; falta UI `/cuenta` |
 | P31 | Slider marcas ↔ módulo marcas + seed | Pedido UI | hecho | v0.1.14 · migración `006` |
-| P32 | Galería multi-imagen producto | Productos | pendiente | Hoy 1 foto principal |
+| P33 | Listado precios: crear presentaciones (N unidades) + precios | Pedido UX | hecho | v0.1.20 editor por producto |
 
 ## Hechos recientes
 
+- Listado precios: presentaciones con N unidades + precios (v0.1.20)
 - Productos por fases (Odoo) + specs libres + sin reseñas admin (v0.1.19)
 - Ofertas DB + seed 3 ejemplos + ERP publicar (v0.1.18)
 - ERP shell fijo + Productos / Listado de precios (v0.1.17)

@@ -1018,13 +1018,16 @@ adminCatalogRoutes.post('/products/:id/packagings', async (c) => {
         [productId],
       )
     }
-    const label =
-      body.data.label ||
+    const unitName =
       (
         await client.query(`SELECT name FROM unit_types WHERE id = $1`, [
           body.data.unitTypeId,
         ])
-      ).rows[0]?.name + ` ×${body.data.contentQty}`
+      ).rows[0]?.name ?? 'Unidad'
+    const qty = body.data.contentQty
+    const label =
+      body.data.label?.trim() ||
+      (qty === 1 ? unitName : `${unitName} × ${qty}`)
 
     const { rows } = await client.query(
       `INSERT INTO product_packagings
@@ -1034,7 +1037,7 @@ adminCatalogRoutes.post('/products/:id/packagings', async (c) => {
       [
         productId,
         body.data.unitTypeId,
-        body.data.contentQty,
+        qty,
         label,
         body.data.barcode || null,
         body.data.isDefault ?? false,
@@ -1053,10 +1056,22 @@ adminCatalogRoutes.post('/products/:id/packagings', async (c) => {
     }, 201)
   } catch {
     await client.query('ROLLBACK')
-    return c.json({ error: 'Ese empaque (unidad + cantidad) ya existe.' }, 409)
+    return c.json({ error: 'Esa presentación (unidad + cantidad) ya existe.' }, 409)
   } finally {
     client.release()
   }
+})
+
+adminCatalogRoutes.delete('/products/:id/packagings/:packagingId', async (c) => {
+  const productId = c.req.param('id')
+  const packagingId = c.req.param('packagingId')
+  const { rowCount } = await pool.query(
+    `DELETE FROM product_packagings WHERE id = $1 AND product_id = $2`,
+    [packagingId, productId],
+  )
+  if (!rowCount) return c.json({ error: 'Presentación no encontrada' }, 404)
+  await invalidateCatalogHomeCaches()
+  return c.json({ ok: true })
 })
 
 /**
@@ -1179,6 +1194,21 @@ function mapPrice(r: Record<string, unknown>) {
     notes: r.notes,
   }
 }
+
+adminCatalogRoutes.delete('/products/:id/prices/:priceId', async (c) => {
+  const productId = c.req.param('id')
+  const priceId = c.req.param('priceId')
+  const { rows } = await pool.query(
+    `UPDATE product_prices
+     SET is_active = false, updated_at = now()
+     WHERE id = $1 AND product_id = $2
+     RETURNING id`,
+    [priceId, productId],
+  )
+  if (!rows[0]) return c.json({ error: 'Precio no encontrado' }, 404)
+  await invalidateCatalogHomeCaches()
+  return c.json({ ok: true, softDeleted: true })
+})
 
 /* ——— Reseñas / calificaciones ——— */
 adminCatalogRoutes.get('/products/:id/reviews', async (c) => {

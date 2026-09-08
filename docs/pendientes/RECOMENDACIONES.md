@@ -18,5 +18,5 @@ Ideas útiles **no pedidas** aún. No implementar solas; esperar OK del usuario.
 | R12 | Historial de precios (auditoría) en ERP | Compliance / márgenes | media |
 | R14 | Seed categorías demo con tagline/puntos/imagen | Arranque tienda sin mocks | hecho | Migración `007` |
 | R15 | Logo marca en admin (upload R2) | Filtro + marquee con logo real | hecho | v0.1.15 |
-| R16 | Wizard producto: fase empaques/presentaciones | Completar flujo Odoo (packaging aparte) | media |
+| R16 | Wizard producto: fase empaques/presentaciones | Completar flujo Odoo (packaging aparte) | hecho | También en `/admin/listado-precios` v0.1.20 |
 
