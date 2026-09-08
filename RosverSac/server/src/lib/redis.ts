@@ -1,4 +1,4 @@
-import Redis from 'ioredis'
+import { Redis } from 'ioredis'
 import { config } from '../config.js'
 
 const FEATURED_KEY = 'rosver:catalog:featured:v1'

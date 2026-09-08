@@ -11,10 +11,12 @@ import {
   requireRole,
   type AuthVariables,
 } from '../middleware/auth.js'
+import { validateUuidParams } from '../middleware/validate-params.js'
 
 export const adminRoutes = new Hono<{ Variables: AuthVariables }>()
 
 adminRoutes.use('*', requireAuth, requireRole('admin'))
+adminRoutes.use('/roles/:id/permissions', validateUuidParams('id'))
 
 adminRoutes.get('/health', (c) =>
   c.json({ ok: true, panel: 'SystemRSV', user: c.get('user').email }),

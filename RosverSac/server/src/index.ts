@@ -10,6 +10,7 @@ import { config } from './config.js'
 import { authRoutes } from './routes/auth.js'
 import { profileRoutes } from './routes/profile.js'
 import { adminRoutes } from './routes/admin.js'
+import { adminUsersRoutes } from './routes/admin-users.js'
 import { adminCatalogRoutes } from './routes/admin-catalog.js'
 import { adminStorageRoutes } from './routes/admin-storage.js'
 import { mediaRoutes } from './routes/media.js'
@@ -49,6 +50,7 @@ app.get('/api/health', (c) =>
 app.route('/api/auth', authRoutes)
 app.route('/api/profile', profileRoutes)
 app.route('/api/admin', adminRoutes)
+app.route('/api/admin', adminUsersRoutes)
 app.route('/api/admin', adminCatalogRoutes)
 app.route('/api/admin', adminStorageRoutes)
 app.route('/api/media', mediaRoutes)

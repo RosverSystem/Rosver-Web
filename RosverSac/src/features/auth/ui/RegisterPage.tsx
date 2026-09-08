@@ -3,6 +3,13 @@ import { OtpVerifyPanel } from '@/features/auth/ui/OtpVerifyPanel'
 import { isValidEmail, isValidPhone, cnField } from '@/shared/lib'
 import { ApiError } from '@/shared/lib/api'
 import { prefersReducedMotion } from '@/shared/lib/gsap'
+import {
+  PASSWORD_RULES,
+  PASSWORD_STRENGTH_UI,
+  getPasswordStrength,
+  passwordMeetsRules,
+  type PasswordStrength,
+} from '@/shared/lib/password-rules'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { cn } from '@/shared/lib/cn'
 import { FloatingToasts } from '@/shared/ui/floating-toasts'
@@ -21,72 +28,6 @@ type FieldKey =
   | 'terms'
 
 type FieldErrors = Partial<Record<FieldKey, string>>
-
-const PASSWORD_RULES = [
-  {
-    id: 'length',
-    label: 'Mínimo 8 caracteres',
-    test: (value: string) => value.length >= 8,
-  },
-  {
-    id: 'upper',
-    label: 'Una letra mayúscula',
-    test: (value: string) => /[A-ZÁÉÍÓÚÑ]/.test(value),
-  },
-  {
-    id: 'lower',
-    label: 'Una letra minúscula',
-    test: (value: string) => /[a-záéíóúñ]/.test(value),
-  },
-  {
-    id: 'number',
-    label: 'Un número',
-    test: (value: string) => /\d/.test(value),
-  },
-  {
-    id: 'special',
-    label: 'Un carácter especial (!@#$%…)',
-    test: (value: string) => /[^A-Za-zÁÉÍÓÚÑáéíóúñ0-9\s]/.test(value),
-  },
-] as const
-
-function passwordMeetsRules(value: string) {
-  return PASSWORD_RULES.every((rule) => rule.test(value))
-}
-
-type PasswordStrength = 'baja' | 'media' | 'segura'
-
-function getPasswordStrength(value: string): PasswordStrength | null {
-  if (!value) return null
-  const met = PASSWORD_RULES.filter((rule) => rule.test(value)).length
-  if (met <= 2) return 'baja'
-  if (met <= 4) return 'media'
-  return 'segura'
-}
-
-const STRENGTH_UI: Record<
-  PasswordStrength,
-  { label: string; width: string; bar: string; text: string }
-> = {
-  baja: {
-    label: 'Baja',
-    width: '33%',
-    bar: 'bg-rosver-red',
-    text: 'text-rosver-red',
-  },
-  media: {
-    label: 'Media',
-    width: '66%',
-    bar: 'bg-rosver-yellow',
-    text: 'text-rosver-ink',
-  },
-  segura: {
-    label: 'Segura',
-    width: '100%',
-    bar: 'bg-rosver-success',
-    text: 'text-rosver-success',
-  },
-}
 
 /** Tras dejar de teclear, se ocultan los requisitos y queda la barra. */
 const PASSWORD_IDLE_MS = 900
@@ -637,7 +578,7 @@ function PasswordStrengthBar({
   strength: PasswordStrength
   reduceMotion: boolean
 }) {
-  const ui = STRENGTH_UI[strength]
+  const ui = PASSWORD_STRENGTH_UI[strength]
 
   return (
     <motion.div

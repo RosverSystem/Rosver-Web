@@ -140,6 +140,15 @@ export async function revokeSession(c: Context) {
   deleteCookie(c, config.sessionCookie, { path: '/' })
 }
 
+/** Revoca todas las sesiones activas de un usuario (ej. tras reset de contraseña). */
+export async function revokeAllSessionsForUser(userId: string) {
+  await pool.query(
+    `UPDATE sessions SET revoked_at = now()
+     WHERE user_id = $1 AND revoked_at IS NULL`,
+    [userId],
+  )
+}
+
 export async function createLoginChallenge(userId: string, purpose = 'totp') {
   const token = randomToken(24)
   const expiresAt = new Date(Date.now() + 10 * 60 * 1000)

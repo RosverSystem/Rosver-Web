@@ -29,6 +29,12 @@ export const otpSchema = z.object({
   code: z.string().trim().min(4).max(8),
 })
 
+export const resetPasswordSchema = z.object({
+  email: z.string().trim().email().transform((v) => v.toLowerCase()),
+  code: z.string().trim().min(4).max(8),
+  newPassword: passwordSchema,
+})
+
 export const profileSchema = z.object({
   fullName: z.string().trim().min(2).optional(),
   phone: z

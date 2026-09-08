@@ -51,6 +51,7 @@ type AuthContextValue = {
   }) => Promise<{ email: string }>
   verifyEmail: (email: string, code: string) => Promise<AuthUser>
   resendOtp: (email: string, purpose: 'email_verify' | 'login' | 'reset_password') => Promise<void>
+  resetPassword: (email: string, code: string, newPassword: string) => Promise<AuthUser>
   logout: () => Promise<void>
   updateProfile: (patch: Record<string, unknown>) => Promise<AuthUser>
   uploadAvatar: (file: File) => Promise<AuthUser>
@@ -136,6 +137,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [],
   )
 
+  const resetPassword = useCallback(
+    async (email: string, code: string, newPassword: string) => {
+      const data = await api<{ user: AuthUser }>('/api/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({ email, code, newPassword }),
+      })
+      setUser(data.user)
+      return data.user
+    },
+    [],
+  )
+
   const logout = useCallback(async () => {
     await api('/api/auth/logout', { method: 'POST' })
     setUser(null)
@@ -171,6 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       verifyEmail,
       resendOtp,
+      resetPassword,
       logout,
       updateProfile,
       uploadAvatar,
@@ -187,6 +201,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       register,
       verifyEmail,
       resendOtp,
+      resetPassword,
       logout,
       updateProfile,
       uploadAvatar,

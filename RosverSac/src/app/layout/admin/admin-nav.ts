@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import { Award, Compass, Hardrive, Home, StarGrow } from 'cssvg-icons'
+import { Award, Compass, Group, Hardrive, Home, StarGrow } from 'cssvg-icons'
 
 type IconProps = { size?: number; color?: string; strokeWidth?: number }
 
@@ -47,6 +47,14 @@ export const ADMIN_NAV: AdminNavEntry[] = [
       'storage',
     ],
     Icon: Hardrive,
+  },
+  {
+    type: 'link',
+    id: 'usuarios',
+    name: 'Usuarios',
+    link: '/admin/usuarios',
+    keywords: ['usuarios', 'roles', 'permisos', 'equipo', 'cuentas', 'staff'],
+    Icon: Group,
   },
   {
     type: 'group',
@@ -139,6 +147,7 @@ export function searchAdminModules(query: string): AdminNavLeaf[] {
 }
 
 export function adminPageTitle(pathname: string): string {
+  if (pathname.startsWith('/admin/usuarios')) return 'Usuarios'
   if (pathname.startsWith('/admin/almacenamiento')) return 'Almacenamiento'
   if (pathname.startsWith('/admin/ofertas')) return 'Ofertas'
   if (pathname.startsWith('/admin/marcas')) return 'Marcas'

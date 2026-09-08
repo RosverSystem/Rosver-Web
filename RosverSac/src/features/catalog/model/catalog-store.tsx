@@ -64,6 +64,11 @@ type CatalogContextValue = {
   liveProducts: boolean
   updatedAt: string | null
   refreshing: boolean
+  /** true tras el primer intento de refresh (éxito o error). `products`
+   *  arranca en los mocks de forma síncrona, así que hasta que esto sea
+   *  true no se puede confiar en `products` para decidir qué existe de
+   *  verdad (ver CartCatalogSync). */
+  hasLoadedOnce: boolean
   refresh: () => Promise<void>
 }
 
@@ -122,6 +127,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
   const [liveProducts, setLiveProducts] = useState(false)
   const [updatedAt, setUpdatedAt] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
 
   const refresh = useCallback(async () => {
     setRefreshing(true)
@@ -176,6 +182,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
       setLiveProducts(false)
     } finally {
       setRefreshing(false)
+      setHasLoadedOnce(true)
     }
   }, [])
 
@@ -218,6 +225,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
       liveProducts,
       updatedAt,
       refreshing,
+      hasLoadedOnce,
       refresh,
     }),
     [
@@ -229,6 +237,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
       liveProducts,
       updatedAt,
       refreshing,
+      hasLoadedOnce,
       refresh,
     ],
   )
@@ -248,6 +257,7 @@ export function useCatalog() {
       liveProducts: false,
       updatedAt: null,
       refreshing: false,
+      hasLoadedOnce: false,
       refresh: async () => {},
     } satisfies CatalogContextValue
   }

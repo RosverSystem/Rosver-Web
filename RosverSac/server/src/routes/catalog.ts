@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { pool } from '../db.js'
-import { featuredCache, invalidateCatalogHomeCaches, redisStatus, trendingCache } from '../lib/redis.js'
+import { featuredCache, redisStatus, trendingCache } from '../lib/redis.js'
 import {
   queryFeaturedProducts,
   queryOfferProducts,

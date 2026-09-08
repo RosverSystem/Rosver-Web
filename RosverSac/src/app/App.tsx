@@ -1,5 +1,6 @@
 import { AuthLayout } from '@/app/layout/AuthLayout'
 import { AdminDashboardPage } from '@/app/pages/AdminDashboardPage'
+import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { AdminShell } from '@/app/layout/AdminShell'
 import { Footer } from '@/app/layout/Footer'
 import { IntroTransition } from '@/app/layout/IntroTransition'
@@ -21,12 +22,14 @@ import {
   AdminProductsPage,
 } from '@/features/admin-catalog'
 import { AdminStoragePage } from '@/features/admin-media'
+import { AdminUsersPage } from '@/features/admin-users'
 import {
   AuthProvider,
   LoginPage,
   RegisterPage,
   RequireAdmin,
   RequireAuth,
+  ResetPasswordPage,
 } from '@/features/auth'
 import { CartPage, CartProvider, CartCatalogSync } from '@/features/cart'
 import {
@@ -93,10 +96,19 @@ export function App() {
                   <Route path="cotizaciones" element={<ClientQuotesPage />} />
                   <Route path="perfil" element={<AccountProfilePage />} />
                 </Route>
+
+                {/* Catch-all: sin esto, cualquier URL sin match (typo, link
+                    roto, o un sub-path de /admin o /cuenta que no existe)
+                    renderiza una pantalla en blanco total. */}
+                <Route path="*" element={<NotFoundPage />} />
               </Route>
 
               <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
               <Route path="/registro" element={<AuthLayout><RegisterPage /></AuthLayout>} />
+              <Route
+                path="/recuperar"
+                element={<AuthLayout><ResetPasswordPage /></AuthLayout>}
+              />
 
               <Route
                 path="/admin"
@@ -107,6 +119,7 @@ export function App() {
                 }
               >
                 <Route index element={<AdminDashboardPage />} />
+                <Route path="usuarios" element={<AdminUsersPage />} />
                 <Route path="productos" element={<AdminProductsPage />} />
                 <Route path="listado-precios" element={<AdminPriceListPage />} />
                 <Route path="almacenamiento" element={<AdminStoragePage />} />

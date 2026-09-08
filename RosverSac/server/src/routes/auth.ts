@@ -15,10 +15,18 @@ import {
   createSession,
   loadUserById,
   resolveSessionUser,
+  revokeAllSessionsForUser,
   revokeSession,
 } from '../lib/session.js'
-import { loginSchema, otpSchema, passwordSchema, registerSchema } from '../lib/validation.js'
+import {
+  loginSchema,
+  otpSchema,
+  registerSchema,
+  resetPasswordSchema,
+} from '../lib/validation.js'
 import { requireAuth, type AuthVariables } from '../middleware/auth.js'
+import { loginLimiter, requestIp } from '../lib/rate-limit.js'
+import { deleteCookie, getCookie } from 'hono/cookie'
 import { z } from 'zod'
 
 export const authRoutes = new Hono<{ Variables: AuthVariables }>()
@@ -34,38 +42,55 @@ authRoutes.post('/register', async (c) => {
   }
   const data = parsed.data
 
-  const exists = await pool.query(`SELECT id FROM users WHERE email = $1`, [
-    data.email,
-  ])
-  if (exists.rowCount) {
-    return c.json({ error: 'Ya existe una cuenta con ese correo.' }, 409)
-  }
-
-  const role = await pool.query<{ id: string }>(
-    `SELECT id FROM roles WHERE code = 'client' LIMIT 1`,
-  )
-  if (!role.rows[0]) {
-    return c.json({ error: 'Rol cliente no configurado. Ejecuta el seed.' }, 500)
-  }
-
-  const passwordHash = await hashPassword(data.password)
-  const avatarUrl = pickDefaultAvatar(data.email)
-
-  const inserted = await pool.query<{ id: string }>(
-    `INSERT INTO users (email, password_hash, role_id, full_name, phone, avatar_url)
-     VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING id`,
-    [
-      data.email,
-      passwordHash,
-      role.rows[0].id,
-      data.fullName,
-      data.phone,
-      avatarUrl,
-    ],
+  const existing = await pool.query<{ id: string; email_verified_at: Date | null }>(
+    `SELECT id, email_verified_at FROM users WHERE email = $1`,
+    [data.email],
   )
 
-  const userId = inserted.rows[0].id
+  let userId: string
+
+  if (existing.rows[0]) {
+    // Cuenta ya verificada → correo realmente en uso, se bloquea.
+    if (existing.rows[0].email_verified_at) {
+      return c.json({ error: 'Ya existe una cuenta con ese correo.' }, 409)
+    }
+    // Cuenta sin verificar (ej. un intento anterior que no pudo completar
+    // el envío del OTP): se retoma el registro en vez de dejar al usuario
+    // sin poder registrarse ni verificar.
+    userId = existing.rows[0].id
+    const passwordHash = await hashPassword(data.password)
+    await pool.query(
+      `UPDATE users SET password_hash = $2, full_name = $3, phone = $4, updated_at = now()
+       WHERE id = $1`,
+      [userId, passwordHash, data.fullName, data.phone],
+    )
+  } else {
+    const role = await pool.query<{ id: string }>(
+      `SELECT id FROM roles WHERE code = 'client' LIMIT 1`,
+    )
+    if (!role.rows[0]) {
+      return c.json({ error: 'Rol cliente no configurado. Ejecuta el seed.' }, 500)
+    }
+
+    const passwordHash = await hashPassword(data.password)
+    const avatarUrl = pickDefaultAvatar(data.email)
+
+    const inserted = await pool.query<{ id: string }>(
+      `INSERT INTO users (email, password_hash, role_id, full_name, phone, avatar_url)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id`,
+      [
+        data.email,
+        passwordHash,
+        role.rows[0].id,
+        data.fullName,
+        data.phone,
+        avatarUrl,
+      ],
+    )
+    userId = inserted.rows[0].id
+  }
+
   await issueOtp({ email: data.email, purpose: 'email_verify', userId })
 
   return c.json({
@@ -110,6 +135,17 @@ authRoutes.post('/login', async (c) => {
     return c.json({ error: 'Correo o contraseña inválidos.' }, 400)
   }
 
+  const ip = requestIp(c.req.raw.headers)
+  const lock = loginLimiter.check(parsed.data.email, ip)
+  if (lock.locked) {
+    return c.json(
+      {
+        error: `Demasiados intentos. Vuelve a intentar en ${lock.retryAfterSec ?? 300}s.`,
+      },
+      429,
+    )
+  }
+
   const { rows } = await pool.query<{
     id: string
     password_hash: string | null
@@ -126,10 +162,15 @@ authRoutes.post('/login', async (c) => {
 
   const row = rows[0]
   if (!row?.password_hash) {
+    loginLimiter.recordFailure(parsed.data.email, ip)
     return c.json({ error: 'Correo o contraseña incorrectos.' }, 401)
   }
   const ok = await verifyPassword(row.password_hash, parsed.data.password)
-  if (!ok) return c.json({ error: 'Correo o contraseña incorrectos.' }, 401)
+  if (!ok) {
+    loginLimiter.recordFailure(parsed.data.email, ip)
+    return c.json({ error: 'Correo o contraseña incorrectos.' }, 401)
+  }
+  loginLimiter.recordSuccess(parsed.data.email, ip)
   if (row.status !== 'active') {
     return c.json({ error: 'Cuenta deshabilitada.' }, 403)
   }
@@ -227,6 +268,45 @@ authRoutes.post('/otp/resend', async (c) => {
   })
 })
 
+authRoutes.post('/reset-password', async (c) => {
+  const body = await c.req.json().catch(() => null)
+  const parsed = resetPasswordSchema.safeParse(body)
+  if (!parsed.success) {
+    return c.json(
+      { error: parsed.error.issues[0]?.message ?? 'Datos inválidos.' },
+      400,
+    )
+  }
+
+  const result = await verifyOtp({
+    email: parsed.data.email,
+    purpose: 'reset_password',
+    code: parsed.data.code,
+  })
+  if (!result.ok) return c.json({ error: result.error }, 400)
+
+  const { rows } = await pool.query<{ id: string; status: string }>(
+    `SELECT id, status FROM users WHERE email = $1`,
+    [parsed.data.email],
+  )
+  const row = rows[0]
+  if (!row || row.status !== 'active') {
+    return c.json({ error: 'No se pudo restablecer la contraseña.' }, 404)
+  }
+
+  const passwordHash = await hashPassword(parsed.data.newPassword)
+  await pool.query(
+    `UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1`,
+    [row.id, passwordHash],
+  )
+  // Cierra cualquier sesión existente: una contraseña nueva invalida las viejas.
+  await revokeAllSessionsForUser(row.id)
+
+  await createSession(c, row.id)
+  const user = await loadUserById(row.id)
+  return c.json({ ok: true, user })
+})
+
 authRoutes.get('/google/start', async (c) => {
   if (!config.google.clientId || !config.google.clientSecret) {
     return c.json(
@@ -258,6 +338,15 @@ authRoutes.get('/google/callback', async (c) => {
   if (!config.google.clientId || !config.google.clientSecret) {
     return c.redirect(`${config.appUrl}/login?error=google_not_configured`)
   }
+
+  // Valida el state contra la cookie emitida en /google/start (anti-CSRF).
+  const stateParam = c.req.query('state')
+  const stateCookie = getCookie(c, 'google_oauth_state')
+  deleteCookie(c, 'google_oauth_state', { path: '/' })
+  if (!stateParam || !stateCookie || stateParam !== stateCookie) {
+    return c.redirect(`${config.appUrl}/login?error=google_state`)
+  }
+
   const code = c.req.query('code')
   if (!code) return c.redirect(`${config.appUrl}/login?error=google_denied`)
 
@@ -412,6 +501,3 @@ authRoutes.post('/2fa/disable', requireAuth, async (c) => {
   )
   return c.json({ ok: true })
 })
-
-// keep passwordSchema import used for future reset
-void passwordSchema

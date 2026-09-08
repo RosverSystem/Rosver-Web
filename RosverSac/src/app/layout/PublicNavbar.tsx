@@ -56,19 +56,19 @@ export function PublicNavbar() {
       <div className="hidden bg-rosver-ink text-white sm:block">
         <div className="mx-auto flex h-10 max-w-7xl items-center justify-between gap-4 px-4 text-[11px] lg:px-6">
           <div className="flex min-w-0 items-center gap-4 lg:gap-6">
-            <p className="flex items-center gap-1.5 font-medium text-white/90">
+            <div className="flex items-center gap-1.5 font-medium text-white/90">
               <span className="text-rosver-red" aria-hidden>
                 <Compass size={14} color="currentColor" strokeWidth={2} />
               </span>
               <span className="truncate">Envíos a nivel nacional</span>
-            </p>
+            </div>
             <span className="hidden h-3 w-px bg-white/20 md:block" aria-hidden />
-            <p className="hidden items-center gap-1.5 font-medium text-white/90 md:flex">
+            <div className="hidden items-center gap-1.5 font-medium text-white/90 md:flex">
               <span className="text-rosver-red" aria-hidden>
                 <Check size={14} color="currentColor" strokeWidth={2} />
               </span>
               Cotiza sin compromiso
-            </p>
+            </div>
           </div>
 
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">

@@ -260,7 +260,7 @@ export function LoginPage() {
                 Recordarme
               </label>
               <Link
-                to="/contacto"
+                to="/recuperar"
                 className="font-semibold text-rosver-blue hover:text-rosver-red"
               >
                 ¿Olvidaste tu clave?

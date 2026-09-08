@@ -1,6 +1,6 @@
 # Pendientes — Rosver Web
 
-Última actualización: 2026-09-08
+Última actualización: 2026-09-08 (auditoría E2E + seguridad)
 
 | ID | Ítem | Origen | Estado | Notas / bloqueo |
 | --- | --- | --- | --- | --- |
@@ -18,7 +18,7 @@
 | P21 | Mega-menú topbar con imágenes / columnas | Topbar cats | hecho | v0.1.15 |
 | P22 | Import CSV / sync ERP externo | Catálogo | pendiente | |
 | P13 | ERP perfil solo sidebar | Pedido UX | hecho | v0.1.7 |
-| P05 | Recuperación de contraseña | Auth | pendiente | |
+| P05 | Recuperación de contraseña | Auth | hecho | `/recuperar` + `POST /api/auth/reset-password`; revoca sesiones viejas (0125) |
 | P06 | Avatar R2 | Perfil | hecho | |
 | P07 | 2FA UI perfil | Auth | pendiente | |
 | P08 | Header sesión | Login UX | hecho | |
@@ -41,9 +41,20 @@
 | P41 | Lógica carrito (persistencia + sync catálogo) | Pedido lógica | hecho | v0.1.30 localStorage |
 | P42 | Continuar pedido: PDF cotización + WhatsApp | Pedido UX | hecho | v0.1.31 jspdf; WA sin adjunto auto |
 | P43 | Badge carrito fantasma + pedido ligado a sesión | Bug + lógica | hecho | v0.1.32 visibleCount + local orders |
+| P44 | Login sin protección contra fuerza bruta | Auditoría seguridad | hecho | Rate limit por email+IP (0125), ver R01 |
+| P45 | IDs con formato inválido en API admin → 500 sin controlar | Auditoría seguridad | hecho | Middleware `validateUuidParams` (0125) |
+| P46 | URL sin match (typo, link roto) → pantalla en blanco total | Auditoría QA | hecho | Catch-all `NotFoundPage` (0125) |
+| P47 | Carrito se vacía en cada carga completa de página | Auditoría QA (bug crítico) | hecho | Race mocks vs API real en `CartCatalogSync` (0125) |
+| P48 | Registro se rompe (500) si falla el envío del OTP por correo | Auditoría QA (bug crítico) | hecho | `mail.ts` degrada a consola en vez de tumbar el request (0125) |
+| P49 | Cuenta sin verificar tras fallo de OTP queda bloqueada (409 para siempre) | Auditoría QA | hecho | `/register` retoma cuentas no verificadas (0125) |
+| P50 | Google OAuth callback sin validar `state` (CSRF) | Auditoría seguridad | hecho | Compara cookie vs query param (0125) |
+| P51 | `server/src` sin typecheck (no está en ningún `tsconfig`) | Auditoría calidad | hecho | `server/tsconfig.json` + `npm run typecheck:server` (0125) |
+| P52 | Admin: gestión de usuarios (listar/cambiar rol/estado) | Auditoría seguridad (refina P04) | hecho | API `admin-users` + UI `/admin/usuarios` (0125) |
+| P53 | Pedidos / Leads / Cotizaciones / Contenido: permisos RBAC existen, sin rutas API ni tablas | Auditoría (refina P03) | pendiente | `admin.orders`, `admin.leads`, `admin.quotes`, `admin.content` sin backend; páginas admin son mocks locales; formulario de contacto no persiste lead |
 
 ## Hechos recientes
 
+- Auditoría E2E + seguridad: carrito, OTP, reset password, rate limit, 404, admin users (v0.1.33 / 0125)
 - Badge carrito solo catálogo + Continuar pedido con sesión/prefill + pedidos locales (v0.1.32)
 - Continuar pedido: modal PDF estilo factura + WhatsApp (v0.1.31)
 - Lógica carrito: localStorage, sync catálogo, sin seed fantasma (v0.1.30)

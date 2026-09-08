@@ -1,7 +1,7 @@
-import nodemailer from 'nodemailer'
+import nodemailer, { type Transporter } from 'nodemailer'
 import { config } from '../config.js'
 
-let transporter: nodemailer.Transporter | null = null
+let transporter: Transporter | null = null
 
 function getTransporter() {
   if (!config.smtp.pass) return null
@@ -48,12 +48,21 @@ export async function sendOtpEmail(
     return { delivered: false, mode: 'console' as const }
   }
 
-  await tx.sendMail({
-    from: config.smtp.from,
-    to,
-    subject,
-    text,
-    html,
-  })
-  return { delivered: true, mode: 'smtp' as const }
+  try {
+    await tx.sendMail({
+      from: config.smtp.from,
+      to,
+      subject,
+      text,
+      html,
+    })
+    return { delivered: true, mode: 'smtp' as const }
+  } catch (err) {
+    // No dejar que un SMTP caído/mal configurado tumbe el flujo de auth
+    // (registro, login, reset). El código sigue quedando disponible por
+    // consola para no bloquear al usuario mientras se resuelve SMTP.
+    console.error('[mail] envío falló, degradando a consola:', err)
+    console.info(`[mail:dev] → ${to} | ${purpose} | OTP ${code}`)
+    return { delivered: false, mode: 'console' as const }
+  }
 }

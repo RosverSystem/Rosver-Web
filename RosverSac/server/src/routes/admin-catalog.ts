@@ -10,10 +10,29 @@ import {
   requireRole,
   type AuthVariables,
 } from '../middleware/auth.js'
+import { validateUuidParams } from '../middleware/validate-params.js'
 
 export const adminCatalogRoutes = new Hono<{ Variables: AuthVariables }>()
 
 adminCatalogRoutes.use('*', requireAuth, requireRole('admin'))
+
+// IDs con formato inválido en la URL (ej. "not-a-uuid") deben devolver 400,
+// no un 500 sin controlar por Postgres rechazando el UUID en la query.
+adminCatalogRoutes.use('/brands/:id', validateUuidParams('id'))
+adminCatalogRoutes.use('/categories/:id', validateUuidParams('id'))
+adminCatalogRoutes.use('/unit-types/:id', validateUuidParams('id'))
+adminCatalogRoutes.use('/offers/:productId', validateUuidParams('productId'))
+adminCatalogRoutes.use('/products/:id', validateUuidParams('id'))
+adminCatalogRoutes.use('/products/:id/*', validateUuidParams('id'))
+adminCatalogRoutes.use(
+  '/products/:id/packagings/:packagingId',
+  validateUuidParams('id', 'packagingId'),
+)
+adminCatalogRoutes.use(
+  '/products/:id/prices/:priceId',
+  validateUuidParams('id', 'priceId'),
+)
+adminCatalogRoutes.use('/reviews/:id', validateUuidParams('id'))
 
 /* ——— Upload R2 (categorías / marcas / productos) ——— */
 adminCatalogRoutes.post('/uploads', async (c) => {
@@ -896,7 +915,7 @@ adminCatalogRoutes.post('/products', async (c) => {
     await client.query('COMMIT')
     await invalidateCatalogHomeCaches()
     return c.json({ product: { id: productId, sku: rows[0].sku, slug: rows[0].slug } }, 201)
-  } catch (e) {
+  } catch {
     await client.query('ROLLBACK')
     return c.json({ error: 'SKU o slug de producto ya existe.' }, 409)
   } finally {

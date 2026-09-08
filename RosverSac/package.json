@@ -1,7 +1,7 @@
 {
   "name": "rosver-sac",
   "private": true,
-  "version": "0.1.32",
+  "version": "0.1.33",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -15,6 +15,7 @@
     "start": "tsx server/src/boot.ts",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "typecheck:server": "tsc -p server/tsconfig.json",
     "preview": "vite preview"
   },
   "dependencies": {
