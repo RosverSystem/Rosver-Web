@@ -17,6 +17,8 @@ Documentación de producto. El código vive en `RosverSac/`; aquí va el **qué*
 | Carpeta | Contenido |
 | --- | --- |
 | `architecture/` | Arquitectura, producto, vistas/flujos |
+| `logica-y-flujos/` | Lógica de comportamiento (auth, cuenta, …) |
+| `pendientes/` | Deudas abiertas + recomendaciones entre pedidos |
 | `features/` | Ficha por módulo de producto + índice |
 | `changes/` | Un archivo por cada cambio cerrado |
 | `templates/` | Plantillas obligatorias |
@@ -25,8 +27,9 @@ Documentación de producto. El código vive en `RosverSac/`; aquí va el **qué*
 
 1. Implementar en `RosverSac/src/`.
 2. Copiar `templates/cambio.md` → `changes/NNNN-slug.md`.
-3. Si hay feature nueva o cambio de alcance → actualizar `features/`.
-4. Si cambió la forma de trabajar o flujos → actualizar `architecture/`.
+3. Actualizar `pendientes/PENDIENTES.md` (y `RECOMENDACIONES.md` si aplica).
+4. Si hay feature nueva o cambio de alcance → actualizar `features/`.
+5. Si cambió la forma de trabajar o flujos → actualizar `architecture/` y/ o `logica-y-flujos/`.
 
 ## Skills del agente
 

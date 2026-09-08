@@ -63,6 +63,7 @@ npm run lint
 - **Paleta oficial:** solo tokens Rosver (`docs/architecture/06-paleta-colores.md`, `.claude/rules/09-paleta-colores.md`).
 - **Formularios / validación:** toasts flotantes (`FloatingToasts` + `useFormToasts`); nunca bubbles nativos ni errores inline que alarguen el form (`.claude/rules/10-form-toasts.md`).
 - **Despliegues / versiones:** documentar en `08` + `docs/changes/`. **Todo cambio cerrado → push GitHub `main` + deploy Railway** (`.claude/rules/11-despliegues-versiones.md`). Infra: Railway (web + Postgres), Cloudflare R2 (media).
+- **Pendientes / recomendaciones:** actualizar `docs/pendientes/` al cerrar o dejar trabajo a medias (`.claude/rules/12-pendientes-recomendaciones.md`).
 
 ## Paridad con Cursor
 
@@ -73,6 +74,8 @@ npm run lint
 
 - Producto: `docs/architecture/02-producto-rosver-sac.md`
 - Vistas/flujos: `docs/architecture/03-vistas-y-flujos.md`
+- Lógica de flujos: `docs/logica-y-flujos/`
+- Pendientes: `docs/pendientes/`
 - Stack / librerías: `docs/architecture/04-stack-y-librerias.md`
 - Paleta: `docs/architecture/06-paleta-colores.md`
 - Despliegue / Postgres / R2: `docs/architecture/08-despliegue-y-almacenamiento.md`

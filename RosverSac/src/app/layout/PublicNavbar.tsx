@@ -1,7 +1,8 @@
+import { SessionAccountMenu } from '@/features/auth'
 import { useCart } from '@/features/cart'
 import { CATEGORIES } from '@/features/catalog/model/mocks'
 import { cn } from '@/shared/lib'
-import { IconBag, IconChevronDown, IconSearch, IconUser } from '@/shared/ui/icons'
+import { IconBag, IconChevronDown, IconSearch } from '@/shared/ui/icons'
 import { Check, Compass, Message, Phone } from 'cssvg-icons'
 import { Heart, Menu, X } from 'lucide-react'
 import { useState } from 'react'
@@ -106,13 +107,7 @@ export function PublicNavbar() {
         </label>
 
         <div className="flex shrink-0 items-center justify-end gap-1 justify-self-end">
-          <Link
-            to="/login"
-            className="hidden items-center gap-2 px-2 py-2 text-sm font-semibold text-rosver-ink transition hover:text-rosver-red sm:flex"
-          >
-            <IconUser />
-            <span className="hidden lg:inline">Mi cuenta</span>
-          </Link>
+          <SessionAccountMenu variant="desktop" />
           <button
             type="button"
             aria-label="Favoritos"
@@ -228,13 +223,10 @@ export function PublicNavbar() {
               </li>
             ))}
             <li>
-              <Link
-                to="/login"
-                onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-2 py-2.5 text-sm font-bold text-rosver-ink uppercase"
-              >
-                <IconUser className="size-4" /> Mi cuenta
-              </Link>
+              <SessionAccountMenu
+                variant="compact"
+                onNavigate={() => setMobileOpen(false)}
+              />
             </li>
           </ul>
           <div className="mt-3 border-t border-rosver-line pt-3">

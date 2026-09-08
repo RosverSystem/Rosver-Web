@@ -1,6 +1,6 @@
+import { shortDisplayName, useAuth } from '@/features/auth'
 import { cn } from '@/shared/lib'
-import { IconUser } from '@/shared/ui/icons'
-import { Link, Outlet, useLocation } from 'react-router-dom'
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 
 const NAV_SECTIONS = [
   {
@@ -33,6 +33,14 @@ const NAV_SECTIONS = [
 
 export function AdminShell() {
   const { pathname } = useLocation()
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+  const label = user ? shortDisplayName(user) : 'Admin'
+
+  const onLogout = async () => {
+    await logout()
+    navigate('/login')
+  }
 
   return (
     <div className="min-h-dvh bg-white lg:flex">
@@ -95,17 +103,27 @@ export function AdminShell() {
           </span>
           <div className="flex items-center gap-3">
             <span className="text-sm font-semibold text-rosver-ink">
-              Ana Torres
+              {user?.fullName?.trim() || label}
               <span className="ml-1.5 text-xs font-normal text-rosver-muted">
-                (admin)
+                ({user?.roleName ?? 'admin'})
               </span>
             </span>
-            <span className="inline-flex size-9 items-center justify-center rounded-full bg-rosver-ink text-white">
-              <IconUser />
-            </span>
-            <Link to="/login" className="text-xs font-semibold text-rosver-muted hover:text-rosver-red">
+            {user?.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt=""
+                width={36}
+                height={36}
+                className="size-9 rounded-full object-cover ring-1 ring-rosver-line"
+              />
+            ) : null}
+            <button
+              type="button"
+              onClick={() => void onLogout()}
+              className="text-xs font-semibold text-rosver-muted hover:text-rosver-red"
+            >
               Salir
-            </Link>
+            </button>
           </div>
         </header>
 

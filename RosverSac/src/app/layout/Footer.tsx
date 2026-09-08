@@ -1,3 +1,4 @@
+import { SessionAccountMenu } from '@/features/auth'
 import { CATEGORIES } from '@/features/catalog/model/mocks'
 import { WHATSAPP_DISPLAY, WHATSAPP_LINK } from '@/shared/lib'
 import { IconFacebook, IconInstagram, IconTikTok, IconWhatsApp } from '@/shared/ui/icons'
@@ -78,9 +79,7 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link to="/login" className="transition hover:text-white">
-                  Mi cuenta
-                </Link>
+                <SessionAccountMenu variant="footer" />
               </li>
               <li>
                 <Link to="/carrito" className="transition hover:text-white">

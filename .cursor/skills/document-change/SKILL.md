@@ -24,6 +24,8 @@ Toda tarea cerrada deja un archivo en `docs/changes/`.
 4. **Docs relacionados** (si aplica):
    - Feature nueva o alcance → `docs/features/<nombre>.md` + índice.
    - Arquitectura → `docs/architecture/`.
+   - Flujos de lógica → `docs/logica-y-flujos/`.
+   - Deudas / ideas → `docs/pendientes/PENDIENTES.md` y `RECOMENDACIONES.md` (regla `12`).
 
 ## Estilo
 
@@ -34,6 +36,8 @@ Toda tarea cerrada deja un archivo en `docs/changes/`.
 ## No cerrar sin
 
 - [ ] Archivo en `docs/changes/NNNN-slug.md`
-- [ ] Features/architecture actualizados si el cambio lo requiere
+- [ ] Features/architecture/logica-y-flujos actualizados si el cambio lo requiere
+- [ ] `docs/pendientes/` actualizado (qué quedó o qué se cerró)
 - [ ] Si hay UI: verificación móvil + tablet + desktop en el checklist
 - [ ] Contexto legible para Claude Code / Cursor sin depender del chat
+- [ ] Push `main` + deploy Railway (regla `11`)
