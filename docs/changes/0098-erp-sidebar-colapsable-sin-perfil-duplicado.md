@@ -9,6 +9,7 @@
 - Sidebar blanca colapsable (labels ↔ solo iconos) con perfil **solo al pie** (avatar, nombre, logout).
 - Top bar sin saludo/avatar/“Mi cuenta”: título de módulo + búsqueda + reloj.
 - Skill `erp-systemrsv-saas-ux`, regla `13` y `docs/architecture/09-erp-systemrsv-ux.md` actualizados (evitar perfil duplicado).
+- Fix build Railway: `.npmrc` + `nixpacks.toml` instalan `devDependencies` (`vite`, `@types/*`) para que `tsc -b && vite build` no falle.
 
 ## Por qué
 
@@ -28,6 +29,8 @@ Estado `collapsed` en `AdminShell` (persistido en `localStorage`). Drawer móvil
 - `.cursor/rules/13-erp-systemrsv-ux.mdc` (+ espejo Claude)
 - `docs/architecture/09-erp-systemrsv-ux.md`
 - `docs/pendientes/PENDIENTES.md`
+- `RosverSac/nixpacks.toml`
+- `RosverSac/.npmrc`
 - `RosverSac/package.json` (0.1.7)
 
 ## Cómo verificar
