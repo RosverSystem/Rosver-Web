@@ -32,8 +32,9 @@
 | P28 | Volumen persistente Redis / Redis oficial template | Infra | recomendado | Hoy imagen `redis:7-alpine` sin volume |
 | P29 | Tendencia + calificaciones / reseñas | Pedido lógica | hecho | Doc 06 + v0.1.13 |
 | P30 | Reseñas desde cuenta cliente (no solo admin) | Calificaciones | pendiente | API admin lista; falta UI `/cuenta` |
+| P31 | Slider marcas ↔ módulo marcas + seed | Pedido UI | hecho | v0.1.14 · migración `006` |
 
 ## Hechos recientes
 
+- Seed marcas home + slider DB (v0.1.14)
 - Tendencia + reseñas + estrellas en cards (v0.1.13)
-- Destacados para ti: lógica 100% + Redis Railway (v0.1.12)

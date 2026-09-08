@@ -123,7 +123,7 @@ catalogRoutes.get('/trending', async (c) => {
 catalogRoutes.get('/', async (c) => {
   try {
     const brands = await pool.query(
-      `SELECT id, code, sku, name, slug, logo_url, visible, sort_order
+      `SELECT id, code, sku, name, slug, logo_url, visible, show_on_home, sort_order
        FROM brands WHERE visible = true ORDER BY sort_order, name`,
     )
     const categories = await pool.query(
@@ -212,6 +212,7 @@ function mapBrand(r: Record<string, unknown>) {
     slug: r.slug,
     logoUrl: r.logo_url,
     visible: r.visible,
+    showOnHome: r.show_on_home ?? true,
     sortOrder: r.sort_order,
   }
 }

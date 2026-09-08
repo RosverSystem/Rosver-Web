@@ -13,7 +13,7 @@ import { Link } from 'react-router-dom'
 export function BrandCarousel() {
   const { brands: catalogBrands } = useCatalog()
   const brands = catalogBrands
-    .filter((b) => b.visible !== false)
+    .filter((b) => b.visible !== false && b.showOnHome !== false)
     .slice()
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
 

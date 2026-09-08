@@ -33,6 +33,7 @@ function mapBrand(row: Record<string, unknown>) {
     slug: row.slug,
     logoUrl: row.logo_url,
     visible: row.visible,
+    showOnHome: row.show_on_home ?? true,
     sortOrder: row.sort_order,
   }
 }
@@ -84,6 +85,7 @@ adminCatalogRoutes.post('/brands', async (c) => {
       slug: z.string().trim().min(1).max(80).optional(),
       logoUrl: z.string().trim().url().optional().or(z.literal('')),
       visible: z.boolean().optional(),
+      showOnHome: z.boolean().optional(),
       sortOrder: z.number().int().optional(),
     })
     .safeParse(await c.req.json().catch(() => null))
@@ -93,8 +95,8 @@ adminCatalogRoutes.post('/brands', async (c) => {
   const slug = body.data.slug || slugify(body.data.name)
   try {
     const { rows } = await pool.query(
-      `INSERT INTO brands (sku, name, slug, logo_url, visible, sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6)
+      `INSERT INTO brands (sku, name, slug, logo_url, visible, show_on_home, sort_order)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)
        RETURNING *`,
       [
         body.data.sku.toUpperCase(),
@@ -102,6 +104,7 @@ adminCatalogRoutes.post('/brands', async (c) => {
         slug,
         body.data.logoUrl || null,
         body.data.visible ?? true,
+        body.data.showOnHome ?? true,
         body.data.sortOrder ?? 0,
       ],
     )
@@ -120,6 +123,7 @@ adminCatalogRoutes.patch('/brands/:id', async (c) => {
       slug: z.string().trim().min(1).max(80).optional(),
       logoUrl: z.string().trim().optional().nullable(),
       visible: z.boolean().optional(),
+      showOnHome: z.boolean().optional(),
       sortOrder: z.number().int().optional(),
     })
     .safeParse(await c.req.json().catch(() => null))
@@ -132,7 +136,8 @@ adminCatalogRoutes.patch('/brands/:id', async (c) => {
        slug = COALESCE($4, slug),
        logo_url = COALESCE($5, logo_url),
        visible = COALESCE($6, visible),
-       sort_order = COALESCE($7, sort_order),
+       show_on_home = COALESCE($7, show_on_home),
+       sort_order = COALESCE($8, sort_order),
        updated_at = now()
      WHERE id = $1
      RETURNING *`,
@@ -143,6 +148,7 @@ adminCatalogRoutes.patch('/brands/:id', async (c) => {
       d.slug ?? null,
       d.logoUrl === undefined ? null : d.logoUrl,
       d.visible ?? null,
+      d.showOnHome ?? null,
       d.sortOrder ?? null,
     ],
   )

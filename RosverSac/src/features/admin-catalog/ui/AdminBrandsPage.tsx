@@ -18,6 +18,8 @@ type Brand = {
   slug: string
   logoUrl?: string | null
   visible: boolean
+  showOnHome?: boolean
+  sortOrder?: number
 }
 
 export function AdminBrandsPage() {
@@ -26,6 +28,7 @@ export function AdminBrandsPage() {
   const [loading, setLoading] = useState(true)
   const [name, setName] = useState('')
   const [sku, setSku] = useState('')
+  const [showOnHome, setShowOnHome] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [query, setQuery] = useState('')
@@ -63,12 +66,14 @@ export function AdminBrandsPage() {
     setEditingId(null)
     setName('')
     setSku('')
+    setShowOnHome(true)
   }
 
   function startEdit(b: Brand) {
     setEditingId(b.id)
     setName(b.name)
     setSku(b.sku)
+    setShowOnHome(b.showOnHome !== false)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -84,15 +89,20 @@ export function AdminBrandsPage() {
     }
     setBusy(true)
     try {
+      const payload = {
+        name: name.trim(),
+        sku: sku.trim(),
+        showOnHome,
+      }
       if (editingId) {
         await api(`/api/admin/brands/${editingId}`, {
           method: 'PATCH',
-          body: JSON.stringify({ name: name.trim(), sku: sku.trim() }),
+          body: JSON.stringify(payload),
         })
       } else {
         await api('/api/admin/brands', {
           method: 'POST',
-          body: JSON.stringify({ name: name.trim(), sku: sku.trim() }),
+          body: JSON.stringify(payload),
         })
       }
       resetForm()
@@ -103,6 +113,21 @@ export function AdminBrandsPage() {
       ])
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function toggleHome(b: Brand) {
+    clear()
+    try {
+      await api(`/api/admin/brands/${b.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ showOnHome: !b.showOnHome }),
+      })
+      await load()
+    } catch (err) {
+      showMessages([
+        err instanceof ApiError ? err.message : 'No se pudo actualizar',
+      ])
     }
   }
 
@@ -157,7 +182,7 @@ export function AdminBrandsPage() {
               id="brand-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Ej. Rosver Tools"
+              placeholder="Ej. Bosch"
             />
           </AdminField>
           <AdminField label="Código de marca" htmlFor="brand-sku">
@@ -165,7 +190,7 @@ export function AdminBrandsPage() {
               id="brand-sku"
               value={sku}
               onChange={(e) => setSku(e.target.value)}
-              placeholder="Ej. RSV"
+              placeholder="Ej. BOSCH"
               className="uppercase"
             />
           </AdminField>
@@ -179,6 +204,15 @@ export function AdminBrandsPage() {
             </button>
           </div>
         </div>
+        <label className="mt-4 flex items-center gap-2 text-sm text-rosver-ink">
+          <input
+            type="checkbox"
+            checked={showOnHome}
+            onChange={(e) => setShowOnHome(e.target.checked)}
+            className="size-4 rounded border-rosver-line text-rosver-red"
+          />
+          Mostrar en «Marcas que importamos» (inicio)
+        </label>
       </form>
 
       <AdminInput
@@ -197,7 +231,7 @@ export function AdminBrandsPage() {
           <div className="col-span-full rounded-2xl border border-rosver-line bg-white">
             <AdminEmptyState
               title="Todavía no hay marcas"
-              detail="Agrega la primera marca para asociarla a tus productos y al filtro de la tienda."
+              detail="Al desplegar se cargan Bosch, DeWalt, 3M y las demás por defecto."
             />
           </div>
         ) : (
@@ -222,17 +256,29 @@ export function AdminBrandsPage() {
                   >
                     {b.visible ? 'Visible' : 'Oculta'}
                   </span>
+                  {b.showOnHome !== false ? (
+                    <span className="rounded-full bg-rosver-red/10 px-2 py-0.5 text-[10px] font-bold text-rosver-red">
+                      Inicio
+                    </span>
+                  ) : null}
                 </div>
                 <p className="mt-0.5 text-xs text-rosver-muted">
                   Código #{b.code} · {b.sku}
                 </p>
-                <div className="mt-2 flex gap-2">
+                <div className="mt-2 flex flex-wrap gap-2">
                   <button
                     type="button"
                     onClick={() => startEdit(b)}
                     className="text-xs font-semibold text-rosver-red hover:underline"
                   >
                     Editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void toggleHome(b)}
+                    className="text-xs font-semibold text-rosver-muted hover:text-rosver-red"
+                  >
+                    {b.showOnHome !== false ? 'Quitar del inicio' : 'Poner en inicio'}
                   </button>
                   <button
                     type="button"

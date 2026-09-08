@@ -38,6 +38,7 @@ type ApiBrand = {
   slug?: string
   logoUrl?: string | null
   visible?: boolean
+  showOnHome?: boolean
   sortOrder?: number
 }
 
@@ -91,6 +92,7 @@ function hydrateBrands(raw: ApiBrand[]): Brand[] {
     logoUrl: b.logoUrl || undefined,
     href: b.slug ? `/catalogo?marca=${encodeURIComponent(b.name)}` : undefined,
     visible: b.visible ?? true,
+    showOnHome: b.showOnHome ?? true,
     sortOrder: b.sortOrder ?? i,
   }))
 }
