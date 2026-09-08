@@ -63,6 +63,7 @@ npm run lint
 - **Iconos UI nuevos:** solo `cssvg-icons` ([icon.cssvg.com](https://icon.cssvg.com)) — regla `07-icons-cssvg`.
 - **Paleta oficial:** solo tokens Rosver (`06-paleta-colores.md`, regla `09-paleta-colores`).
 - **Formularios / validación:** toasts flotantes (`FloatingToasts` + `useFormToasts`); nunca bubbles nativos ni errores inline que alarguen el form (regla `10-form-toasts`).
+- **ERP selects / copy:** `AdminSelect` + lenguaje cotidiano; sin jerga ni textos de ayuda técnicos (regla `14-erp-selects-copy`).
 - **Despliegues / versiones:** documentar en `08` + `docs/changes/`. **Todo cambio cerrado → push GitHub `main` + deploy Railway** (regla `11-despliegues-versiones`). Infra: Railway (web + Postgres), Cloudflare R2 (media).
 - **Pendientes / recomendaciones:** actualizar `docs/pendientes/` al cerrar o dejar trabajo a medias (regla `12-pendientes-recomendaciones`).
 

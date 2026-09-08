@@ -1,8 +1,14 @@
 import { api, ApiError } from '@/shared/lib/api'
-import { cn, cnField } from '@/shared/lib'
+import { cn } from '@/shared/lib'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { FloatingToasts } from '@/shared/ui/floating-toasts'
-import { useEffect, useState } from 'react'
+import {
+  AdminEmptyState,
+  AdminField,
+  AdminInput,
+  AdminPageHeader,
+} from '@/shared/ui/admin-field'
+import { useEffect, useMemo, useState } from 'react'
 
 type Brand = {
   id: string
@@ -20,6 +26,18 @@ export function AdminBrandsPage() {
   const [name, setName] = useState('')
   const [sku, setSku] = useState('')
   const [busy, setBusy] = useState(false)
+  const [query, setQuery] = useState('')
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return brands
+    return brands.filter(
+      (b) =>
+        b.name.toLowerCase().includes(q) ||
+        b.sku.toLowerCase().includes(q) ||
+        String(b.code).includes(q),
+    )
+  }, [brands, query])
 
   async function load() {
     setLoading(true)
@@ -43,8 +61,8 @@ export function AdminBrandsPage() {
     e.preventDefault()
     clear()
     const errors: string[] = []
-    if (!name.trim()) errors.push('Nombre de marca obligatorio')
-    if (!sku.trim()) errors.push('SKU de marca obligatorio')
+    if (!name.trim()) errors.push('Escribe el nombre de la marca')
+    if (!sku.trim()) errors.push('Escribe el código de marca')
     if (errors.length) {
       showMessages(errors)
       return
@@ -70,94 +88,100 @@ export function AdminBrandsPage() {
   return (
     <div className="space-y-5">
       <FloatingToasts toasts={toasts} onDismiss={dismiss} />
-      <header>
-        <h2 className="text-xl font-semibold tracking-tight text-rosver-ink">Marcas</h2>
-        <p className="mt-1 text-sm text-rosver-muted">
-          Código interno auto-incremental + SKU personalizado de la empresa.
-        </p>
-      </header>
+      <AdminPageHeader
+        title="Marcas"
+        actions={
+          <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-rosver-muted ring-1 ring-rosver-line">
+            {brands.length} marcas
+          </span>
+        }
+      />
 
       <form
         noValidate
         onSubmit={onSubmit}
         className="rounded-2xl border border-rosver-line bg-white p-4 shadow-sm sm:p-5"
       >
-        <div className="grid gap-3 sm:grid-cols-[1fr_10rem_auto]">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Nombre (ej. Rosver Tools)"
-            className={cnField(
-              'h-11 rounded-xl border border-rosver-line bg-rosver-soft/40 px-3 text-sm outline-none focus:border-rosver-red/40 focus:ring-2 focus:ring-rosver-red/15',
-              false,
-            )}
-            aria-invalid={false}
-          />
-          <input
-            value={sku}
-            onChange={(e) => setSku(e.target.value)}
-            placeholder="SKU marca"
-            className={cnField(
-              'h-11 rounded-xl border border-rosver-line bg-rosver-soft/40 px-3 text-sm uppercase outline-none focus:border-rosver-red/40 focus:ring-2 focus:ring-rosver-red/15',
-              false,
-            )}
-          />
-          <button
-            type="submit"
-            disabled={busy}
-            className="h-11 rounded-xl bg-rosver-red px-4 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
-          >
-            {busy ? 'Guardando…' : 'Crear marca'}
-          </button>
+        <p className="mb-4 text-sm font-semibold text-rosver-ink">Nueva marca</p>
+        <div className="grid gap-4 sm:grid-cols-[1fr_12rem_auto]">
+          <AdminField label="Nombre comercial" htmlFor="brand-name">
+            <AdminInput
+              id="brand-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ej. Rosver Tools"
+            />
+          </AdminField>
+          <AdminField label="Código de marca" htmlFor="brand-sku">
+            <AdminInput
+              id="brand-sku"
+              value={sku}
+              onChange={(e) => setSku(e.target.value)}
+              placeholder="Ej. RSV"
+              className="uppercase"
+            />
+          </AdminField>
+          <div className="flex items-end">
+            <button
+              type="submit"
+              disabled={busy}
+              className="h-11 w-full rounded-xl bg-rosver-red px-5 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60 sm:w-auto"
+            >
+              {busy ? 'Guardando…' : 'Crear marca'}
+            </button>
+          </div>
         </div>
       </form>
 
-      <div className="overflow-hidden rounded-2xl border border-rosver-line bg-white shadow-sm">
-        <table className="w-full text-left text-sm">
-          <thead className="border-b border-rosver-line bg-rosver-soft/50 text-xs uppercase tracking-wide text-rosver-muted">
-            <tr>
-              <th className="px-4 py-3">Cód.</th>
-              <th className="px-4 py-3">SKU</th>
-              <th className="px-4 py-3">Nombre</th>
-              <th className="px-4 py-3">Visible</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-rosver-muted">
-                  Cargando…
-                </td>
-              </tr>
-            ) : brands.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="px-4 py-8 text-center text-rosver-muted">
-                  Sin marcas aún. Crea la primera.
-                </td>
-              </tr>
-            ) : (
-              brands.map((b) => (
-                <tr key={b.id} className="border-b border-rosver-line last:border-0">
-                  <td className="px-4 py-3 tabular-nums text-rosver-muted">{b.code}</td>
-                  <td className="px-4 py-3 font-semibold text-rosver-ink">{b.sku}</td>
-                  <td className="px-4 py-3 text-rosver-ink">{b.name}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={cn(
-                        'rounded-full px-2 py-0.5 text-[11px] font-bold',
-                        b.visible
-                          ? 'bg-rosver-success/15 text-rosver-success'
-                          : 'bg-rosver-soft text-rosver-muted',
-                      )}
-                    >
-                      {b.visible ? 'Sí' : 'No'}
-                    </span>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <AdminInput
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Buscar marca…"
+        className="max-w-sm"
+      />
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {loading ? (
+          <div className="col-span-full rounded-2xl border border-rosver-line bg-white">
+            <AdminEmptyState title="Cargando…" />
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="col-span-full rounded-2xl border border-rosver-line bg-white">
+            <AdminEmptyState
+              title="Todavía no hay marcas"
+              detail="Agrega la primera marca para asociarla a tus productos."
+            />
+          </div>
+        ) : (
+          filtered.map((b) => (
+            <article
+              key={b.id}
+              className="flex items-center gap-3 rounded-2xl border border-rosver-line bg-white p-4 shadow-sm transition hover:border-rosver-red/25 hover:shadow-md"
+            >
+              <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-rosver-soft text-base font-bold text-rosver-ink">
+                {b.name.slice(0, 1).toUpperCase()}
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="truncate font-semibold text-rosver-ink">{b.name}</h3>
+                  <span
+                    className={cn(
+                      'rounded-full px-2 py-0.5 text-[10px] font-bold',
+                      b.visible
+                        ? 'bg-rosver-success/15 text-rosver-success'
+                        : 'bg-rosver-soft text-rosver-muted',
+                    )}
+                  >
+                    {b.visible ? 'Visible' : 'Oculta'}
+                  </span>
+                </div>
+                <p className="mt-0.5 text-xs text-rosver-muted">
+                  Código #{b.code} · {b.sku}
+                </p>
+              </div>
+            </article>
+          ))
+        )}
       </div>
     </div>
   )

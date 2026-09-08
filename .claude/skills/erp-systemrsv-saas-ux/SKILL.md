@@ -40,6 +40,9 @@ Referencia: sidebar clara colapsable (iconos / iconos+labels) + top bar limpia. 
 - Sidebar oscura permanente solo-iconos como único modo.
 - Azul EduNova / purple / cream.
 - Nav roja de la tienda pública en `/admin`.
+- Tablas “planas” como única UI de listados: preferir cards / filas densas con jerarquía.
+- Textos de ayuda técnicos bajo el título (regla `14-erp-selects-copy`).
+- Selects nativos sin `AdminSelect` / jerga (“sin padre”, “raíz”).
 
 ## Checklist
 
@@ -48,3 +51,5 @@ Referencia: sidebar clara colapsable (iconos / iconos+labels) + top bar limpia. 
 - [ ] Top bar sin avatar/nombre de sesión
 - [ ] Responsive drawer móvil
 - [ ] `cssvg-icons` + docs `09-erp-systemrsv-ux.md`
+- [ ] Selects con `AdminSelect` + copy cotidiano
+- [ ] Sin mensajes de ayuda de arquitectura en UI

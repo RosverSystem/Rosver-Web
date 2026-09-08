@@ -24,9 +24,10 @@
 | P08 | Header sesión | Login UX | hecho | |
 | P09 | CLI railway login | Deploy | pendiente | Deploy GraphQL OK |
 | P14 | Force commitSha deploy | Deploy | parcial | |
-| P12 | Vars R2 Railway | Avatar | hecho | |
+| P23 | UX ERP catálogo (cards + selects claros) | Pedido UX | hecho | v0.1.10; regla 14 |
 
 ## Hechos recientes
 
 - SPA cuenta sin flash + refresh catálogo (v0.1.8)
 - Modelo precios/unidades + admin marcas/categorías/listado precios (v0.1.9)
+- UX ERP catálogo cards + selects + copy claro (v0.1.10)
