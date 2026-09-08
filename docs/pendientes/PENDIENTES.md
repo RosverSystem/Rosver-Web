@@ -37,6 +37,7 @@
 
 ## Hechos recientes
 
+- Presentación: tipo + cantidad + precio en un paso (v0.1.25)
 - Listado precios: presentación (tipo+cantidad) → varios precios (v0.1.24)
 - Marcas en modal + selector R2 con búsqueda y nombre al subir (v0.1.23)
 - Almacenamiento R2: grid + modal preview (v0.1.22)

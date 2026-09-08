@@ -78,6 +78,8 @@ export function AdminPriceListPage() {
   const [contentQty, setContentQty] = useState('1')
   const [packLabel, setPackLabel] = useState('')
   const [newUnitName, setNewUnitName] = useState('')
+  const [listAmount, setListAmount] = useState('')
+  const [wholesaleAmount, setWholesaleAmount] = useState('')
 
   const [packagingId, setPackagingId] = useState('')
   const [priceKind, setPriceKind] = useState<'list' | 'wholesale' | 'offer'>('list')
@@ -219,6 +221,17 @@ export function AdminPriceListPage() {
       showMessages(['Indica cuántas unidades lleva esa presentación'])
       return
     }
+    const listAmt = Number(listAmount)
+    if (!Number.isFinite(listAmt) || listAmt < 0) {
+      showMessages(['Pon el precio de venta'])
+      return
+    }
+    const whAmt =
+      wholesaleAmount.trim() === '' ? null : Number(wholesaleAmount)
+    if (whAmt != null && (!Number.isFinite(whAmt) || whAmt < 0)) {
+      showMessages(['El precio mayorista no es válido'])
+      return
+    }
     setBusy(true)
     try {
       const res = await api<{ packaging: { id: string } }>(
@@ -233,12 +246,33 @@ export function AdminPriceListPage() {
           }),
         },
       )
+      const packId = res.packaging.id
+      await api(`/api/admin/products/${selectedId}/prices`, {
+        method: 'POST',
+        body: JSON.stringify({
+          packagingId: packId,
+          priceKind: 'list',
+          minQty: 1,
+          amount: listAmt,
+        }),
+      })
+      if (whAmt != null) {
+        await api(`/api/admin/products/${selectedId}/prices`, {
+          method: 'POST',
+          body: JSON.stringify({
+            packagingId: packId,
+            priceKind: 'wholesale',
+            minQty: 1,
+            amount: whAmt,
+          }),
+        })
+      }
       setPackLabel('')
       setContentQty('1')
-      await loadDetail(selectedId, res.packaging.id)
-      showMessages([
-        'Presentación creada — ahora agrega precios (venta, mayorista…)',
-      ])
+      setListAmount('')
+      setWholesaleAmount('')
+      await loadDetail(selectedId, packId)
+      showMessages(['Presentación creada con precio'])
     } catch (err) {
       showMessages([
         err instanceof ApiError
@@ -380,8 +414,8 @@ export function AdminPriceListPage() {
               1. Nueva presentación
             </h2>
             <p className="mt-1 text-xs text-rosver-muted">
-              Elige el tipo (Unidad, Paquete, Caja…) y cuántas unidades lleva.
-              Eso es una presentación, como una ubicación.
+              Tipo → cantidad → precio de venta (y mayorista si quieres). Todo
+              junto.
             </p>
           </div>
 
@@ -407,7 +441,7 @@ export function AdminPriceListPage() {
           <form
             noValidate
             onSubmit={addPresentation}
-            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
           >
             <AdminField label="Tipo de unidad" htmlFor="pl-unit">
               <AdminSelect
@@ -426,7 +460,7 @@ export function AdminPriceListPage() {
                 )}
               </AdminSelect>
             </AdminField>
-            <AdminField label="Cantidad (unidades que incluye)" htmlFor="pl-qty">
+            <AdminField label="Cantidad" htmlFor="pl-qty">
               <AdminInput
                 id="pl-qty"
                 inputMode="decimal"
@@ -443,13 +477,31 @@ export function AdminPriceListPage() {
                 placeholder="Ej. Caja x12"
               />
             </AdminField>
+            <AdminField label="Precio venta S/" htmlFor="pl-list">
+              <AdminInput
+                id="pl-list"
+                inputMode="decimal"
+                value={listAmount}
+                onChange={(e) => setListAmount(e.target.value)}
+                placeholder="200.00"
+              />
+            </AdminField>
+            <AdminField label="Mayorista S/ (opc.)" htmlFor="pl-wh">
+              <AdminInput
+                id="pl-wh"
+                inputMode="decimal"
+                value={wholesaleAmount}
+                onChange={(e) => setWholesaleAmount(e.target.value)}
+                placeholder="184.00"
+              />
+            </AdminField>
             <div className="flex items-end">
               <button
                 type="submit"
                 disabled={busy || !unitTypeId}
-                className="h-11 w-full rounded-xl bg-rosver-ink text-sm font-semibold text-white hover:bg-rosver-red disabled:opacity-60"
+                className="h-11 w-full rounded-xl bg-rosver-red text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
               >
-                Crear presentación
+                Crear con precio
               </button>
             </div>
           </form>

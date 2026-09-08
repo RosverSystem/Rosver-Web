@@ -121,6 +121,8 @@ export function AdminProductsPage() {
   const [unitTypeId, setUnitTypeId] = useState('')
   const [contentQty, setContentQty] = useState('1')
   const [packagingId, setPackagingId] = useState('')
+  const [listAmount, setListAmount] = useState('')
+  const [wholesaleAmount, setWholesaleAmount] = useState('')
   const [priceKind, setPriceKind] = useState<'list' | 'wholesale' | 'offer'>('list')
   const [minQty, setMinQty] = useState('1')
   const [amount, setAmount] = useState('')
@@ -446,34 +448,85 @@ export function AdminProductsPage() {
     }
   }
 
-  async function addPackaging(e: React.FormEvent) {
+  async function addPackagingWithPrice(e: React.FormEvent) {
     e.preventDefault()
-    if (!selectedId || !unitTypeId) return
+    clear()
+    if (!selectedId || !unitTypeId) {
+      showMessages(['Elige un tipo de unidad'])
+      return
+    }
     const qty = Number(contentQty)
     if (!Number.isFinite(qty) || qty <= 0) {
-      showMessages(['Indica cuántas unidades van en esa presentación'])
+      showMessages(['Indica la cantidad de esa presentación'])
+      return
+    }
+    const listAmt = Number(listAmount)
+    if (!Number.isFinite(listAmt) || listAmt < 0) {
+      showMessages(['Pon el precio de venta'])
+      return
+    }
+    const whAmt =
+      wholesaleAmount.trim() === '' ? null : Number(wholesaleAmount)
+    if (whAmt != null && (!Number.isFinite(whAmt) || whAmt < 0)) {
+      showMessages(['El precio mayorista no es válido'])
       return
     }
     setBusy(true)
     try {
-      await api(`/api/admin/products/${selectedId}/packagings`, {
+      const created = await api<{ packaging: { id: string } }>(
+        `/api/admin/products/${selectedId}/packagings`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            unitTypeId,
+            contentQty: qty,
+            isDefault: packagings.length === 0,
+          }),
+        },
+      )
+      const packId = created.packaging.id
+      await api(`/api/admin/products/${selectedId}/prices`, {
         method: 'POST',
-        body: JSON.stringify({ unitTypeId, contentQty: qty }),
+        body: JSON.stringify({
+          packagingId: packId,
+          priceKind: 'list',
+          minQty: 1,
+          amount: listAmt,
+        }),
       })
+      if (whAmt != null) {
+        await api(`/api/admin/products/${selectedId}/prices`, {
+          method: 'POST',
+          body: JSON.stringify({
+            packagingId: packId,
+            priceKind: 'wholesale',
+            minQty: 1,
+            amount: whAmt,
+          }),
+        })
+      }
+      setContentQty('1')
+      setListAmount('')
+      setWholesaleAmount('')
+      setPackagingId(packId)
       await loadDetail(selectedId)
+      showMessages(['Presentación agregada con precio'])
     } catch (err) {
       showMessages([
-        err instanceof ApiError ? err.message : 'No se pudo agregar la presentación',
+        err instanceof ApiError
+          ? err.message
+          : 'No se pudo agregar la presentación',
       ])
     } finally {
       setBusy(false)
     }
   }
 
-  async function savePrice() {
+  async function saveExtraPrice(e: React.FormEvent) {
+    e.preventDefault()
     clear()
     if (!selectedId || !packagingId) {
-      showMessages(['Elige una presentación'])
+      showMessages(['Selecciona una presentación en la lista'])
       return
     }
     const amt = Number(amount)
@@ -491,12 +544,12 @@ export function AdminProductsPage() {
           minQty: Number(minQty) || 1,
           amount: amt,
           compareAtAmount: compareAt ? Number(compareAt) : null,
-          saveAsNew: true,
         }),
       })
       setAmount('')
       setCompareAt('')
       await loadDetail(selectedId)
+      showMessages(['Precio agregado'])
     } catch (err) {
       showMessages([
         err instanceof ApiError ? err.message : 'No se pudo guardar el precio',
@@ -734,13 +787,18 @@ export function AdminProductsPage() {
 
           {step === 3 ? (
             <div className="space-y-5">
-              <p className="text-sm font-semibold text-rosver-ink">
-                Fase 3 — Presentaciones y precios
-              </p>
+              <div>
+                <p className="text-sm font-semibold text-rosver-ink">
+                  Fase 3 — Presentaciones y precios
+                </p>
+                <p className="mt-1 text-xs text-rosver-muted">
+                  Tipo de unidad → cantidad → precio. Todo en un solo paso.
+                </p>
+              </div>
               <form
                 noValidate
-                onSubmit={addPackaging}
-                className="grid gap-3 rounded-xl border border-rosver-line p-3 sm:grid-cols-3"
+                onSubmit={addPackagingWithPrice}
+                className="grid gap-3 rounded-xl border border-rosver-line p-3 sm:grid-cols-2 lg:grid-cols-5"
               >
                 <AdminField label="Tipo de unidad" htmlFor="w-unit">
                   <AdminSelect
@@ -748,131 +806,167 @@ export function AdminProductsPage() {
                     value={unitTypeId}
                     onChange={(e) => setUnitTypeId(e.target.value)}
                   >
-                    {unitTypes.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name}
-                      </option>
-                    ))}
+                    {unitTypes.length === 0 ? (
+                      <option value="">Sin tipos</option>
+                    ) : (
+                      unitTypes.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name}
+                        </option>
+                      ))
+                    )}
                   </AdminSelect>
                 </AdminField>
-                <AdminField label="Cantidad por presentación" htmlFor="w-qty">
+                <AdminField label="Cantidad" htmlFor="w-qty">
                   <AdminInput
                     id="w-qty"
                     value={contentQty}
                     onChange={(e) => setContentQty(e.target.value)}
+                    placeholder="1, 12…"
+                  />
+                </AdminField>
+                <AdminField label="Precio venta S/" htmlFor="w-list">
+                  <AdminInput
+                    id="w-list"
+                    inputMode="decimal"
+                    value={listAmount}
+                    onChange={(e) => setListAmount(e.target.value)}
+                    placeholder="200.00"
+                  />
+                </AdminField>
+                <AdminField label="Mayorista S/ (opc.)" htmlFor="w-wh">
+                  <AdminInput
+                    id="w-wh"
+                    inputMode="decimal"
+                    value={wholesaleAmount}
+                    onChange={(e) => setWholesaleAmount(e.target.value)}
+                    placeholder="184.00"
                   />
                 </AdminField>
                 <div className="flex items-end">
                   <button
                     type="submit"
-                    disabled={busy}
-                    className="h-11 w-full rounded-xl bg-rosver-ink text-sm font-semibold text-white hover:bg-rosver-red disabled:opacity-60"
+                    disabled={busy || !unitTypeId}
+                    className="h-11 w-full rounded-xl bg-rosver-red text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
                   >
-                    Agregar presentación
+                    Agregar
                   </button>
                 </div>
               </form>
+
               <ul className="divide-y divide-rosver-line rounded-xl border border-rosver-line">
                 {packagings.length === 0 ? (
                   <li className="px-4 py-3 text-sm text-rosver-muted">
                     Sin presentaciones aún
                   </li>
                 ) : (
-                  packagings.map((pk) => (
-                    <li
-                      key={pk.id}
-                      className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm"
-                    >
-                      <span className="font-medium text-rosver-ink">
-                        {pk.label || `${pk.unitName} × ${pk.contentQty}`}
-                        {pk.isDefault ? (
-                          <span className="ml-2 text-[10px] font-bold text-rosver-red">
-                            Default
+                  packagings.map((pk) => {
+                    const pkPrices = prices.filter(
+                      (p) => p.isActive && p.packagingId === pk.id,
+                    )
+                    return (
+                      <li key={pk.id} className="px-4 py-3 text-sm">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setPackagingId(pk.id)}
+                            className={cn(
+                              'text-left font-semibold',
+                              packagingId === pk.id
+                                ? 'text-rosver-red'
+                                : 'text-rosver-ink',
+                            )}
+                          >
+                            {pk.label || `${pk.unitName} × ${pk.contentQty}`}
+                            {pk.isDefault ? (
+                              <span className="ml-2 text-[10px] font-bold text-rosver-red">
+                                Default
+                              </span>
+                            ) : null}
+                          </button>
+                          <span className="text-xs text-rosver-muted">
+                            {packagingId === pk.id
+                              ? 'Seleccionada'
+                              : 'Clic para + precios'}
                           </span>
-                        ) : null}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setPackagingId(pk.id)}
-                        className={cn(
-                          'text-xs font-semibold',
-                          packagingId === pk.id
-                            ? 'text-rosver-red'
-                            : 'text-rosver-muted',
+                        </div>
+                        {pkPrices.length > 0 ? (
+                          <ul className="mt-2 space-y-1">
+                            {pkPrices.map((p) => (
+                              <li
+                                key={p.id}
+                                className="flex justify-between text-xs text-rosver-muted"
+                              >
+                                <span>
+                                  {PRICE_KIND_LABEL[p.priceKind] ?? p.priceKind}
+                                </span>
+                                <span className="font-bold text-rosver-red">
+                                  S/ {p.amount.toFixed(2)}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <p className="mt-1 text-xs text-rosver-muted">
+                            Sin precios
+                          </p>
                         )}
-                      >
-                        Usar para precio
-                      </button>
-                    </li>
-                  ))
-                )}
-              </ul>
-              <div className="grid gap-3 rounded-xl border border-rosver-line p-3 sm:grid-cols-4">
-                <AdminField label="Tipo de precio" htmlFor="w-pk">
-                  <AdminSelect
-                    id="w-pk"
-                    value={priceKind}
-                    onChange={(e) =>
-                      setPriceKind(e.target.value as 'list' | 'wholesale' | 'offer')
-                    }
-                  >
-                    <option value="list">Venta</option>
-                    <option value="wholesale">Mayorista</option>
-                    <option value="offer">Oferta</option>
-                  </AdminSelect>
-                </AdminField>
-                <AdminField label="Desde (cant.)" htmlFor="w-min">
-                  <AdminInput
-                    id="w-min"
-                    value={minQty}
-                    onChange={(e) => setMinQty(e.target.value)}
-                  />
-                </AdminField>
-                <AdminField label="Monto S/" htmlFor="w-amt">
-                  <AdminInput
-                    id="w-amt"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                  />
-                </AdminField>
-                <AdminField label="Antes S/ (opcional)" htmlFor="w-cmp">
-                  <AdminInput
-                    id="w-cmp"
-                    value={compareAt}
-                    onChange={(e) => setCompareAt(e.target.value)}
-                  />
-                </AdminField>
-              </div>
-              <button
-                type="button"
-                onClick={() => void savePrice()}
-                disabled={busy}
-                className="h-11 rounded-xl bg-rosver-red px-5 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
-              >
-                Guardar precio
-              </button>
-              <ul className="divide-y divide-rosver-line rounded-xl border border-rosver-line text-sm">
-                {prices.filter((p) => p.isActive).length === 0 ? (
-                  <li className="px-4 py-3 text-rosver-muted">Sin precios activos</li>
-                ) : (
-                  prices
-                    .filter((p) => p.isActive)
-                    .map((p) => (
-                      <li
-                        key={p.id}
-                        className="flex justify-between gap-2 px-4 py-2.5"
-                      >
-                        <span>
-                          {PRICE_KIND_LABEL[p.priceKind] ?? p.priceKind} · desde{' '}
-                          {p.minQty}
-                        </span>
-                        <span className="font-bold text-rosver-red">
-                          S/ {p.amount.toFixed(2)}
-                        </span>
                       </li>
-                    ))
+                    )
+                  })
                 )}
               </ul>
+
+              {packagingId ? (
+                <form
+                  noValidate
+                  onSubmit={saveExtraPrice}
+                  className="grid gap-3 rounded-xl border border-dashed border-rosver-line p-3 sm:grid-cols-4"
+                >
+                  <p className="sm:col-span-4 text-xs font-semibold text-rosver-muted">
+                    Precio extra para la presentación seleccionada (oferta,
+                    otro mayorista…)
+                  </p>
+                  <AdminField label="Tipo" htmlFor="w-pk">
+                    <AdminSelect
+                      id="w-pk"
+                      value={priceKind}
+                      onChange={(e) =>
+                        setPriceKind(
+                          e.target.value as 'list' | 'wholesale' | 'offer',
+                        )
+                      }
+                    >
+                      <option value="list">Venta</option>
+                      <option value="wholesale">Mayorista</option>
+                      <option value="offer">Oferta</option>
+                    </AdminSelect>
+                  </AdminField>
+                  <AdminField label="Desde" htmlFor="w-min">
+                    <AdminInput
+                      id="w-min"
+                      value={minQty}
+                      onChange={(e) => setMinQty(e.target.value)}
+                    />
+                  </AdminField>
+                  <AdminField label="Monto S/" htmlFor="w-amt">
+                    <AdminInput
+                      id="w-amt"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                    />
+                  </AdminField>
+                  <div className="flex items-end">
+                    <button
+                      type="submit"
+                      disabled={busy}
+                      className="h-11 w-full rounded-xl bg-rosver-ink text-sm font-semibold text-white hover:bg-rosver-red disabled:opacity-60"
+                    >
+                      Agregar precio
+                    </button>
+                  </div>
+                </form>
+              ) : null}
             </div>
           ) : null}
 
