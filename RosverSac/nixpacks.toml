@@ -4,10 +4,16 @@ providers = ["node"]
 [variables]
 NIXPACKS_NODE_VERSION = "22"
 NPM_CONFIG_PRODUCTION = "false"
-NODE_ENV = "development"
+# Evita que npm ci en build intente borrar el mount de caché (EBUSY en Railway).
+NIXPACKS_NO_CACHE = "1"
 
 [phases.setup]
 nixPkgs = ["nodejs_22", "npm-10_x"]
 
 [phases.install]
 cmds = ["npm ci --include=dev"]
+
+# Solo build: no repetir npm ci (el mount de .cache provoca EBUSY en Railway).
+[phases.build]
+dependsOn = ["install"]
+cmds = ["npm run build"]

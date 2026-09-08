@@ -3,9 +3,9 @@ builder = "NIXPACKS"
 buildCommand = "npm run build"
 
 [deploy]
-# Web SPA (dist) + API Hono (misma origen). migrate+seed upsert en boot.
-startCommand = "npx tsx server/src/migrate.ts && npx tsx server/src/seed.ts && npx tsx server/src/index.ts"
+# Web SPA (dist) + API Hono (misma origen). migrate+seed vía boot.
+startCommand = "npx tsx server/src/boot.ts"
 healthcheckPath = "/api/health"
-healthcheckTimeout = 90
+healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3

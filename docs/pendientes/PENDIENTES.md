@@ -55,8 +55,11 @@
 | P55 | Quitar «Agregar otro producto a la lista» en /cotizar | Pedido UX | hecho | v0.1.36 / 0134 |
 | P56 | PDF cotización: logo + pie web + QR personalizado | Pedido UX | hecho | v0.1.37 / 0135; rediseño comercial (no factura) v0.1.38 / 0136 |
 
+| P57 | Deploy Railway FAILED (EBUSY npm cache + commit viejo) | Ops | hecho | v0.1.39 nixpacks sin npm ci en build + deploy con commitSha (0137) |
+
 ## Hechos recientes
 
+- Fix Railway EBUSY + redeploy con commit correcto (v0.1.39 / 0137)
 - PDF cotización comercial (no factura): total estimado, logo, pie web, QR (v0.1.38 / 0136)
 - PDF cotización: logo `logo_sinfondo.png`, pie visita web, QR con `?ref=` (v0.1.37 / 0135)
 - Cotizar: sin botón «Agregar otro producto a la lista» (v0.1.36 / 0134)
