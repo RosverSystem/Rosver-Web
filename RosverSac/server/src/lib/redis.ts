@@ -23,9 +23,23 @@ function getClient(): Redis | null {
       maxRetriesPerRequest: 1,
       connectTimeout: 4_000,
       enableOfflineQueue: false,
+      // Evita spam infinito de reconnect con WRONGPASS.
+      retryStrategy(times) {
+        if (times > 5) return null
+        return Math.min(times * 500, 3_000)
+      },
     })
     client.on('error', (err) => {
-      console.warn('[redis]', err.message)
+      const msg = err.message || String(err)
+      console.warn('[redis]', msg)
+      if (/WRONGPASS|invalid username-password|NOAUTH/i.test(msg)) {
+        try {
+          client?.disconnect()
+        } catch {
+          /* ignore */
+        }
+        client = null
+      }
     })
     return client
   } catch (err) {

@@ -64,12 +64,24 @@ export const config = {
 
 function buildRedisUrl() {
   const full = req('REDIS_URL') || req('REDIS_PRIVATE_URL')
-  if (full) return full
+  // Redis alpine / requirepass: no usar user "default" (provoca WRONGPASS con ACL).
+  if (full) {
+    try {
+      const u = new URL(full)
+      if (u.username === 'default' && u.password) {
+        u.username = ''
+        return u.toString().replace('redis:///', 'redis://')
+      }
+    } catch {
+      /* usar tal cual */
+    }
+    return full
+  }
   const host = req('REDISHOST') || req('REDIS_HOST')
   const port = req('REDISPORT') || req('REDIS_PORT', '6379')
   const password = req('REDISPASSWORD') || req('REDIS_PASSWORD')
   if (!host) return ''
-  if (password) return `redis://default:${encodeURIComponent(password)}@${host}:${port}`
+  if (password) return `redis://:${encodeURIComponent(password)}@${host}:${port}`
   return `redis://${host}:${port}`
 }
 

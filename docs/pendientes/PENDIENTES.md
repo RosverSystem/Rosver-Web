@@ -57,8 +57,11 @@
 
 | P57 | Deploy Railway FAILED (EBUSY npm cache + commit viejo) | Ops | hecho | v0.1.39 nixpacks sin npm ci en build + deploy con commitSha (0137) |
 
+| P58 | Redis WRONGPASS (user `default` vs requirepass) | Ops logs | hecho | v0.1.40 URL sin username + var Railway (0138) |
+
 ## Hechos recientes
 
+- Fix Redis WRONGPASS: URL sin usuario `default` (v0.1.40 / 0138)
 - Fix Railway EBUSY + redeploy con commit correcto (v0.1.39 / 0137)
 - PDF cotización comercial (no factura): total estimado, logo, pie web, QR (v0.1.38 / 0136)
 - PDF cotización: logo `logo_sinfondo.png`, pie visita web, QR con `?ref=` (v0.1.37 / 0135)

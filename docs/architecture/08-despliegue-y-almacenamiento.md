@@ -42,7 +42,7 @@ Infra de la web **Rosver SAC** y del ERP **SystemRSV**. Actualizar este archivo 
 - `NIXPACKS_NODE_VERSION=22`
 - `NODE_ENV=production`
 - `DATABASE_URL` = `${{Postgres.DATABASE_URL}}` (sin `DATABASE_PUBLIC_URL` en prod)
-- `REDIS_URL` = `redis://default:${{Redis.REDISPASSWORD}}@${{Redis.RAILWAY_PRIVATE_DOMAIN}}:6379`
+- `REDIS_URL` = `redis://:${{Redis.REDISPASSWORD}}@${{Redis.RAILWAY_PRIVATE_DOMAIN}}:6379` (sin usuario `default`; `requirepass` de alpine)
 - `APP_URL` / `CORS_ORIGIN` = `https://rosver-web-production.up.railway.app`
 - `SMTP_HOST` `SMTP_PORT` `SMTP_USER` `SMTP_PASS` `SMTP_FROM`
 - `SEED_ADMIN_PASSWORD` / `SEED_CLIENT_PASSWORD`
