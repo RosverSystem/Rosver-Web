@@ -13,7 +13,7 @@
 | P16 | Selector empaque + precio en carrito/ficha | Precios unidades | hecho | v0.1.15 packagingId en carrito |
 | P17 | Specs UI (atributos + unidades variables) | Specs | hecho | Admin PUT specs + ficha dinámica |
 | P18 | Filtro categoría incluye subcategorías | Filtros | hecho | v0.1.15 árbol en filtro |
-| P19 | Módulo Ofertas ERP (vincular price_kind=offer) | Ofertas | hecho | Listado admin + storefront offer |
+| P19 | Módulo Ofertas ERP (vincular price_kind=offer) | Ofertas | hecho | v0.1.18 seed + alta ERP + tienda DB |
 | P20 | Tipos de unidad UI dedicada | Unidades | hecho | `/admin/unidades` |
 | P21 | Mega-menú topbar con imágenes / columnas | Topbar cats | hecho | v0.1.15 |
 | P22 | Import CSV / sync ERP externo | Catálogo | pendiente | |
@@ -37,6 +37,6 @@
 
 ## Hechos recientes
 
+- Ofertas DB + seed 3 ejemplos + ERP publicar (v0.1.18)
 - ERP shell fijo + Productos / Listado de precios (v0.1.17)
 - Subir imagen botón primario (v0.1.16)
-- Catálogo R2 + filtros subcats + empaques carrito + ofertas/unidades (v0.1.15)

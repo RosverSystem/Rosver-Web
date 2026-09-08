@@ -1,14 +1,11 @@
 import { CatalogPagination } from '@/features/catalog/ui/CatalogPagination'
 import { OfferCard } from '@/features/catalog/ui/OfferCard'
 import { useCatalog } from '@/features/catalog/model/catalog-store'
-import {
-  discountPercent,
-  getOfferProducts,
-} from '@/features/catalog/model/offers'
+import { discountPercent } from '@/features/catalog/model/offers'
 import { prefersReducedMotion } from '@/shared/lib/gsap'
 import { ArrowRight } from 'cssvg-icons'
 import { motion } from 'motion/react'
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
 const PAGE_SIZE = 8
@@ -17,8 +14,7 @@ const PAGE_SIZE = 8
  * Vista Ofertas: cards horizontales (campaña, ahorro, carrito + WhatsApp).
  */
 export function OffersPage() {
-  const { products, refresh, refreshing, live } = useCatalog()
-  const offers = useMemo(() => getOfferProducts(products), [products])
+  const { offers, refresh, refreshing, live, liveProducts } = useCatalog()
   const [page, setPage] = useState(1)
   const reduce = prefersReducedMotion()
 
@@ -73,7 +69,7 @@ export function OffersPage() {
               disabled={refreshing}
               className="text-sm font-semibold text-rosver-muted transition hover:text-rosver-ink disabled:opacity-60"
             >
-              {refreshing ? 'Actualizando…' : live ? 'Actualizar' : 'Buscar novedades'}
+              {refreshing ? 'Actualizando…' : live || liveProducts ? 'Actualizar' : 'Buscar novedades'}
             </button>
             <Link
               to="/catalogo"
@@ -113,8 +109,9 @@ export function OffersPage() {
               Sin ofertas activas
             </p>
             <p className="mx-auto mt-2 max-w-md text-sm text-rosver-muted">
-              Ahora mismo no hay productos con descuento. Explora el catálogo o
-              cotiza tu pedido.
+              {liveProducts
+                ? 'No hay precios en oferta en la base de datos. Agrégalos en el ERP → Ofertas.'
+                : 'Cuando el catálogo esté en línea, las ofertas del ERP aparecerán aquí.'}
             </p>
             <div className="mt-5 flex flex-wrap justify-center gap-2">
               <Link

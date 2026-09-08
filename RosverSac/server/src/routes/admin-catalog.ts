@@ -464,6 +464,153 @@ adminCatalogRoutes.get('/offers', async (c) => {
   })
 })
 
+/** Alta rápida de oferta: producto existente o nuevo + precios lista/oferta. */
+adminCatalogRoutes.post('/offers', async (c) => {
+  const body = z
+    .object({
+      productId: z.string().uuid().optional(),
+      name: z.string().trim().min(2).max(200).optional(),
+      sku: z.string().trim().min(1).max(60).optional(),
+      brandId: z.string().uuid().nullable().optional(),
+      categoryId: z.string().uuid().nullable().optional(),
+      description: z.string().optional(),
+      imageUrl: z.string().optional().nullable(),
+      listPrice: z.number().positive(),
+      offerPrice: z.number().positive(),
+    })
+    .safeParse(await c.req.json().catch(() => null))
+  if (!body.success) {
+    return c.json({ error: body.error.issues[0]?.message ?? 'Datos inválidos' }, 400)
+  }
+  const d = body.data
+  if (d.offerPrice >= d.listPrice) {
+    return c.json({ error: 'El precio oferta debe ser menor que el precio normal' }, 400)
+  }
+
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    let productId = d.productId
+
+    if (!productId) {
+      if (!d.name?.trim() || !d.sku?.trim()) {
+        await client.query('ROLLBACK')
+        return c.json({ error: 'Nombre y código son obligatorios para un producto nuevo' }, 400)
+      }
+      const slug = slugify(d.name)
+      const inserted = await client.query(
+        `INSERT INTO products
+           (sku, slug, name, brand_id, category_id, description, image_url, availability, visible)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,'in_stock',true)
+         RETURNING id`,
+        [
+          d.sku.toUpperCase(),
+          slug,
+          d.name.trim(),
+          d.brandId ?? null,
+          d.categoryId ?? null,
+          d.description ?? '',
+          d.imageUrl ?? null,
+        ],
+      )
+      productId = inserted.rows[0].id as string
+      const unit = await client.query(
+        `SELECT id FROM unit_types WHERE is_base = true ORDER BY sort_order LIMIT 1`,
+      )
+      if (unit.rows[0]) {
+        await client.query(
+          `INSERT INTO product_packagings (product_id, unit_type_id, content_qty, label, is_default)
+           VALUES ($1,$2,1,'Unidad',true)
+           ON CONFLICT (product_id, unit_type_id, content_qty) DO NOTHING`,
+          [productId, unit.rows[0].id],
+        )
+      }
+    }
+
+    const pack = await client.query(
+      `SELECT id FROM product_packagings
+       WHERE product_id = $1
+       ORDER BY is_default DESC, content_qty ASC
+       LIMIT 1`,
+      [productId],
+    )
+    let packagingId = pack.rows[0]?.id as string | undefined
+    if (!packagingId) {
+      const unit = await client.query(
+        `SELECT id FROM unit_types WHERE is_base = true ORDER BY sort_order LIMIT 1`,
+      )
+      if (!unit.rows[0]) {
+        await client.query('ROLLBACK')
+        return c.json({ error: 'No hay tipos de unidad. Crea uno en Unidades.' }, 400)
+      }
+      const created = await client.query(
+        `INSERT INTO product_packagings (product_id, unit_type_id, content_qty, label, is_default)
+         VALUES ($1,$2,1,'Unidad',true)
+         RETURNING id`,
+        [productId, unit.rows[0].id],
+      )
+      packagingId = created.rows[0].id as string
+    }
+
+    await client.query(
+      `UPDATE product_prices SET is_active = false, updated_at = now()
+       WHERE product_id = $1 AND packaging_id = $2
+         AND price_kind IN ('list','offer') AND is_active = true`,
+      [productId, packagingId],
+    )
+
+    await client.query(
+      `INSERT INTO product_prices
+         (product_id, packaging_id, price_kind, min_qty, amount, compare_at_amount, is_active)
+       VALUES ($1,$2,'list',1,$3,$3,true)`,
+      [productId, packagingId, d.listPrice],
+    )
+    await client.query(
+      `INSERT INTO product_prices
+         (product_id, packaging_id, price_kind, min_qty, amount, compare_at_amount, is_active)
+       VALUES ($1,$2,'offer',1,$3,$4,true)`,
+      [productId, packagingId, d.offerPrice, d.listPrice],
+    )
+
+    if (d.imageUrl !== undefined && d.productId) {
+      await client.query(
+        `UPDATE products SET image_url = COALESCE($2, image_url), updated_at = now() WHERE id = $1`,
+        [productId, d.imageUrl],
+      )
+    }
+
+    await client.query('COMMIT')
+    await invalidateCatalogHomeCaches()
+    const products = await queryOfferProducts(300)
+    const created = products.find((p) => p.id === productId)
+    return c.json({ ok: true, product: created ?? { id: productId }, count: products.length }, 201)
+  } catch (e) {
+    await client.query('ROLLBACK')
+    const msg = e instanceof Error ? e.message : ''
+    if (msg.includes('unique') || msg.includes('duplicate')) {
+      return c.json({ error: 'Ese código de producto ya existe.' }, 409)
+    }
+    console.error('admin offers POST', e)
+    return c.json({ error: 'No se pudo guardar la oferta' }, 500)
+  } finally {
+    client.release()
+  }
+})
+
+adminCatalogRoutes.delete('/offers/:productId', async (c) => {
+  const productId = c.req.param('productId')
+  const { rowCount } = await pool.query(
+    `UPDATE product_prices SET is_active = false, updated_at = now()
+     WHERE product_id = $1 AND price_kind = 'offer' AND is_active = true`,
+    [productId],
+  )
+  if (!rowCount) {
+    return c.json({ error: 'No hay oferta activa en ese producto' }, 404)
+  }
+  await invalidateCatalogHomeCaches()
+  return c.json({ ok: true })
+})
+
 /* ——— Specs ——— */
 adminCatalogRoutes.get('/spec-attributes', async (c) => {
   const { rows } = await pool.query(

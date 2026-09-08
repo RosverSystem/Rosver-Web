@@ -5,6 +5,7 @@ import {
   type Product,
 } from '@/features/catalog/model/mocks'
 import { BRANDS, type Brand } from '@/features/catalog/model/brands'
+import { getOfferProducts } from '@/features/catalog/model/offers'
 import { api } from '@/shared/lib/api'
 import { IconWrench } from '@/shared/ui/icons'
 import {
@@ -49,15 +50,18 @@ type CatalogPayload = {
   liveBrands?: boolean
   updatedAt?: string
   products?: Product[]
+  offers?: Product[]
   categories?: ApiCategory[]
   brands?: ApiBrand[]
 }
 
 type CatalogContextValue = {
   products: Product[]
+  offers: Product[]
   categories: Category[]
   brands: Brand[]
   live: boolean
+  liveProducts: boolean
   updatedAt: string | null
   refreshing: boolean
   refresh: () => Promise<void>
@@ -111,9 +115,11 @@ function wantsCatalogRefresh(pathname: string) {
 export function CatalogProvider({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
   const [products, setProducts] = useState<Product[]>(PRODUCTS)
+  const [offers, setOffers] = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>(CATEGORIES)
   const [brands, setBrands] = useState<Brand[]>(BRANDS)
   const [live, setLive] = useState(false)
+  const [liveProducts, setLiveProducts] = useState(false)
   const [updatedAt, setUpdatedAt] = useState<string | null>(null)
   const [refreshing, setRefreshing] = useState(false)
 
@@ -149,13 +155,25 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
         setProducts(PRODUCTS)
       }
 
+      // Ofertas solo desde DB (nunca mocks)
+      if (Array.isArray(data.offers)) {
+        setOffers(data.offers)
+      } else if (hasDbProducts) {
+        setOffers(getOfferProducts(data.products ?? []))
+      } else {
+        setOffers([])
+      }
+
+      setLiveProducts(hasDbProducts)
       setLive(Boolean(data.live) || hasDbCategories || hasDbBrands || hasDbProducts)
       setUpdatedAt(data.updatedAt ?? new Date().toISOString())
     } catch {
       setProducts(PRODUCTS)
+      setOffers([])
       setCategories(CATEGORIES)
       setBrands(BRANDS)
       setLive(false)
+      setLiveProducts(false)
     } finally {
       setRefreshing(false)
     }
@@ -191,8 +209,28 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
   }, [pathname, refresh])
 
   const value = useMemo(
-    () => ({ products, categories, brands, live, updatedAt, refreshing, refresh }),
-    [products, categories, brands, live, updatedAt, refreshing, refresh],
+    () => ({
+      products,
+      offers,
+      categories,
+      brands,
+      live,
+      liveProducts,
+      updatedAt,
+      refreshing,
+      refresh,
+    }),
+    [
+      products,
+      offers,
+      categories,
+      brands,
+      live,
+      liveProducts,
+      updatedAt,
+      refreshing,
+      refresh,
+    ],
   )
 
   return <CatalogContext.Provider value={value}>{children}</CatalogContext.Provider>
@@ -203,9 +241,11 @@ export function useCatalog() {
   if (!ctx) {
     return {
       products: PRODUCTS,
+      offers: [],
       categories: CATEGORIES,
       brands: BRANDS,
       live: false,
+      liveProducts: false,
       updatedAt: null,
       refreshing: false,
       refresh: async () => {},

@@ -1,5 +1,4 @@
 import type { Product } from '@/features/catalog/model/mocks'
-import { PRODUCTS } from '@/features/catalog/model/mocks'
 
 /** Producto en oferta: precio oferta activo o precio anterior mayor. */
 export function isOfferProduct(p: Product): boolean {
@@ -12,7 +11,7 @@ export function isOfferProduct(p: Product): boolean {
   )
 }
 
-export function getOfferProducts(products: Product[] = PRODUCTS): Product[] {
+export function getOfferProducts(products: Product[]): Product[] {
   return products
     .filter(isOfferProduct)
     .slice()
@@ -31,16 +30,20 @@ export function offerSavings(p: Product): number {
 
 const CAMPAIGN_BY_CATEGORY: Record<string, string> = {
   herramientas: 'Campaña herramientas',
+  'herramientas-electricas': 'Campaña herramientas',
+  'herramientas-manuales': 'Campaña herramientas',
   ferreteria: 'Lote ferretería',
+  electricidad: 'Novedad viral',
   electronica: 'Novedad viral',
   hogar: 'Campaña hogar',
+  seguridad: 'Promo seguridad',
   textil: 'Oferta textil',
   iluminacion: 'Flash iluminación',
   limpieza: 'Promo limpieza',
-  construccion: 'Campaña escolar',
+  construccion: 'Campaña obra',
 }
 
-/** Etiqueta de campaña mock (fase visual). */
+/** Etiqueta de campaña según categoría del producto (DB). */
 export function offerCampaignTag(p: Product): string {
   return CAMPAIGN_BY_CATEGORY[p.category] ?? 'Oferta Rosver'
 }

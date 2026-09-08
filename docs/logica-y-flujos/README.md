@@ -15,5 +15,6 @@ Carpeta de **lógica de producto** (cómo debe comportarse la app), complementar
 | [04-catalogo-precios-unidades.md](./04-catalogo-precios-unidades.md) | Precios por unidad/contenido, marcas, categorías, specs, filtros |
 | [05-destacados-home-redis.md](./05-destacados-home-redis.md) | Destacados para ti: Postgres + Redis + admin + cards |
 | [06-tendencia-calificaciones.md](./06-tendencia-calificaciones.md) | Tendencia por categoría + reseñas / estrellas |
+| [07-ofertas-erp-tienda.md](./07-ofertas-erp-tienda.md) | Ofertas: precios offer en Postgres → `/ofertas` |
 
 Actualizar estos docs cuando cambie un flujo real (no solo el mock visual).

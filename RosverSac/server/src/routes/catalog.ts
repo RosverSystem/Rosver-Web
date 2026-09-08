@@ -3,6 +3,7 @@ import { pool } from '../db.js'
 import { featuredCache, invalidateCatalogHomeCaches, redisStatus, trendingCache } from '../lib/redis.js'
 import {
   queryFeaturedProducts,
+  queryOfferProducts,
   queryStoreProducts,
   queryTrendingProducts,
   queryTrendingTabs,
@@ -120,6 +121,29 @@ catalogRoutes.get('/trending', async (c) => {
   }
 })
 
+catalogRoutes.get('/offers', async (c) => {
+  try {
+    const products = await queryOfferProducts(200)
+    return c.json({
+      ok: true,
+      live: true,
+      updatedAt: new Date().toISOString(),
+      products,
+      count: products.length,
+    })
+  } catch (err) {
+    console.error('catalog offers', err)
+    return c.json({
+      ok: true,
+      live: false,
+      products: [],
+      count: 0,
+      updatedAt: new Date().toISOString(),
+      message: 'Ofertas no disponibles',
+    })
+  }
+})
+
 catalogRoutes.get('/', async (c) => {
   try {
     const brands = await pool.query(
@@ -133,6 +157,7 @@ catalogRoutes.get('/', async (c) => {
     )
 
     const mappedProducts = await queryStoreProducts(1000)
+    const offerProducts = await queryOfferProducts(200)
     const featuredBundle = await loadFeaturedCached()
     const trendingBundle = await loadTrendingCached(null)
 
@@ -164,6 +189,7 @@ catalogRoutes.get('/', async (c) => {
       brands: mappedBrands,
       categories: mappedCategories,
       products: mappedProducts,
+      offers: offerProducts,
       featured: featuredBundle.products,
       featuredMeta: {
         cache: featuredBundle.cache,
@@ -193,6 +219,7 @@ catalogRoutes.get('/', async (c) => {
       liveBrands: false,
       updatedAt: new Date().toISOString(),
       products: [],
+      offers: [],
       featured: [],
       trending: [],
       trendingTabs: [],

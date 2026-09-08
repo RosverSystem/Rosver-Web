@@ -3,8 +3,12 @@ import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { FloatingToasts } from '@/shared/ui/floating-toasts'
 import {
   AdminEmptyState,
+  AdminField,
+  AdminInput,
   AdminPageHeader,
+  AdminSelect,
 } from '@/shared/ui/admin-field'
+import { AdminImageUpload } from '@/shared/ui/admin-image-upload'
 import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 
@@ -20,16 +24,48 @@ type OfferProduct = {
   imageUrl?: string
 }
 
+type CatalogOption = { id: string; name: string; sku?: string }
+
+/**
+ * Ofertas ERP → tienda /ofertas (Postgres, sin mocks).
+ */
 export function AdminOffersPage() {
-  const { toasts, showMessages, dismiss } = useFormToasts()
+  const { toasts, showMessages, dismiss, clear } = useFormToasts()
   const [products, setProducts] = useState<OfferProduct[]>([])
+  const [allProducts, setAllProducts] = useState<CatalogOption[]>([])
+  const [brands, setBrands] = useState<CatalogOption[]>([])
+  const [categories, setCategories] = useState<CatalogOption[]>([])
   const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+
+  const [mode, setMode] = useState<'existing' | 'new'>('new')
+  const [productId, setProductId] = useState('')
+  const [name, setName] = useState('')
+  const [sku, setSku] = useState('')
+  const [brandId, setBrandId] = useState('')
+  const [categoryId, setCategoryId] = useState('')
+  const [description, setDescription] = useState('')
+  const [imageUrl, setImageUrl] = useState('')
+  const [listPrice, setListPrice] = useState('')
+  const [offerPrice, setOfferPrice] = useState('')
 
   async function load() {
     setLoading(true)
     try {
-      const data = await api<{ products: OfferProduct[] }>('/api/admin/offers')
-      setProducts(data.products)
+      const [offers, list, b, c] = await Promise.all([
+        api<{ products: OfferProduct[] }>('/api/admin/offers'),
+        api<{ products: { id: string; name: string; sku: string }[] }>(
+          '/api/admin/products',
+        ),
+        api<{ brands: { id: string; name: string }[] }>('/api/admin/brands'),
+        api<{ categories: { id: string; name: string }[] }>(
+          '/api/admin/categories',
+        ),
+      ])
+      setProducts(offers.products)
+      setAllProducts(list.products)
+      setBrands(b.brands)
+      setCategories(c.categories)
     } catch (e) {
       showMessages([
         e instanceof ApiError ? e.message : 'No se pudieron cargar las ofertas',
@@ -43,6 +79,90 @@ export function AdminOffersPage() {
     void load()
   }, [])
 
+  function resetForm() {
+    setProductId('')
+    setName('')
+    setSku('')
+    setBrandId('')
+    setCategoryId('')
+    setDescription('')
+    setImageUrl('')
+    setListPrice('')
+    setOfferPrice('')
+  }
+
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    clear()
+    const list = Number(listPrice)
+    const offer = Number(offerPrice)
+    const errors: string[] = []
+    if (!Number.isFinite(list) || list <= 0) errors.push('Precio normal inválido')
+    if (!Number.isFinite(offer) || offer <= 0) errors.push('Precio oferta inválido')
+    if (Number.isFinite(list) && Number.isFinite(offer) && offer >= list) {
+      errors.push('La oferta debe ser menor que el precio normal')
+    }
+    if (mode === 'existing' && !productId) {
+      errors.push('Elige un producto')
+    }
+    if (mode === 'new') {
+      if (!name.trim()) errors.push('Escribe el nombre del producto')
+      if (!sku.trim()) errors.push('Escribe el código del producto')
+    }
+    if (errors.length) {
+      showMessages(errors)
+      return
+    }
+
+    setBusy(true)
+    try {
+      await api('/api/admin/offers', {
+        method: 'POST',
+        body: JSON.stringify(
+          mode === 'existing'
+            ? {
+                productId,
+                listPrice: list,
+                offerPrice: offer,
+                imageUrl: imageUrl.trim() || undefined,
+              }
+            : {
+                name: name.trim(),
+                sku: sku.trim(),
+                brandId: brandId || null,
+                categoryId: categoryId || null,
+                description: description.trim(),
+                imageUrl: imageUrl.trim() || null,
+                listPrice: list,
+                offerPrice: offer,
+              },
+        ),
+      })
+      resetForm()
+      await load()
+      showMessages(['Oferta publicada en la tienda'])
+    } catch (err) {
+      showMessages([
+        err instanceof ApiError ? err.message : 'No se pudo guardar la oferta',
+      ])
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function removeOffer(id: string, productName: string) {
+    if (!window.confirm(`¿Quitar la oferta de «${productName}»?`)) return
+    clear()
+    try {
+      await api(`/api/admin/offers/${id}`, { method: 'DELETE' })
+      await load()
+    } catch (err) {
+      showMessages([
+        err instanceof ApiError ? err.message : 'No se pudo quitar la oferta',
+      ])
+    }
+  }
+
   return (
     <div className="space-y-5">
       <FloatingToasts toasts={toasts} onDismiss={dismiss} />
@@ -50,18 +170,157 @@ export function AdminOffersPage() {
         title="Ofertas"
         actions={
           <Link
-            to="/admin/productos"
+            to="/ofertas"
+            target="_blank"
+            rel="noreferrer"
             className="rounded-full border border-rosver-line bg-white px-3 py-1.5 text-xs font-semibold text-rosver-ink hover:border-rosver-red/40 hover:text-rosver-red"
           >
-            Gestionar en productos
+            Ver en la tienda
           </Link>
         }
       />
 
-      <p className="text-sm text-rosver-muted">
-        Aquí aparecen productos con precio «en oferta» o con precio anterior
-        (compare) en la lista. Los creas desde el producto → precios.
-      </p>
+      <form
+        noValidate
+        onSubmit={onSubmit}
+        className="space-y-4 rounded-2xl border border-rosver-line bg-white p-4 shadow-sm sm:p-5"
+      >
+        <p className="text-sm font-semibold text-rosver-ink">Nueva oferta</p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setMode('new')}
+            className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+              mode === 'new'
+                ? 'bg-rosver-red text-white'
+                : 'bg-rosver-soft text-rosver-muted'
+            }`}
+          >
+            Producto nuevo
+          </button>
+          <button
+            type="button"
+            onClick={() => setMode('existing')}
+            className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+              mode === 'existing'
+                ? 'bg-rosver-red text-white'
+                : 'bg-rosver-soft text-rosver-muted'
+            }`}
+          >
+            Producto ya creado
+          </button>
+        </div>
+
+        {mode === 'existing' ? (
+          <AdminField label="Producto" htmlFor="offer-prod">
+            <AdminSelect
+              id="offer-prod"
+              value={productId}
+              onChange={(e) => setProductId(e.target.value)}
+            >
+              <option value="">Elegir producto</option>
+              {allProducts.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.sku})
+                </option>
+              ))}
+            </AdminSelect>
+          </AdminField>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <AdminField label="Nombre" htmlFor="offer-name">
+              <AdminInput
+                id="offer-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ej. Multímetro digital CAT III"
+              />
+            </AdminField>
+            <AdminField label="Código" htmlFor="offer-sku">
+              <AdminInput
+                id="offer-sku"
+                value={sku}
+                onChange={(e) => setSku(e.target.value)}
+                placeholder="RS-4201"
+                className="uppercase"
+              />
+            </AdminField>
+            <AdminField label="Marca" htmlFor="offer-brand">
+              <AdminSelect
+                id="offer-brand"
+                value={brandId}
+                onChange={(e) => setBrandId(e.target.value)}
+              >
+                <option value="">Sin marca</option>
+                {brands.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </AdminSelect>
+            </AdminField>
+            <AdminField label="Categoría" htmlFor="offer-cat">
+              <AdminSelect
+                id="offer-cat"
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+              >
+                <option value="">Elegir categoría</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </AdminSelect>
+            </AdminField>
+            <AdminField label="Descripción" htmlFor="offer-desc" className="sm:col-span-2">
+              <AdminInput
+                id="offer-desc"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Breve descripción para la card"
+              />
+            </AdminField>
+          </div>
+        )}
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <AdminField label="Precio normal (S/)" htmlFor="offer-list">
+            <AdminInput
+              id="offer-list"
+              value={listPrice}
+              onChange={(e) => setListPrice(e.target.value)}
+              placeholder="99.00"
+              inputMode="decimal"
+            />
+          </AdminField>
+          <AdminField label="Precio oferta (S/)" htmlFor="offer-price">
+            <AdminInput
+              id="offer-price"
+              value={offerPrice}
+              onChange={(e) => setOfferPrice(e.target.value)}
+              placeholder="79.00"
+              inputMode="decimal"
+            />
+          </AdminField>
+        </div>
+
+        <AdminImageUpload
+          folder="products"
+          value={imageUrl}
+          onChange={setImageUrl}
+          onError={(msg) => showMessages([msg])}
+          label="Foto (opcional)"
+        />
+
+        <button
+          type="submit"
+          disabled={busy}
+          className="h-11 rounded-xl bg-rosver-red px-5 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
+        >
+          {busy ? 'Publicando…' : 'Publicar oferta'}
+        </button>
+      </form>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {loading ? (
@@ -72,7 +331,7 @@ export function AdminOffersPage() {
           <div className="col-span-full rounded-2xl border border-rosver-line bg-white">
             <AdminEmptyState
               title="Todavía no hay ofertas"
-              detail="En un producto, agrega un precio de tipo «en oferta» o un precio lista con precio anterior."
+              detail="Publica la primera arriba. Se verá en /ofertas de la tienda."
             />
           </div>
         ) : (
@@ -119,12 +378,13 @@ export function AdminOffersPage() {
                       </span>
                     ) : null}
                   </div>
-                  <Link
-                    to="/admin/productos"
-                    className="mt-2 inline-block text-xs font-semibold text-rosver-red hover:underline"
+                  <button
+                    type="button"
+                    onClick={() => void removeOffer(p.id, p.name)}
+                    className="mt-2 text-xs font-semibold text-rosver-muted hover:text-rosver-red"
                   >
-                    Abrir en listado
-                  </Link>
+                    Quitar oferta
+                  </button>
                 </div>
               </article>
             )

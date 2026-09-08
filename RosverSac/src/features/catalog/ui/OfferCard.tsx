@@ -18,12 +18,30 @@ export function OfferCard({ product }: { product: Product }) {
   const savings = offerSavings(product)
   const pct = discountPercent(product)
   const tag = offerCampaignTag(product)
-  const price = product.price!
-  const original = product.originalPrice!
+  const price = product.price
+  const original = product.originalPrice
+
+  if (price == null || original == null) return null
 
   const waHref = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
     `Hola Rosver, me interesa la oferta:\n• ${product.name}\n• SKU: ${product.sku}\n• Precio oferta: S/ ${price.toFixed(2)} (antes S/ ${original.toFixed(2)})`,
   )}`
+
+  const defaultPack = product.packagings?.find((p) => p.isDefault) ?? product.packagings?.[0]
+
+  function onAdd() {
+    if (defaultPack) {
+      addItem({
+        productSlug: product.slug,
+        quantity: 1,
+        packagingId: defaultPack.id,
+        packagingLabel: defaultPack.label,
+        unitPrice: price,
+      })
+    } else {
+      addItem(product.slug, 1)
+    }
+  }
 
   return (
     <article className="flex flex-col gap-4 rounded-2xl border border-rosver-line bg-white p-3 shadow-[0_12px_28px_-22px_rgba(17,17,17,0.35)] transition hover:border-rosver-ink/25 hover:shadow-[0_16px_36px_-20px_rgba(17,17,17,0.4)] sm:flex-row sm:items-stretch sm:p-4">
@@ -102,7 +120,7 @@ export function OfferCard({ product }: { product: Product }) {
           <div className="flex items-stretch gap-2">
             <button
               type="button"
-              onClick={() => addItem(product.slug, 1)}
+              onClick={onAdd}
               className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-rosver-red px-4 text-xs font-bold tracking-wide text-white uppercase transition hover:bg-rosver-red-dark sm:flex-none sm:px-5"
             >
               Añadir al carrito
