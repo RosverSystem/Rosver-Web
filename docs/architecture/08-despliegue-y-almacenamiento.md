@@ -44,6 +44,7 @@ Infra de la web **Rosver SAC** y del ERP **SystemRSV**. Actualizar este archivo 
 - `SMTP_HOST` `SMTP_PORT` `SMTP_USER` `SMTP_PASS` `SMTP_FROM`
 - `SEED_ADMIN_PASSWORD` / `SEED_CLIENT_PASSWORD`
 - Google (opcional): `GOOGLE_CLIENT_ID` `GOOGLE_CLIENT_SECRET` `GOOGLE_REDIRECT_URI`
+- R2: `R2_ENDPOINT` `R2_ACCESS_KEY_ID` `R2_SECRET_ACCESS_KEY` `R2_BUCKET_PUBLIC` (`R2_PUBLIC_BASE_URL` opcional)
 - **No** poner secretos en `VITE_*` (misma origen: front usa `/api` relativo)
 ---
 
@@ -98,5 +99,5 @@ Verificado 2026-09-08: `ListBuckets` + `PutObject` healthcheck en `rosver-public
 
 | Fase | Web | Postgres | R2 |
 | --- | --- | --- | --- |
-| Visual (actual) | Sí — mocks | Crear instancia; sin ORM aún | Preparar buckets; sin upload en UI aún |
+| Visual (actual) | Sí — mocks | Auth + seed online | Avatares vía API → R2; productos aún mock |
 | Lógica | API + auth | Modelos / migraciones | Upload productos, docs, leads |

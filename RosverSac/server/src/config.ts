@@ -49,6 +49,14 @@ export const config = {
     clientEmail: req('SEED_CLIENT_EMAIL', 'acosta.wp076@gmail.com'),
     clientPassword: req('SEED_CLIENT_PASSWORD', 'RosverCliente!2026'),
   },
+  r2: {
+    endpoint: req('R2_ENDPOINT'),
+    accessKeyId: req('R2_ACCESS_KEY_ID'),
+    secretAccessKey: req('R2_SECRET_ACCESS_KEY'),
+    bucketPublic: req('R2_BUCKET_PUBLIC', 'rosver-public-media'),
+    /** Si hay dominio/r2.dev público; si no, se sirve vía /api/media/… */
+    publicBaseUrl: req('R2_PUBLIC_BASE_URL'),
+  },
   isProd: req('NODE_ENV') === 'production',
 }
 

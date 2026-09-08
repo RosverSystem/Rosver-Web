@@ -53,6 +53,7 @@ type AuthContextValue = {
   resendOtp: (email: string, purpose: 'email_verify' | 'login' | 'reset_password') => Promise<void>
   logout: () => Promise<void>
   updateProfile: (patch: Record<string, unknown>) => Promise<AuthUser>
+  uploadAvatar: (file: File) => Promise<AuthUser>
   hasPermission: (code: string) => boolean
   isAdmin: boolean
   googleStartUrl: string
@@ -149,6 +150,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data.user
   }, [])
 
+  const uploadAvatar = useCallback(async (file: File) => {
+    const fd = new FormData()
+    fd.append('file', file)
+    const data = await api<{ user: AuthUser }>('/api/profile/avatar', {
+      method: 'POST',
+      body: fd,
+    })
+    setUser(data.user)
+    return data.user
+  }, [])
+
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
@@ -161,6 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resendOtp,
       logout,
       updateProfile,
+      uploadAvatar,
       hasPermission: (code) => Boolean(user?.permissions.includes(code)),
       isAdmin: user?.roleCode === 'admin',
       googleStartUrl: `${(import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') || ''}/api/auth/google/start`,
@@ -176,6 +189,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       resendOtp,
       logout,
       updateProfile,
+      uploadAvatar,
     ],
   )
 

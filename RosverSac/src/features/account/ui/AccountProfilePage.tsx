@@ -3,9 +3,10 @@ import { cnField, isValidPhone } from '@/shared/lib'
 import { ApiError } from '@/shared/lib/api'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { FloatingToasts } from '@/shared/ui/floating-toasts'
-import { type FormEvent, useEffect, useState } from 'react'
+import { Camera } from 'cssvg-icons'
+import { type ChangeEvent, type FormEvent, useEffect, useRef, useState } from 'react'
 
-type FieldKey = 'fullName' | 'phone'
+type FieldKey = 'fullName' | 'phone' | 'avatar'
 type FieldErrors = Partial<Record<FieldKey, string>>
 
 const inputClass =
@@ -19,8 +20,9 @@ const AVATARS = [
 ]
 
 export function AccountProfilePage() {
-  const { user, updateProfile } = useAuth()
+  const { user, updateProfile, uploadAvatar } = useAuth()
   const { toasts, showErrors, dismiss, clear } = useFormToasts()
+  const fileRef = useRef<HTMLInputElement>(null)
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
   const [companyName, setCompanyName] = useState('')
@@ -30,6 +32,7 @@ export function AccountProfilePage() {
   const [errors, setErrors] = useState<FieldErrors>({})
   const [saved, setSaved] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [uploading, setUploading] = useState(false)
 
   useEffect(() => {
     if (!user) return
@@ -40,6 +43,31 @@ export function AccountProfilePage() {
     setDocumentNumber(user.documentNumber ?? '')
     setAvatarUrl(user.avatarUrl || '/avatars/default-1.svg')
   }, [user])
+
+  async function onPickFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploading(true)
+    setSaved(false)
+    clear()
+    try {
+      const next = await uploadAvatar(file)
+      setAvatarUrl(next.avatarUrl)
+    } catch (err) {
+      showErrors(
+        {
+          avatar:
+            err instanceof ApiError
+              ? err.message
+              : 'No se pudo subir la foto.',
+        },
+        ['avatar'],
+      )
+    } finally {
+      setUploading(false)
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -83,16 +111,27 @@ export function AccountProfilePage() {
   if (!user) return null
 
   return (
-    <div className="rounded-2xl border border-rosver-line bg-white p-5 sm:p-6">
+    <div className="rounded-2xl border border-rosver-line bg-white p-5 shadow-sm sm:p-6">
       <FloatingToasts toasts={toasts} onDismiss={dismiss} />
       <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center">
-        <img
-          src={avatarUrl}
-          alt=""
-          width={72}
-          height={72}
-          className="size-18 rounded-full border border-rosver-line bg-rosver-soft"
-        />
+        <div className="relative">
+          <img
+            src={avatarUrl}
+            alt=""
+            width={88}
+            height={88}
+            className="size-[88px] rounded-full border border-rosver-line bg-rosver-soft object-cover"
+          />
+          <button
+            type="button"
+            disabled={uploading}
+            onClick={() => fileRef.current?.click()}
+            className="absolute -right-1 -bottom-1 inline-flex size-9 items-center justify-center rounded-full bg-rosver-red text-white shadow hover:bg-rosver-red-dark disabled:opacity-60"
+            aria-label="Subir foto"
+          >
+            <Camera size={16} color="currentColor" strokeWidth={2} />
+          </button>
+        </div>
         <div>
           <h2 className="font-display text-lg font-bold text-rosver-ink">
             {user.fullName?.trim() || 'Tu perfil'}
@@ -105,9 +144,28 @@ export function AccountProfilePage() {
         </div>
       </div>
 
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif"
+        className="hidden"
+        onChange={(e) => void onPickFile(e)}
+      />
+
       <p className="mb-2 text-xs font-bold tracking-wide text-rosver-muted uppercase">
         Foto de perfil
       </p>
+      <div className="mb-2 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          disabled={uploading}
+          onClick={() => fileRef.current?.click()}
+          className="rounded-full border border-rosver-red px-4 py-2 text-xs font-bold text-rosver-red uppercase hover:bg-rosver-red hover:text-white disabled:opacity-60"
+        >
+          {uploading ? 'Subiendo…' : 'Subir foto personalizada'}
+        </button>
+        <span className="text-xs text-rosver-muted">JPG/PNG/WebP · máx 2.5 MB · R2</span>
+      </div>
       <div className="mb-5 flex flex-wrap gap-2">
         {AVATARS.map((src) => (
           <button

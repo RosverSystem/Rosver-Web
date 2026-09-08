@@ -11,10 +11,11 @@
 | P10 | CRUD Productos ERP + API | Pedido ERP | pendiente | Vista vacía montada; falta lógica/API/R2 |
 | P11 | Migrar resto módulos admin al estilo SystemRSV | ERP UX | pendiente | Categorías, leads, etc. aún wireframe |
 | P05 | Recuperación de contraseña | Auth | pendiente | No implementado |
-| P06 | Subida foto perfil a R2 | Perfil | pendiente | Solo avatares SVG default |
+| P06 | Subida foto perfil a R2 | Perfil | hecho | `POST /api/profile/avatar` + `/api/media` (v0.1.4) |
 | P07 | 2FA UI en perfil (activar TOTP) | Auth TOTP | pendiente | API `/api/auth/2fa/*` lista; falta pantalla |
 | P08 | Header sesión visible | Login UX | hecho | Menú con primer nombre + logout interno (v0.1.2) |
-| P09 | CLI `railway` no autenticado en esta máquina | Deploy continuo | pendiente | Push GitHub OK; deploy vía GraphQL `serviceInstanceDeploy`. Opcional: `railway login` |
+| P09 | CLI `railway` no autenticado en esta máquina | Deploy continuo | pendiente | Deploy vía GraphQL; opcional `railway login` |
+| P12 | Vars R2 en Railway prod | Avatar upload | pendiente | Copiar `R2_*` del `.env` local al servicio Rosver-Web |
 
 ## Hechos recientes (referencia)
 
@@ -23,4 +24,5 @@
 - Seed admin + cliente
 - Header sesión visible (v0.1.2)
 - Shell ERP SystemRSV (sidebar + top bar) + Productos vacío (v0.1.3)
+- Cuenta: pedidos/cotizaciones con fotos + avatar R2 (v0.1.4)
 

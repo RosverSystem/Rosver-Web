@@ -1,6 +1,14 @@
-import { ORDERS, ORDER_STATUS_TONE } from '@/features/account/model/mocks'
+import {
+  ORDERS,
+  ORDER_STATUS_LABEL,
+  ORDER_STATUS_TONE,
+} from '@/features/account/model/mocks'
 import { shortDisplayName, useAuth } from '@/features/auth'
-import { QUOTES, QUOTE_STATUS_TONE } from '@/features/quotes/model/mocks'
+import {
+  QUOTES,
+  QUOTE_STATUS_LABEL,
+  QUOTE_STATUS_TONE,
+} from '@/features/quotes/model/mocks'
 import { Badge } from '@/shared/ui/badge'
 import { Link } from 'react-router-dom'
 
@@ -13,11 +21,7 @@ export function AccountOverviewPage() {
   return (
     <div className="flex flex-col gap-5">
       {user ? (
-        <section className="relative overflow-hidden rounded-2xl border border-rosver-line bg-gradient-to-br from-white via-white to-rosver-soft px-5 py-5 sm:px-6">
-          <div
-            className="pointer-events-none absolute -top-10 -right-10 size-40 rounded-full bg-rosver-red/5"
-            aria-hidden
-          />
+        <section className="relative overflow-hidden rounded-2xl border border-rosver-line bg-gradient-to-br from-white via-white to-rosver-soft px-5 py-5 shadow-sm sm:px-6">
           <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center">
             <img
               src={user.avatarUrl}
@@ -31,16 +35,6 @@ export function AccountOverviewPage() {
                 {user.fullName?.trim() || first}
               </p>
               <p className="truncate text-sm text-rosver-muted">{user.email}</p>
-              <p className="mt-1 text-xs text-rosver-muted">
-                <span className="rounded bg-rosver-ink px-1.5 py-0.5 font-bold text-white uppercase">
-                  {user.roleName}
-                </span>
-                {user.phone ? (
-                  <span className="ml-2">{user.phone}</span>
-                ) : (
-                  <span className="ml-2 text-rosver-red">Falta teléfono</span>
-                )}
-              </p>
             </div>
             <Link
               to="/cuenta/perfil"
@@ -52,28 +46,40 @@ export function AccountOverviewPage() {
         </section>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <section className="rounded-2xl border border-rosver-line bg-white p-4 sm:p-5">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="rounded-2xl border border-rosver-line bg-white p-4 shadow-sm sm:p-5">
           <div className="mb-3 flex items-center justify-between gap-2">
             <h2 className="text-xs font-bold tracking-widest text-rosver-muted uppercase">
               Último pedido
             </h2>
-            <span className="rounded bg-rosver-yellow/80 px-1.5 py-0.5 text-[10px] font-bold text-rosver-ink">
-              Demo
-            </span>
+            {lastOrder ? (
+              <Badge tone={ORDER_STATUS_TONE[lastOrder.status]}>
+                {ORDER_STATUS_LABEL[lastOrder.status]}
+              </Badge>
+            ) : null}
           </div>
           {lastOrder ? (
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="font-semibold text-rosver-ink">{lastOrder.id}</p>
-                <p className="mt-0.5 text-sm text-rosver-muted">
-                  {lastOrder.itemsSummary}
-                </p>
+            <>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {lastOrder.items.map((item) => (
+                  <img
+                    key={item.name}
+                    src={item.imageUrl}
+                    alt=""
+                    width={56}
+                    height={56}
+                    className="size-14 shrink-0 rounded-xl object-cover ring-1 ring-rosver-line"
+                  />
+                ))}
               </div>
-              <Badge tone={ORDER_STATUS_TONE[lastOrder.status]}>
-                {lastOrder.status}
-              </Badge>
-            </div>
+              <p className="mt-3 text-sm font-semibold text-rosver-ink">
+                {lastOrder.id}
+              </p>
+              <p className="text-sm text-rosver-muted">{lastOrder.itemsSummary}</p>
+              <p className="mt-1 font-bold text-rosver-ink">
+                S/ {lastOrder.total.toFixed(2)}
+              </p>
+            </>
           ) : (
             <p className="text-sm text-rosver-muted">Sin pedidos todavía.</p>
           )}
@@ -85,27 +91,38 @@ export function AccountOverviewPage() {
           </Link>
         </section>
 
-        <section className="rounded-2xl border border-rosver-line bg-white p-4 sm:p-5">
+        <section className="rounded-2xl border border-rosver-line bg-white p-4 shadow-sm sm:p-5">
           <div className="mb-3 flex items-center justify-between gap-2">
             <h2 className="text-xs font-bold tracking-widest text-rosver-muted uppercase">
               Última cotización
             </h2>
-            <span className="rounded bg-rosver-yellow/80 px-1.5 py-0.5 text-[10px] font-bold text-rosver-ink">
-              Demo
-            </span>
+            {lastQuote ? (
+              <Badge tone={QUOTE_STATUS_TONE[lastQuote.status]}>
+                {QUOTE_STATUS_LABEL[lastQuote.status]}
+              </Badge>
+            ) : null}
           </div>
           {lastQuote ? (
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="font-semibold text-rosver-ink">{lastQuote.id}</p>
-                <p className="mt-0.5 text-sm text-rosver-muted">
-                  {lastQuote.itemsSummary}
-                </p>
+            <>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {lastQuote.items.map((item) => (
+                  <img
+                    key={item.name}
+                    src={item.imageUrl}
+                    alt=""
+                    width={56}
+                    height={56}
+                    className="size-14 shrink-0 rounded-xl object-cover ring-1 ring-rosver-line"
+                  />
+                ))}
               </div>
-              <Badge tone={QUOTE_STATUS_TONE[lastQuote.status]}>
-                {lastQuote.status}
-              </Badge>
-            </div>
+              <p className="mt-3 text-sm font-semibold text-rosver-ink">
+                {lastQuote.id}
+              </p>
+              <p className="text-sm text-rosver-muted">
+                {lastQuote.itemsSummary}
+              </p>
+            </>
           ) : (
             <p className="text-sm text-rosver-muted">Sin cotizaciones todavía.</p>
           )}

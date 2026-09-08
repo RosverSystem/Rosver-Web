@@ -103,7 +103,10 @@ async function upsertUser(params: {
        role_id = EXCLUDED.role_id,
        full_name = EXCLUDED.full_name,
        phone = EXCLUDED.phone,
-       avatar_url = EXCLUDED.avatar_url,
+       avatar_url = CASE
+         WHEN users.avatar_url LIKE '/avatars/%' THEN EXCLUDED.avatar_url
+         ELSE users.avatar_url
+       END,
        email_verified_at = COALESCE(users.email_verified_at, now()),
        status = 'active',
        updated_at = now()`,

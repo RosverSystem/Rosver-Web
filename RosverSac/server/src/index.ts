@@ -10,6 +10,7 @@ import { config } from './config.js'
 import { authRoutes } from './routes/auth.js'
 import { profileRoutes } from './routes/profile.js'
 import { adminRoutes } from './routes/admin.js'
+import { mediaRoutes } from './routes/media.js'
 
 const app = new Hono()
 const sacRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
@@ -39,6 +40,7 @@ app.get('/api/health', (c) =>
 app.route('/api/auth', authRoutes)
 app.route('/api/profile', profileRoutes)
 app.route('/api/admin', adminRoutes)
+app.route('/api/media', mediaRoutes)
 
 if (hasDist) {
   app.use(

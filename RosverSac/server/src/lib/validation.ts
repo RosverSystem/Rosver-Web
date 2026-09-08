@@ -40,5 +40,5 @@ export const profileSchema = z.object({
   companyName: z.string().trim().max(120).nullable().optional(),
   documentType: z.enum(['DNI', 'RUC', 'CE', 'PAS']).nullable().optional(),
   documentNumber: z.string().trim().max(32).nullable().optional(),
-  avatarUrl: z.string().trim().max(500).optional(),
+  avatarUrl: z.string().trim().max(1000).optional(),
 })
