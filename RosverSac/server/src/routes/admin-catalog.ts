@@ -1,8 +1,10 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { pool } from '../db.js'
+import { queryOfferProducts } from '../lib/catalog-products.js'
 import { invalidateCatalogHomeCaches } from '../lib/redis.js'
 import { recalculateProductRating } from '../lib/product-ratings.js'
+import { isUploadFolder, uploadPublicImage } from '../lib/upload-image.js'
 import {
   requireAuth,
   requireRole,
@@ -12,6 +14,27 @@ import {
 export const adminCatalogRoutes = new Hono<{ Variables: AuthVariables }>()
 
 adminCatalogRoutes.use('*', requireAuth, requireRole('admin'))
+
+/* ——— Upload R2 (categorías / marcas / productos) ——— */
+adminCatalogRoutes.post('/uploads', async (c) => {
+  const body = await c.req.parseBody()
+  const file = body.file
+  const folderRaw = typeof body.folder === 'string' ? body.folder : ''
+  if (!(file instanceof File)) {
+    return c.json({ error: 'Adjunta una imagen (campo file).' }, 400)
+  }
+  if (!isUploadFolder(folderRaw)) {
+    return c.json(
+      { error: 'Carpeta inválida. Usa categories, brands o products.' },
+      400,
+    )
+  }
+  const result = await uploadPublicImage({ file, folder: folderRaw })
+  if (!result.ok) {
+    return c.json({ error: result.error }, result.status)
+  }
+  return c.json({ ok: true, url: result.url, key: result.key })
+})
 
 function slugify(input: string) {
   return input
@@ -83,7 +106,7 @@ adminCatalogRoutes.post('/brands', async (c) => {
       name: z.string().trim().min(2).max(120),
       sku: z.string().trim().min(1).max(40),
       slug: z.string().trim().min(1).max(80).optional(),
-      logoUrl: z.string().trim().url().optional().or(z.literal('')),
+      logoUrl: z.string().trim().max(1000).optional().nullable().or(z.literal('')),
       visible: z.boolean().optional(),
       showOnHome: z.boolean().optional(),
       sortOrder: z.number().int().optional(),
@@ -383,6 +406,118 @@ adminCatalogRoutes.post('/unit-types', async (c) => {
   } catch {
     return c.json({ error: 'Código de unidad ya existe.' }, 409)
   }
+})
+
+adminCatalogRoutes.patch('/unit-types/:id', async (c) => {
+  const id = c.req.param('id')
+  const body = z
+    .object({
+      name: z.string().trim().min(1).max(60).optional(),
+      code: z.string().trim().min(1).max(40).optional(),
+      isBase: z.boolean().optional(),
+      sortOrder: z.number().int().optional(),
+    })
+    .safeParse(await c.req.json().catch(() => null))
+  if (!body.success) return c.json({ error: 'Datos inválidos' }, 400)
+  const d = body.data
+  try {
+    const { rows } = await pool.query(
+      `UPDATE unit_types SET
+         name = COALESCE($2, name),
+         code = COALESCE($3, code),
+         is_base = COALESCE($4, is_base),
+         sort_order = COALESCE($5, sort_order)
+       WHERE id = $1
+       RETURNING id, code, name, is_base AS "isBase", sort_order AS "sortOrder"`,
+      [id, d.name ?? null, d.code ?? null, d.isBase ?? null, d.sortOrder ?? null],
+    )
+    if (!rows[0]) return c.json({ error: 'Unidad no encontrada' }, 404)
+    return c.json({ unitType: rows[0] })
+  } catch {
+    return c.json({ error: 'Código de unidad ya existe.' }, 409)
+  }
+})
+
+adminCatalogRoutes.delete('/unit-types/:id', async (c) => {
+  const id = c.req.param('id')
+  const used = await pool.query(
+    `SELECT 1 FROM product_packagings WHERE unit_type_id = $1 LIMIT 1`,
+    [id],
+  )
+  if (used.rows[0]) {
+    return c.json(
+      { error: 'Esta unidad está en uso en presentaciones. No se puede eliminar.' },
+      409,
+    )
+  }
+  const { rowCount } = await pool.query(`DELETE FROM unit_types WHERE id = $1`, [id])
+  if (!rowCount) return c.json({ error: 'Unidad no encontrada' }, 404)
+  return c.json({ ok: true })
+})
+
+/* ——— Ofertas (precios price_kind=offer o compare_at) ——— */
+adminCatalogRoutes.get('/offers', async (c) => {
+  const products = await queryOfferProducts(300)
+  return c.json({
+    products,
+    count: products.length,
+  })
+})
+
+/* ——— Specs ——— */
+adminCatalogRoutes.get('/spec-attributes', async (c) => {
+  const { rows } = await pool.query(
+    `SELECT id, key, name, value_type AS "valueType", unit_hint AS "unitHint",
+            sort_order AS "sortOrder"
+     FROM spec_attributes ORDER BY sort_order, name`,
+  )
+  return c.json({ attributes: rows })
+})
+
+adminCatalogRoutes.put('/products/:id/specs', async (c) => {
+  const productId = c.req.param('id')
+  const body = z
+    .object({
+      specs: z.array(
+        z.object({
+          attributeId: z.string().uuid(),
+          valueText: z.string().optional(),
+          valueNumber: z.number().nullable().optional(),
+          unit: z.string().optional(),
+        }),
+      ),
+    })
+    .safeParse(await c.req.json().catch(() => null))
+  if (!body.success) return c.json({ error: 'Datos inválidos' }, 400)
+
+  const exists = await pool.query(`SELECT id FROM products WHERE id = $1`, [productId])
+  if (!exists.rows[0]) return c.json({ error: 'Producto no encontrado' }, 404)
+
+  const client = await pool.connect()
+  try {
+    await client.query('BEGIN')
+    await client.query(`DELETE FROM product_spec_values WHERE product_id = $1`, [
+      productId,
+    ])
+    for (const s of body.data.specs) {
+      const text = s.valueText?.trim() || null
+      const num = s.valueNumber ?? null
+      if (!text && num == null) continue
+      await client.query(
+        `INSERT INTO product_spec_values (product_id, attribute_id, value_text, value_number, unit)
+         VALUES ($1,$2,$3,$4,$5)`,
+        [productId, s.attributeId, text, num, s.unit ?? null],
+      )
+    }
+    await client.query('COMMIT')
+  } catch (e) {
+    await client.query('ROLLBACK')
+    throw e
+  } finally {
+    client.release()
+  }
+  await invalidateCatalogHomeCaches()
+  return c.json({ ok: true })
 })
 
 /* ——— Productos ——— */

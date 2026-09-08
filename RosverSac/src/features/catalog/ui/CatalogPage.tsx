@@ -7,6 +7,7 @@ import {
 } from '@/features/catalog/ui/FiltersPanel'
 import { ProductGrid } from '@/features/catalog/ui/ProductGrid'
 import { useCatalog } from '@/features/catalog/model/catalog-store'
+import { productMatchesCategory } from '@/features/catalog/model/category-tree'
 import type { Product } from '@/features/catalog/model/mocks'
 import { cn } from '@/shared/lib'
 import { useEffect, useMemo, useState } from 'react'
@@ -69,7 +70,9 @@ export function CatalogPage() {
   const productCountBySlug = useMemo(
     () =>
       categories.reduce<Record<string, number>>((acc, c) => {
-        acc[c.slug] = visibleProducts.filter((p) => p.category === c.slug).length
+        acc[c.slug] = visibleProducts.filter((p) =>
+          productMatchesCategory(p.category, c.slug, categories),
+        ).length
         return acc
       }, {}),
     [categories, visibleProducts],
@@ -87,10 +90,12 @@ export function CatalogPage() {
 
   const filtered = useMemo(() => {
     const byCategory = categorySlug
-      ? visibleProducts.filter((p) => p.category === categorySlug)
+      ? visibleProducts.filter((p) =>
+          productMatchesCategory(p.category, categorySlug, categories),
+        )
       : visibleProducts
     return sortProducts(applyFilters(byCategory, filters), sort)
-  }, [visibleProducts, categorySlug, filters, sort])
+  }, [visibleProducts, categorySlug, categories, filters, sort])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
@@ -173,6 +178,7 @@ export function CatalogPage() {
           categories={categories}
           activeSlug={categorySlug}
           productCountBySlug={productCountBySlug}
+          productsForCounts={visibleProducts}
           vendors={vendors}
           filters={filters}
           onChange={setFilters}

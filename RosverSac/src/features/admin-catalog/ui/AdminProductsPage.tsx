@@ -9,6 +9,7 @@ import {
   AdminPageHeader,
   AdminSelect,
 } from '@/shared/ui/admin-field'
+import { AdminImageUpload } from '@/shared/ui/admin-image-upload'
 import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 
@@ -17,6 +18,8 @@ type ProductRow = {
   code: number
   sku: string
   name: string
+  brandId?: string | null
+  categoryId?: string | null
   brandName: string | null
   categoryName: string | null
   availability: string
@@ -27,6 +30,10 @@ type ProductRow = {
   trendingSort: number
   rating: number
   reviewCount: number
+  imageUrl?: string | null
+  description?: string
+  origin?: string
+  moq?: number
 }
 
 type Brand = { id: string; name: string; sku: string }
@@ -83,6 +90,20 @@ export function AdminProductsPage() {
     { id: string; rating: number; title: string; body: string; visible: boolean }[]
   >([])
 
+  const [editName, setEditName] = useState('')
+  const [editSku, setEditSku] = useState('')
+  const [editBrandId, setEditBrandId] = useState('')
+  const [editCategoryId, setEditCategoryId] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editOrigin, setEditOrigin] = useState('')
+  const [editMoq, setEditMoq] = useState('1')
+  const [editAvailability, setEditAvailability] = useState('in_stock')
+  const [editImageUrl, setEditImageUrl] = useState('')
+  const [specAttrs, setSpecAttrs] = useState<
+    { id: string; key: string; name: string; unitHint?: string | null }[]
+  >([])
+  const [specDrafts, setSpecDrafts] = useState<Record<string, string>>({})
+
   const [unitTypeId, setUnitTypeId] = useState('')
   const [contentQty, setContentQty] = useState('1')
 
@@ -135,12 +156,38 @@ export function AdminProductsPage() {
       const data = await api<{
         packagings: Packaging[]
         prices: Price[]
-        product?: ProductRow
+        product?: ProductRow & {
+          brandId?: string | null
+          categoryId?: string | null
+        }
+        specs?: {
+          attributeId: string
+          valueText: string | null
+          valueNumber: number | null
+        }[]
       }>(`/api/admin/products/${id}`)
       setPackagings(data.packagings)
       setPrices(data.prices)
       const def = data.packagings.find((x) => x.isDefault) ?? data.packagings[0]
       if (def) setPackagingId(def.id)
+      if (data.product) {
+        setEditName(data.product.name)
+        setEditSku(data.product.sku)
+        setEditBrandId(data.product.brandId ?? '')
+        setEditCategoryId(data.product.categoryId ?? '')
+        setEditDescription(data.product.description ?? '')
+        setEditOrigin(data.product.origin ?? '')
+        setEditMoq(String(data.product.moq ?? 1))
+        setEditAvailability(data.product.availability || 'in_stock')
+        setEditImageUrl(data.product.imageUrl ?? '')
+      }
+      const drafts: Record<string, string> = {}
+      for (const s of data.specs ?? []) {
+        drafts[s.attributeId] =
+          s.valueText?.trim() ||
+          (s.valueNumber != null ? String(s.valueNumber) : '')
+      }
+      setSpecDrafts(drafts)
       const rev = await api<{
         reviews: {
           id: string
@@ -158,6 +205,11 @@ export function AdminProductsPage() {
 
   useEffect(() => {
     void loadList()
+    void api<{ attributes: { id: string; key: string; name: string; unitHint?: string | null }[] }>(
+      '/api/admin/spec-attributes',
+    )
+      .then((d) => setSpecAttrs(d.attributes))
+      .catch(() => undefined)
   }, [])
 
   useEffect(() => {
@@ -197,6 +249,61 @@ export function AdminProductsPage() {
       setSelectedId(res.product.id)
     } catch (err) {
       showMessages([err instanceof ApiError ? err.message : 'No se pudo crear'])
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function saveProductDetails(e: React.FormEvent) {
+    e.preventDefault()
+    if (!selectedId) return
+    clear()
+    if (!editName.trim() || !editSku.trim()) {
+      showMessages(['Completa nombre y código del producto'])
+      return
+    }
+    setBusy(true)
+    try {
+      await api(`/api/admin/products/${selectedId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          name: editName.trim(),
+          sku: editSku.trim(),
+          brandId: editBrandId || null,
+          categoryId: editCategoryId || null,
+          description: editDescription,
+          origin: editOrigin,
+          moq: Number(editMoq) || 1,
+          availability: editAvailability,
+          imageUrl: editImageUrl.trim() || null,
+        }),
+      })
+      const specsPayload = specAttrs
+        .map((a) => {
+          const raw = (specDrafts[a.id] ?? '').trim()
+          if (!raw) return null
+          const asNum = Number(raw.replace(',', '.'))
+          if (Number.isFinite(asNum) && raw.match(/^[\d.,]+$/)) {
+            return {
+              attributeId: a.id,
+              valueNumber: asNum,
+              unit: a.unitHint ?? undefined,
+            }
+          }
+          return { attributeId: a.id, valueText: raw, unit: a.unitHint ?? undefined }
+        })
+        .filter(Boolean)
+      await api(`/api/admin/products/${selectedId}/specs`, {
+        method: 'PUT',
+        body: JSON.stringify({ specs: specsPayload }),
+      })
+      await loadList()
+      await loadDetail(selectedId)
+      showMessages(['Producto actualizado'])
+    } catch (err) {
+      showMessages([
+        err instanceof ApiError ? err.message : 'No se pudo guardar el producto',
+      ])
     } finally {
       setBusy(false)
     }
@@ -494,6 +601,132 @@ export function AdminProductsPage() {
                 <h3 className="text-lg font-semibold text-rosver-ink">{selected.name}</h3>
                 <p className="text-sm text-rosver-muted">{selected.sku}</p>
               </div>
+
+              <form
+                noValidate
+                onSubmit={saveProductDetails}
+                className="space-y-3 rounded-xl border border-rosver-line p-3"
+              >
+                <p className="text-sm font-semibold text-rosver-ink">Ficha del producto</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <AdminField label="Nombre" htmlFor="edit-name">
+                    <AdminInput
+                      id="edit-name"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                    />
+                  </AdminField>
+                  <AdminField label="Código" htmlFor="edit-sku">
+                    <AdminInput
+                      id="edit-sku"
+                      value={editSku}
+                      onChange={(e) => setEditSku(e.target.value)}
+                      className="uppercase"
+                    />
+                  </AdminField>
+                  <AdminField label="Marca" htmlFor="edit-brand">
+                    <AdminSelect
+                      id="edit-brand"
+                      value={editBrandId}
+                      onChange={(e) => setEditBrandId(e.target.value)}
+                    >
+                      <option value="">Sin marca</option>
+                      {brands.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name}
+                        </option>
+                      ))}
+                    </AdminSelect>
+                  </AdminField>
+                  <AdminField label="Categoría" htmlFor="edit-cat">
+                    <AdminSelect
+                      id="edit-cat"
+                      value={editCategoryId}
+                      onChange={(e) => setEditCategoryId(e.target.value)}
+                    >
+                      <option value="">Elegir categoría</option>
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.parentId ? `· ${c.name}` : c.name}
+                        </option>
+                      ))}
+                    </AdminSelect>
+                  </AdminField>
+                  <AdminField label="Origen" htmlFor="edit-origin">
+                    <AdminInput
+                      id="edit-origin"
+                      value={editOrigin}
+                      onChange={(e) => setEditOrigin(e.target.value)}
+                      placeholder="Ej. China"
+                    />
+                  </AdminField>
+                  <AdminField label="MOQ" htmlFor="edit-moq">
+                    <AdminInput
+                      id="edit-moq"
+                      value={editMoq}
+                      onChange={(e) => setEditMoq(e.target.value)}
+                    />
+                  </AdminField>
+                  <AdminField label="Disponibilidad" htmlFor="edit-avail">
+                    <AdminSelect
+                      id="edit-avail"
+                      value={editAvailability}
+                      onChange={(e) => setEditAvailability(e.target.value)}
+                    >
+                      <option value="in_stock">En stock</option>
+                      <option value="quote_only">Solo cotización</option>
+                      <option value="out_of_stock">Sin stock</option>
+                    </AdminSelect>
+                  </AdminField>
+                </div>
+                <AdminField label="Descripción" htmlFor="edit-desc">
+                  <textarea
+                    id="edit-desc"
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    rows={3}
+                    className="w-full rounded-xl border border-rosver-line bg-white px-3 py-2 text-sm outline-none focus:border-rosver-red/40"
+                  />
+                </AdminField>
+                <AdminImageUpload
+                  folder="products"
+                  value={editImageUrl}
+                  onChange={setEditImageUrl}
+                  onError={(msg) => showMessages([msg])}
+                  label="Foto del producto"
+                />
+                {specAttrs.length > 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-rosver-ink">
+                      Especificaciones
+                    </p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {specAttrs.map((a) => (
+                        <AdminField key={a.id} label={a.name} htmlFor={`spec-${a.id}`}>
+                          <AdminInput
+                            id={`spec-${a.id}`}
+                            value={specDrafts[a.id] ?? ''}
+                            onChange={(e) =>
+                              setSpecDrafts((d) => ({
+                                ...d,
+                                [a.id]: e.target.value,
+                              }))
+                            }
+                            placeholder={a.unitHint ?? ''}
+                          />
+                        </AdminField>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="h-10 rounded-xl bg-rosver-ink px-4 text-sm font-semibold text-white hover:bg-rosver-red disabled:opacity-60"
+                >
+                  {busy ? 'Guardando…' : 'Guardar ficha'}
+                </button>
+              </form>
 
               <div className="rounded-xl border border-rosver-line bg-rosver-soft/40 p-3">
                 <p className="mb-2 text-sm font-semibold text-rosver-ink">

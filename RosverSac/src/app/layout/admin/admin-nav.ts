@@ -60,6 +60,13 @@ export const ADMIN_NAV: AdminNavEntry[] = [
         Icon: StarGrow,
       },
       {
+        id: 'unidades',
+        name: 'Unidades',
+        link: '/admin/unidades',
+        keywords: ['unidad', 'paquete', 'caja', 'empaque'],
+        Icon: Compass,
+      },
+      {
         id: 'ofertas',
         name: 'Ofertas',
         link: '/admin/ofertas',
@@ -89,6 +96,7 @@ export function isProductosGroupOpen(pathname: string) {
     pathname.startsWith('/admin/productos') ||
     pathname.startsWith('/admin/categorias') ||
     pathname.startsWith('/admin/marcas') ||
+    pathname.startsWith('/admin/unidades') ||
     pathname.startsWith('/admin/ofertas')
   )
 }
@@ -104,6 +112,7 @@ export function searchAdminModules(query: string): AdminNavLeaf[] {
 
 export function adminPageTitle(pathname: string): string {
   if (pathname.startsWith('/admin/ofertas')) return 'Ofertas'
+  if (pathname.startsWith('/admin/unidades')) return 'Unidades'
   if (pathname.startsWith('/admin/marcas')) return 'Marcas'
   if (pathname.startsWith('/admin/categorias')) return 'Categorías'
   if (pathname.startsWith('/admin/productos')) return 'Listado'

@@ -16,6 +16,6 @@ Ideas útiles **no pedidas** aún. No implementar solas; esperar OK del usuario.
 | R10 | Command palette (⌘K) en top bar ERP | Productividad | parcial | Hay search ⌘K; palette full opcional |
 | R11 | Tooltips en sidebar colapsada | Accesibilidad iconos | baja |
 | R12 | Historial de precios (auditoría) en ERP | Compliance / márgenes | media |
-| R14 | Seed categorías demo con tagline/puntos/imagen | Arranque tienda sin mocks | media |
-| R15 | Logo marca en admin (upload R2) | Filtro + marquee con logo real | media |
+| R14 | Seed categorías demo con tagline/puntos/imagen | Arranque tienda sin mocks | hecho | Migración `007` |
+| R15 | Logo marca en admin (upload R2) | Filtro + marquee con logo real | hecho | v0.1.15 |
 

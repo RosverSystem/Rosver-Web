@@ -198,33 +198,57 @@ export function PublicNavbar() {
           })}
 
           {categoriesOpen ? (
-            <div className="absolute top-full left-6 z-30 max-h-[70vh] w-72 overflow-y-auto border border-rosver-line bg-white py-2 text-rosver-ink shadow-[0_12px_24px_rgba(17,17,17,0.12)]">
-              {navCategories.map(({ root, children }) => (
-                <div key={root.id} className="border-b border-rosver-line last:border-0">
-                  <Link
-                    to={`/catalogo/${root.slug}`}
-                    onClick={() => setCategoriesOpen(false)}
-                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm font-semibold transition hover:bg-rosver-soft hover:text-rosver-red"
-                  >
-                    <root.icon className="size-4" />
-                    {root.name}
-                  </Link>
-                  {children.length ? (
-                    <div className="pb-1 pl-8">
-                      {children.map((ch) => (
-                        <Link
-                          key={ch.id}
-                          to={`/catalogo/${ch.slug}`}
-                          onClick={() => setCategoriesOpen(false)}
-                          className="block px-2 py-1.5 text-xs text-rosver-muted transition hover:text-rosver-red"
-                        >
-                          {ch.name}
-                        </Link>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              ))}
+            <div className="absolute top-full left-6 z-30 max-h-[75vh] w-[min(92vw,52rem)] overflow-y-auto border border-rosver-line bg-white p-4 text-rosver-ink shadow-[0_16px_40px_rgba(17,17,17,0.14)]">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {navCategories.map(({ root, children }) => (
+                  <div key={root.id} className="min-w-0">
+                    <Link
+                      to={`/catalogo/${root.slug}`}
+                      onClick={() => setCategoriesOpen(false)}
+                      className="flex items-center gap-3 rounded-xl p-2 transition hover:bg-rosver-soft"
+                    >
+                      {root.imageUrl ? (
+                        <img
+                          src={root.imageUrl}
+                          alt=""
+                          width={44}
+                          height={44}
+                          className="size-11 shrink-0 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-rosver-soft text-rosver-ink">
+                          <root.icon className="size-5" />
+                        </span>
+                      )}
+                      <span className="min-w-0">
+                        <span className="block truncate text-sm font-bold text-rosver-ink">
+                          {root.name}
+                        </span>
+                        {root.tagline ? (
+                          <span className="block truncate text-[11px] text-rosver-muted">
+                            {root.tagline}
+                          </span>
+                        ) : null}
+                      </span>
+                    </Link>
+                    {children.length ? (
+                      <ul className="mt-1 space-y-0.5 border-l border-rosver-line pl-3 ml-2">
+                        {children.map((ch) => (
+                          <li key={ch.id}>
+                            <Link
+                              to={`/catalogo/${ch.slug}`}
+                              onClick={() => setCategoriesOpen(false)}
+                              className="block rounded-md px-2 py-1.5 text-xs text-rosver-muted transition hover:bg-rosver-soft hover:text-rosver-red"
+                            >
+                              {ch.name}
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
             </div>
           ) : null}
         </div>

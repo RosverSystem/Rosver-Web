@@ -1,5 +1,17 @@
 import { pool } from '../db.js'
 
+export type StorePackagingDto = {
+  id: string
+  label: string
+  contentQty: number
+  isDefault: boolean
+  unitName: string
+  listPrice: number | null
+  offerPrice: number | null
+  wholesalePrice: number | null
+  compareAt: number | null
+}
+
 export type StoreProductDto = {
   id: string
   slug: string
@@ -10,6 +22,7 @@ export type StoreProductDto = {
   price: number | null
   originalPrice?: number
   wholesalePrice?: number
+  offerPrice?: number
   featured: boolean
   featuredSort: number
   trending: boolean
@@ -22,6 +35,8 @@ export type StoreProductDto = {
   imageUrl?: string
   visible: boolean
   availability: string
+  packagings?: StorePackagingDto[]
+  specs?: { key: string; name: string; value: string; unit?: string | null }[]
 }
 
 const PRODUCT_SELECT = `
@@ -47,6 +62,13 @@ const PRODUCT_SELECT = `
          ) AS compare_at,
          (
            SELECT pr.amount FROM product_prices pr
+           JOIN product_packagings pk ON pk.id = pr.packaging_id
+           WHERE pr.product_id = p.id AND pr.is_active AND pr.price_kind = 'offer'
+           ORDER BY pk.is_default DESC, pr.min_qty ASC
+           LIMIT 1
+         ) AS offer_price,
+         (
+           SELECT pr.amount FROM product_prices pr
            WHERE pr.product_id = p.id AND pr.is_active AND pr.price_kind = 'wholesale'
            ORDER BY pr.min_qty ASC
            LIMIT 1
@@ -57,6 +79,24 @@ const PRODUCT_SELECT = `
 `
 
 export function mapStoreProduct(r: Record<string, unknown>): StoreProductDto {
+  const listPrice = r.list_price != null ? Number(r.list_price) : null
+  const offerPrice = r.offer_price != null ? Number(r.offer_price) : null
+  const compareAt = r.compare_at != null ? Number(r.compare_at) : undefined
+  const quoteOnly = r.availability === 'quote_only'
+
+  let price: number | null = null
+  let originalPrice: number | undefined
+
+  if (!quoteOnly) {
+    if (offerPrice != null) {
+      price = offerPrice
+      originalPrice = listPrice ?? compareAt
+    } else if (listPrice != null) {
+      price = listPrice
+      originalPrice = compareAt
+    }
+  }
+
   return {
     id: String(r.id),
     slug: String(r.slug),
@@ -64,12 +104,10 @@ export function mapStoreProduct(r: Record<string, unknown>): StoreProductDto {
     sku: String(r.sku),
     vendor: String(r.brand_name || r.brand_sku || 'Rosver'),
     category: String(r.category_slug || 'general'),
-    price:
-      r.availability === 'quote_only' || r.list_price == null
-        ? null
-        : Number(r.list_price),
-    originalPrice: r.compare_at != null ? Number(r.compare_at) : undefined,
+    price,
+    originalPrice,
     wholesalePrice: r.wholesale_price != null ? Number(r.wholesale_price) : undefined,
+    offerPrice: offerPrice ?? undefined,
     featured: Boolean(r.featured),
     featuredSort: Number(r.featured_sort ?? 0),
     trending: Boolean(r.trending),
@@ -85,6 +123,109 @@ export function mapStoreProduct(r: Record<string, unknown>): StoreProductDto {
   }
 }
 
+async function attachPackagings(products: StoreProductDto[]): Promise<StoreProductDto[]> {
+  if (products.length === 0) return products
+  const ids = products.map((p) => p.id)
+  const { rows } = await pool.query(
+    `SELECT pk.id, pk.product_id, pk.content_qty, pk.label, pk.is_default,
+            ut.name AS unit_name,
+            (
+              SELECT pr.amount FROM product_prices pr
+              WHERE pr.packaging_id = pk.id AND pr.is_active AND pr.price_kind = 'list'
+              ORDER BY pr.min_qty ASC LIMIT 1
+            ) AS list_price,
+            (
+              SELECT pr.amount FROM product_prices pr
+              WHERE pr.packaging_id = pk.id AND pr.is_active AND pr.price_kind = 'offer'
+              ORDER BY pr.min_qty ASC LIMIT 1
+            ) AS offer_price,
+            (
+              SELECT pr.amount FROM product_prices pr
+              WHERE pr.packaging_id = pk.id AND pr.is_active AND pr.price_kind = 'wholesale'
+              ORDER BY pr.min_qty ASC LIMIT 1
+            ) AS wholesale_price,
+            (
+              SELECT pr.compare_at_amount FROM product_prices pr
+              WHERE pr.packaging_id = pk.id AND pr.is_active AND pr.price_kind = 'list'
+              ORDER BY pr.min_qty ASC LIMIT 1
+            ) AS compare_at
+     FROM product_packagings pk
+     JOIN unit_types ut ON ut.id = pk.unit_type_id
+     WHERE pk.product_id = ANY($1::uuid[])
+     ORDER BY pk.is_default DESC, pk.content_qty ASC`,
+    [ids],
+  )
+
+  const byProduct = new Map<string, StorePackagingDto[]>()
+  for (const r of rows) {
+    const pid = String(r.product_id)
+    const list = byProduct.get(pid) ?? []
+    const contentQty = Number(r.content_qty)
+    const unitName = String(r.unit_name)
+    const label =
+      (r.label as string | null)?.trim() ||
+      (contentQty === 1 ? unitName : `${unitName} × ${contentQty}`)
+    list.push({
+      id: String(r.id),
+      label,
+      contentQty,
+      isDefault: Boolean(r.is_default),
+      unitName,
+      listPrice: r.list_price != null ? Number(r.list_price) : null,
+      offerPrice: r.offer_price != null ? Number(r.offer_price) : null,
+      wholesalePrice: r.wholesale_price != null ? Number(r.wholesale_price) : null,
+      compareAt: r.compare_at != null ? Number(r.compare_at) : null,
+    })
+    byProduct.set(pid, list)
+  }
+
+  return products.map((p) => ({
+    ...p,
+    packagings: byProduct.get(p.id) ?? [],
+  }))
+}
+
+async function attachSpecs(products: StoreProductDto[]): Promise<StoreProductDto[]> {
+  if (products.length === 0) return products
+  const ids = products.map((p) => p.id)
+  const { rows } = await pool.query(
+    `SELECT v.product_id, a.key, a.name, a.unit_hint,
+            v.value_text, v.value_number, v.unit
+     FROM product_spec_values v
+     JOIN spec_attributes a ON a.id = v.attribute_id
+     WHERE v.product_id = ANY($1::uuid[])
+     ORDER BY a.sort_order, a.name`,
+    [ids],
+  )
+  const byProduct = new Map<string, StoreProductDto['specs']>()
+  for (const r of rows) {
+    const pid = String(r.product_id)
+    const list = byProduct.get(pid) ?? []
+    const value =
+      r.value_text?.trim() ||
+      (r.value_number != null ? String(Number(r.value_number)) : '')
+    if (!value) continue
+    list.push({
+      key: String(r.key),
+      name: String(r.name),
+      value,
+      unit: (r.unit as string | null) || (r.unit_hint as string | null),
+    })
+    byProduct.set(pid, list)
+  }
+  return products.map((p) => ({
+    ...p,
+    specs: byProduct.get(p.id) ?? [],
+  }))
+}
+
+export async function enrichStoreProducts(
+  products: StoreProductDto[],
+): Promise<StoreProductDto[]> {
+  const withPack = await attachPackagings(products)
+  return attachSpecs(withPack)
+}
+
 export async function queryStoreProducts(limit = 1000): Promise<StoreProductDto[]> {
   const { rows } = await pool.query(
     `${PRODUCT_SELECT}
@@ -93,7 +234,7 @@ export async function queryStoreProducts(limit = 1000): Promise<StoreProductDto[
      LIMIT $1`,
     [limit],
   )
-  return rows.map((r) => mapStoreProduct(r as Record<string, unknown>))
+  return enrichStoreProducts(rows.map((r) => mapStoreProduct(r as Record<string, unknown>)))
 }
 
 export async function queryFeaturedProducts(limit = 12): Promise<StoreProductDto[]> {
@@ -104,12 +245,12 @@ export async function queryFeaturedProducts(limit = 12): Promise<StoreProductDto
      LIMIT $1`,
     [limit],
   )
-  return rows.map((r) => mapStoreProduct(r as Record<string, unknown>))
+  return enrichStoreProducts(rows.map((r) => mapStoreProduct(r as Record<string, unknown>)))
 }
 
 /**
  * Tendencia por categoría (slug) o todas.
- * Prioridad: productos con trending=true; si ninguno, top por rating.
+ * Si el slug es raíz, incluye productos de subcategorías.
  */
 export async function queryTrendingProducts(opts?: {
   categorySlug?: string | null
@@ -119,7 +260,10 @@ export async function queryTrendingProducts(opts?: {
   const slug = opts?.categorySlug?.trim() || null
 
   const categoryFilter = slug
-    ? `AND c.slug = $2`
+    ? `AND (
+         c.slug = $2
+         OR c.parent_id IN (SELECT id FROM categories WHERE slug = $2)
+       )`
     : ''
 
   const params: unknown[] = [limit]
@@ -134,7 +278,9 @@ export async function queryTrendingProducts(opts?: {
     params,
   )
   if (marked.rows.length > 0) {
-    return marked.rows.map((r) => mapStoreProduct(r as Record<string, unknown>))
+    return enrichStoreProducts(
+      marked.rows.map((r) => mapStoreProduct(r as Record<string, unknown>)),
+    )
   }
 
   const fallback = await pool.query(
@@ -145,7 +291,9 @@ export async function queryTrendingProducts(opts?: {
      LIMIT $1`,
     params,
   )
-  return fallback.rows.map((r) => mapStoreProduct(r as Record<string, unknown>))
+  return enrichStoreProducts(
+    fallback.rows.map((r) => mapStoreProduct(r as Record<string, unknown>)),
+  )
 }
 
 export async function queryTrendingTabs(): Promise<
@@ -158,7 +306,9 @@ export async function queryTrendingTabs(): Promise<
        AND c.parent_id IS NULL
        AND EXISTS (
          SELECT 1 FROM products p
-         WHERE p.category_id = c.id AND p.visible = true
+         LEFT JOIN categories pc ON pc.id = p.category_id
+         WHERE p.visible = true
+           AND (pc.id = c.id OR pc.parent_id = c.id)
        )
      ORDER BY c.sort_order, c.name`,
   )
@@ -167,4 +317,27 @@ export async function queryTrendingTabs(): Promise<
     name: String(r.name),
     sortOrder: Number(r.sort_order ?? 0),
   }))
+}
+
+/** Productos con precio offer activo o compare_at en lista. */
+export async function queryOfferProducts(limit = 200): Promise<StoreProductDto[]> {
+  const { rows } = await pool.query(
+    `${PRODUCT_SELECT}
+     WHERE p.visible = true
+       AND (
+         EXISTS (
+           SELECT 1 FROM product_prices pr
+           WHERE pr.product_id = p.id AND pr.is_active AND pr.price_kind = 'offer'
+         )
+         OR EXISTS (
+           SELECT 1 FROM product_prices pr
+           WHERE pr.product_id = p.id AND pr.is_active AND pr.price_kind = 'list'
+             AND pr.compare_at_amount IS NOT NULL AND pr.compare_at_amount > pr.amount
+         )
+       )
+     ORDER BY p.updated_at DESC
+     LIMIT $1`,
+    [limit],
+  )
+  return enrichStoreProducts(rows.map((r) => mapStoreProduct(r as Record<string, unknown>)))
 }

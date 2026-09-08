@@ -7,17 +7,32 @@ import {
 } from 'react'
 import { INITIAL_CART, type CartLine } from './mocks'
 
+export type AddCartItemInput = {
+  productSlug: string
+  quantity?: number
+  packagingId?: string
+  packagingLabel?: string
+  unitPrice?: number | null
+}
+
 type CartContextValue = {
   lines: CartLine[]
   itemCount: number
-  addItem: (productSlug: string, quantity?: number) => void
-  updateQuantity: (productSlug: string, quantity: number) => void
-  removeLine: (productSlug: string) => void
+  addItem: (input: string | AddCartItemInput, quantity?: number) => void
+  updateQuantity: (lineKey: string, quantity: number) => void
+  removeLine: (lineKey: string) => void
   replaceAll: (next: CartLine[]) => void
   clear: () => void
+  lineKey: (line: CartLine) => string
 }
 
 const CartContext = createContext<CartContextValue | null>(null)
+
+function makeLineKey(line: Pick<CartLine, 'productSlug' | 'packagingId'>) {
+  return line.packagingId
+    ? `${line.productSlug}::${line.packagingId}`
+    : line.productSlug
+}
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>(INITIAL_CART)
@@ -28,30 +43,50 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return {
       lines,
       itemCount,
-      addItem(productSlug, quantity = 1) {
+      lineKey: makeLineKey,
+      addItem(input, quantity = 1) {
+        const payload: AddCartItemInput =
+          typeof input === 'string'
+            ? { productSlug: input, quantity }
+            : { ...input, quantity: input.quantity ?? quantity }
+
+        const qty = payload.quantity ?? 1
         setLines((prev) => {
-          const existing = prev.find((l) => l.productSlug === productSlug)
+          const key = makeLineKey({
+            productSlug: payload.productSlug,
+            packagingId: payload.packagingId,
+          })
+          const existing = prev.find((l) => makeLineKey(l) === key)
           if (existing) {
             return prev.map((l) =>
-              l.productSlug === productSlug
-                ? { ...l, quantity: l.quantity + quantity }
+              makeLineKey(l) === key
+                ? { ...l, quantity: l.quantity + qty }
                 : l,
             )
           }
-          return [...prev, { productSlug, quantity }]
+          return [
+            ...prev,
+            {
+              productSlug: payload.productSlug,
+              quantity: qty,
+              packagingId: payload.packagingId,
+              packagingLabel: payload.packagingLabel,
+              unitPrice: payload.unitPrice,
+            },
+          ]
         })
       },
-      updateQuantity(productSlug, quantity) {
+      updateQuantity(lineKey, quantity) {
         setLines((prev) =>
           prev.map((l) =>
-            l.productSlug === productSlug
+            makeLineKey(l) === lineKey
               ? { ...l, quantity: Math.max(1, quantity) }
               : l,
           ),
         )
       },
-      removeLine(productSlug) {
-        setLines((prev) => prev.filter((l) => l.productSlug !== productSlug))
+      removeLine(lineKey) {
+        setLines((prev) => prev.filter((l) => makeLineKey(l) !== lineKey))
       },
       replaceAll(next) {
         setLines(next)

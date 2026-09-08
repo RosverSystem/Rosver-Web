@@ -1,4 +1,5 @@
 import type { Category } from '@/features/catalog/model/mocks'
+import { countProductsInCategoryTree } from '@/features/catalog/model/category-tree'
 import { cn } from '@/shared/lib'
 import { SlidersHorizontal, X } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
@@ -27,7 +28,9 @@ export const EMPTY_FILTERS: CatalogFilterState = {
 type Props = {
   categories: Category[]
   activeSlug?: string
+  /** @deprecated se calcula con árbol; se mantiene por compat */
   productCountBySlug?: Record<string, number>
+  productsForCounts?: { category: string; visible?: boolean }[]
   vendors: string[]
   filters: CatalogFilterState
   onChange: (next: CatalogFilterState) => void
@@ -37,6 +40,7 @@ export function FiltersPanel({
   categories,
   activeSlug,
   productCountBySlug,
+  productsForCounts,
   vendors,
   filters,
   onChange,
@@ -47,6 +51,18 @@ export function FiltersPanel({
     .filter((c) => c.visible !== false && !c.parentId)
     .slice()
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+
+  const childrenOf = (rootId: string) =>
+    categories
+      .filter((c) => c.visible !== false && c.parentId === rootId)
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+
+  const countFor = (slug: string) => {
+    if (productsForCounts) {
+      return countProductsInCategoryTree(categories, slug, productsForCounts)
+    }
+    return productCountBySlug?.[slug]
+  }
 
   const toggleVendor = (vendor: string) => {
     const has = filters.vendors.includes(vendor)
@@ -92,8 +108,9 @@ export function FiltersPanel({
               </Link>
             </li>
             {items.map((category) => {
-              const count = productCountBySlug?.[category.slug]
+              const count = countFor(category.slug)
               const active = activeSlug === category.slug
+              const kids = childrenOf(category.id)
               return (
                 <li key={category.id}>
                   <Link
@@ -113,6 +130,35 @@ export function FiltersPanel({
                       </span>
                     ) : null}
                   </Link>
+                  {kids.length ? (
+                    <ul className="mt-0.5 space-y-0.5 border-l border-rosver-line pl-2 ml-2">
+                      {kids.map((ch) => {
+                        const chActive = activeSlug === ch.slug
+                        const chCount = countFor(ch.slug)
+                        return (
+                          <li key={ch.id}>
+                            <Link
+                              to={`/catalogo/${ch.slug}`}
+                              onClick={() => setMobileOpen(false)}
+                              className={cn(
+                                'flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-xs transition',
+                                chActive
+                                  ? 'bg-rosver-red/10 font-semibold text-rosver-red'
+                                  : 'text-rosver-muted hover:bg-rosver-soft hover:text-rosver-ink',
+                              )}
+                            >
+                              <span className="truncate">{ch.name}</span>
+                              {typeof chCount === 'number' ? (
+                                <span className="text-[10px] font-bold text-rosver-muted">
+                                  {chCount}
+                                </span>
+                              ) : null}
+                            </Link>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  ) : null}
                 </li>
               )
             })}

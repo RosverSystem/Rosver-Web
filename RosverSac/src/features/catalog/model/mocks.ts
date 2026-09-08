@@ -46,6 +46,7 @@ export type Product = {
   originalPrice?: number
   /** Precio mayorista (MOQ). Si falta y hay `price`, la UI puede estimar. */
   wholesalePrice?: number
+  offerPrice?: number
   /** Badge “Destacado” / sección home Top picks */
   featured?: boolean
   /** Orden en carrusel Destacados (menor = primero) */
@@ -61,6 +62,27 @@ export type Product = {
   /** Foto principal (CDN/ERP). Si falta → placeholder. */
   imageUrl?: string
   visible?: boolean
+  packagings?: ProductPackaging[]
+  specs?: ProductSpec[]
+}
+
+export type ProductPackaging = {
+  id: string
+  label: string
+  contentQty: number
+  isDefault: boolean
+  unitName: string
+  listPrice: number | null
+  offerPrice: number | null
+  wholesalePrice: number | null
+  compareAt: number | null
+}
+
+export type ProductSpec = {
+  key: string
+  name: string
+  value: string
+  unit?: string | null
 }
 
 /** Precio mayorista publicado o ~8% bajo el precio lista (mock visual). */

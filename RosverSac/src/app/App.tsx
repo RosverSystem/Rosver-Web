@@ -18,6 +18,7 @@ import {
   AdminCategoriesPage,
   AdminOffersPage,
   AdminProductsPage,
+  AdminUnitTypesPage,
 } from '@/features/admin-catalog'
 import {
   AuthProvider,
@@ -107,6 +108,7 @@ export function App() {
                 <Route path="productos" element={<AdminProductsPage />} />
                 <Route path="categorias" element={<AdminCategoriesPage />} />
                 <Route path="marcas" element={<AdminBrandsPage />} />
+                <Route path="unidades" element={<AdminUnitTypesPage />} />
                 <Route path="ofertas" element={<AdminOffersPage />} />
               </Route>
             </Routes>

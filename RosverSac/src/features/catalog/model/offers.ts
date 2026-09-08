@@ -1,10 +1,11 @@
 import type { Product } from '@/features/catalog/model/mocks'
 import { PRODUCTS } from '@/features/catalog/model/mocks'
 
-/** Producto en oferta: tiene precio publicado y precio anterior. */
+/** Producto en oferta: precio oferta activo o precio anterior mayor. */
 export function isOfferProduct(p: Product): boolean {
+  if (p.visible === false) return false
+  if (p.offerPrice != null && p.price != null) return true
   return (
-    p.visible !== false &&
     p.price !== null &&
     typeof p.originalPrice === 'number' &&
     p.originalPrice > p.price

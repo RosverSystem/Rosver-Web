@@ -8,6 +8,7 @@ import {
   AdminPageHeader,
   AdminSelect,
 } from '@/shared/ui/admin-field'
+import { AdminImageUpload } from '@/shared/ui/admin-image-upload'
 import { useEffect, useMemo, useState } from 'react'
 
 type Category = {
@@ -125,7 +126,7 @@ export function AdminCategoriesPage() {
         errors.push('Al menos un punto destacado para la card del inicio')
       }
       if (!form.imageUrl.trim()) {
-        errors.push('URL de la imagen de la card del inicio')
+        errors.push('Sube o pega la imagen de la card del inicio')
       }
     }
     if (errors.length) {
@@ -297,14 +298,13 @@ export function AdminCategoriesPage() {
                     placeholder="Ej. Listas para obra y taller"
                   />
                 </AdminField>
-                <AdminField label="URL de imagen" htmlFor="cat-image">
-                  <AdminInput
-                    id="cat-image"
+                <AdminField label="Imagen de la card" htmlFor="cat-image">
+                  <AdminImageUpload
+                    folder="categories"
                     value={form.imageUrl}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, imageUrl: e.target.value }))
-                    }
-                    placeholder="https://…"
+                    onChange={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
+                    onError={(msg) => showMessages([msg])}
+                    label="Subir o pegar URL"
                   />
                 </AdminField>
                 <AdminField label="Punto 1" htmlFor="cat-p1">

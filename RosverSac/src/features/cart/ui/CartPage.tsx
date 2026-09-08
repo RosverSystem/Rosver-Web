@@ -1,4 +1,4 @@
-import { PRODUCTS, type Product } from '@/features/catalog'
+import { useCatalog, type Product } from '@/features/catalog'
 import { prefersReducedMotion } from '@/shared/lib/gsap'
 import { ProductImagePlaceholder } from '@/shared/ui/product-image-placeholder'
 import { cn } from '@/shared/lib'
@@ -38,9 +38,13 @@ const BENEFITS = [
   },
 ] as const
 
-function resolveLine(line: CartLine) {
-  const product = PRODUCTS.find((p) => p.slug === line.productSlug)
-  return product ? { ...line, product } : null
+function resolveLine(line: CartLine, products: Product[]) {
+  const product = products.find((p) => p.slug === line.productSlug)
+  if (!product) return null
+  const key = line.packagingId
+    ? `${line.productSlug}::${line.packagingId}`
+    : line.productSlug
+  return { ...line, product, key }
 }
 
 /**
@@ -48,14 +52,23 @@ function resolveLine(line: CartLine) {
  */
 export function CartPage() {
   const reduce = prefersReducedMotion()
-  const { lines, addItem, updateQuantity, removeLine, itemCount } = useCart()
+  const { products } = useCatalog()
+  const { lines, addItem, updateQuantity, removeLine, itemCount, lineKey } =
+    useCart()
 
-  const items = lines.map(resolveLine).filter((l) => l !== null)
-  const total = items.reduce(
-    (sum, item) => sum + (item.product.price ?? 0) * item.quantity,
-    0,
-  )
-  const hasConsult = items.some((item) => item.product.price === null)
+  const items = lines
+    .map((l) => resolveLine(l, products))
+    .filter((l): l is NonNullable<typeof l> => l !== null)
+  const total = items.reduce((sum, item) => {
+    const unit =
+      item.unitPrice !== undefined ? item.unitPrice : item.product.price
+    return sum + (unit ?? 0) * item.quantity
+  }, 0)
+  const hasConsult = items.some((item) => {
+    const unit =
+      item.unitPrice !== undefined ? item.unitPrice : item.product.price
+    return unit === null
+  })
 
   return (
     <main className="mx-auto flex w-full min-w-0 max-w-4xl flex-col gap-6 overflow-x-hidden px-4 pb-28 lg:px-6">
@@ -77,6 +90,7 @@ export function CartPage() {
           </p>
           <div className="mt-3">
             <CartProductSearcher
+              products={products}
               onPick={(product) => addItem(product.slug, 1)}
             />
           </div>
@@ -103,71 +117,78 @@ export function CartPage() {
           </div>
         ) : (
           <ul className="flex flex-col divide-y divide-rosver-line px-4 sm:px-5">
-            {items.map(({ product, quantity }) => (
-              <li
-                key={product.slug}
-                className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center"
-              >
-                <Link
-                  to={`/producto/${product.slug}`}
-                  className="shrink-0"
-                  aria-label={`Ver ${product.name}`}
+            {items.map((item) => {
+              const { product, quantity, packagingLabel, unitPrice, key } = item
+              const unit =
+                unitPrice !== undefined ? unitPrice : product.price
+              return (
+                <li
+                  key={key}
+                  className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center"
                 >
-                  <CartThumb
-                    src={product.imageUrl}
-                    alt={product.name}
-                  />
-                </Link>
-
-                <div className="min-w-0 flex-1">
                   <Link
                     to={`/producto/${product.slug}`}
-                    className="text-sm font-semibold text-rosver-ink transition hover:text-rosver-red"
+                    className="shrink-0"
+                    aria-label={`Ver ${product.name}`}
                   >
-                    {product.name}
+                    <CartThumb src={product.imageUrl} alt={product.name} />
                   </Link>
-                  <p className="mt-0.5 text-xs text-rosver-muted">
-                    {product.sku} · {product.vendor}
-                  </p>
-                  <p className="mt-1 text-sm font-bold text-rosver-red">
-                    {product.price !== null
-                      ? `S/ ${product.price.toFixed(2)}`
-                      : 'Consultar'}
-                  </p>
-                </div>
 
-                <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      to={`/producto/${product.slug}`}
+                      className="text-sm font-semibold text-rosver-ink transition hover:text-rosver-red"
+                    >
+                      {product.name}
+                    </Link>
+                    <p className="mt-0.5 text-xs text-rosver-muted">
+                      {product.sku} · {product.vendor}
+                      {packagingLabel ? ` · ${packagingLabel}` : ''}
+                    </p>
+                    <p className="mt-1 text-sm font-bold text-rosver-red">
+                      {unit !== null && unit !== undefined
+                        ? `S/ ${unit.toFixed(2)}`
+                        : 'Consultar'}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateQuantity(lineKey(item), quantity - 1)
+                      }
+                      className="inline-flex size-10 items-center justify-center rounded-full border border-rosver-line text-lg text-rosver-ink transition hover:border-rosver-red/40 hover:text-rosver-red"
+                      aria-label="Disminuir cantidad"
+                    >
+                      −
+                    </button>
+                    <span className="w-8 text-center text-sm font-bold text-rosver-ink">
+                      {quantity}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateQuantity(lineKey(item), quantity + 1)
+                      }
+                      className="inline-flex size-10 items-center justify-center rounded-full border border-rosver-line text-lg text-rosver-ink transition hover:border-rosver-red/40 hover:text-rosver-red"
+                      aria-label="Aumentar cantidad"
+                    >
+                      +
+                    </button>
+                  </div>
+
                   <button
                     type="button"
-                    onClick={() => updateQuantity(product.slug, quantity - 1)}
-                    className="inline-flex size-10 items-center justify-center rounded-full border border-rosver-line text-lg text-rosver-ink transition hover:border-rosver-red/40 hover:text-rosver-red"
-                    aria-label="Disminuir cantidad"
+                    onClick={() => removeLine(lineKey(item))}
+                    className="inline-flex min-h-10 items-center justify-center gap-1.5 self-start rounded-lg px-2 text-xs font-bold text-rosver-muted transition hover:bg-rosver-soft hover:text-rosver-red sm:self-center"
                   >
-                    −
+                    <Trash size={16} color="currentColor" strokeWidth={2} />
+                    Quitar
                   </button>
-                  <span className="w-8 text-center text-sm font-bold text-rosver-ink">
-                    {quantity}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => updateQuantity(product.slug, quantity + 1)}
-                    className="inline-flex size-10 items-center justify-center rounded-full border border-rosver-line text-lg text-rosver-ink transition hover:border-rosver-red/40 hover:text-rosver-red"
-                    aria-label="Aumentar cantidad"
-                  >
-                    +
-                  </button>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => removeLine(product.slug)}
-                  className="inline-flex min-h-10 items-center justify-center gap-1.5 self-start rounded-lg px-2 text-xs font-bold text-rosver-muted transition hover:bg-rosver-soft hover:text-rosver-red sm:self-center"
-                >
-                  <Trash size={16} color="currentColor" strokeWidth={2} />
-                  Quitar
-                </button>
-              </li>
-            ))}
+                </li>
+              )
+            })}
           </ul>
         )}
 
@@ -347,7 +368,13 @@ function CartThumb({ src, alt }: { src?: string; alt: string }) {
   )
 }
 
-function CartProductSearcher({ onPick }: { onPick: (p: Product) => void }) {
+function CartProductSearcher({
+  products,
+  onPick,
+}: {
+  products: Product[]
+  onPick: (p: Product) => void
+}) {
   const listId = useId()
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
@@ -355,14 +382,17 @@ function CartProductSearcher({ onPick }: { onPick: (p: Product) => void }) {
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (q.length < 1) return PRODUCTS.slice(0, 6)
-    return PRODUCTS.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.sku.toLowerCase().includes(q) ||
-        p.vendor.toLowerCase().includes(q),
-    ).slice(0, 8)
-  }, [query])
+    const list = products.filter((p) => p.visible !== false)
+    if (q.length < 1) return list.slice(0, 6)
+    return list
+      .filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.sku.toLowerCase().includes(q) ||
+          p.vendor.toLowerCase().includes(q),
+      )
+      .slice(0, 8)
+  }, [query, products])
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {

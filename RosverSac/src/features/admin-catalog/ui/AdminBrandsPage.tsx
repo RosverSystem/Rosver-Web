@@ -8,6 +8,7 @@ import {
   AdminInput,
   AdminPageHeader,
 } from '@/shared/ui/admin-field'
+import { AdminImageUpload } from '@/shared/ui/admin-image-upload'
 import { useEffect, useMemo, useState } from 'react'
 
 type Brand = {
@@ -28,6 +29,7 @@ export function AdminBrandsPage() {
   const [loading, setLoading] = useState(true)
   const [name, setName] = useState('')
   const [sku, setSku] = useState('')
+  const [logoUrl, setLogoUrl] = useState('')
   const [showOnHome, setShowOnHome] = useState(true)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -66,6 +68,7 @@ export function AdminBrandsPage() {
     setEditingId(null)
     setName('')
     setSku('')
+    setLogoUrl('')
     setShowOnHome(true)
   }
 
@@ -73,6 +76,7 @@ export function AdminBrandsPage() {
     setEditingId(b.id)
     setName(b.name)
     setSku(b.sku)
+    setLogoUrl(b.logoUrl ?? '')
     setShowOnHome(b.showOnHome !== false)
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -93,6 +97,7 @@ export function AdminBrandsPage() {
         name: name.trim(),
         sku: sku.trim(),
         showOnHome,
+        logoUrl: logoUrl.trim() || null,
       }
       if (editingId) {
         await api(`/api/admin/brands/${editingId}`, {
@@ -176,7 +181,7 @@ export function AdminBrandsPage() {
             </button>
           ) : null}
         </div>
-        <div className="grid gap-4 sm:grid-cols-[1fr_12rem_auto]">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <AdminField label="Nombre comercial" htmlFor="brand-name">
             <AdminInput
               id="brand-name"
@@ -194,14 +199,14 @@ export function AdminBrandsPage() {
               className="uppercase"
             />
           </AdminField>
-          <div className="flex items-end">
-            <button
-              type="submit"
-              disabled={busy}
-              className="h-11 w-full rounded-xl bg-rosver-red px-5 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60 sm:w-auto"
-            >
-              {busy ? 'Guardando…' : editingId ? 'Guardar' : 'Crear marca'}
-            </button>
+          <div className="sm:col-span-2 lg:col-span-1">
+            <AdminImageUpload
+              folder="brands"
+              value={logoUrl}
+              onChange={setLogoUrl}
+              onError={(msg) => showMessages([msg])}
+              label="Logo"
+            />
           </div>
         </div>
         <label className="mt-4 flex items-center gap-2 text-sm text-rosver-ink">
@@ -213,6 +218,15 @@ export function AdminBrandsPage() {
           />
           Mostrar en «Marcas que importamos» (inicio)
         </label>
+        <div className="mt-4">
+          <button
+            type="submit"
+            disabled={busy}
+            className="h-11 rounded-xl bg-rosver-red px-5 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
+          >
+            {busy ? 'Guardando…' : editingId ? 'Guardar' : 'Crear marca'}
+          </button>
+        </div>
       </form>
 
       <AdminInput
@@ -240,9 +254,19 @@ export function AdminBrandsPage() {
               key={b.id}
               className="flex items-center gap-3 rounded-2xl border border-rosver-line bg-white p-4 shadow-sm transition hover:border-rosver-red/25 hover:shadow-md"
             >
-              <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-rosver-soft text-base font-bold text-rosver-ink">
-                {b.name.slice(0, 1).toUpperCase()}
-              </span>
+              {b.logoUrl ? (
+                <img
+                  src={b.logoUrl}
+                  alt=""
+                  width={48}
+                  height={48}
+                  className="size-12 shrink-0 rounded-2xl object-contain"
+                />
+              ) : (
+                <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-rosver-soft text-base font-bold text-rosver-ink">
+                  {b.name.slice(0, 1).toUpperCase()}
+                </span>
+              )}
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h3 className="truncate font-semibold text-rosver-ink">{b.name}</h3>
