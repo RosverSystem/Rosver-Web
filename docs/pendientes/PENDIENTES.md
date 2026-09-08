@@ -12,5 +12,12 @@
 | P06 | Subida foto perfil a R2 | Perfil | pendiente | Solo avatares SVG default |
 | P07 | 2FA UI en perfil (activar TOTP) | Auth TOTP | pendiente | API `/api/auth/2fa/*` lista; falta pantalla |
 | P08 | Header sesión visible | Login UX | hecho | `SessionAccountMenu` en navbar/footer; avatar + nombre + menú |
-
 | P09 | CLI `railway` no autenticado en esta máquina | Deploy continuo | pendiente | Push GitHub OK; deploy vía GraphQL `serviceInstanceDeploy`. Opcional: `railway login` |
+
+## Hechos recientes (referencia)
+
+- Auth API + deploy Railway unificado web+api
+- SMTP Hostinger configurado en Railway
+- Seed admin + cliente
+- Header sesión visible (v0.1.1 / commit `55538bc`)
+
