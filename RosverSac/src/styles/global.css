@@ -1,0 +1,153 @@
+@import 'tailwindcss';
+
+/*
+ * Paleta oficial Rosver (regla 09-paleta-colores).
+ * Usar solo estos tokens en UI; no inventar hex sueltos de marca.
+ */
+@theme {
+  /* Principales */
+  --color-rosver-red: #e30613;
+  --color-rosver-red-dark: #90040d;
+  --color-rosver-ink: #0d0d0d;
+
+  /* Secundarios / apoyo */
+  --color-rosver-blue: #1e3a5f;
+  --color-rosver-muted: #6b7280;
+  --color-rosver-line: #e5e7eb;
+  --color-rosver-soft: #f3f4f6;
+  --color-rosver-surface: #ffffff;
+  --color-rosver-yellow: #f2b705;
+  --color-rosver-success: #10b981;
+
+  --font-sans: 'Manrope', ui-sans-serif, sans-serif;
+  --font-display: 'Oswald', ui-sans-serif, sans-serif;
+
+  --shadow-nav: 0 0 24px rgba(34, 42, 53, 0.06), 0 1px 1px rgba(0, 0, 0, 0.05),
+    0 0 0 1px rgba(34, 42, 53, 0.04), 0 0 4px rgba(34, 42, 53, 0.08),
+    0 16px 68px rgba(47, 48, 55, 0.05), 0 1px 0 rgba(255, 255, 255, 0.1) inset;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: var(--font-sans);
+  line-height: 1.5;
+  color: var(--color-rosver-ink);
+  background: var(--color-rosver-surface);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  text-decoration: none;
+}
+
+/*
+ * Scrollbar de marca (página / paneles).
+ * Los carruseles usan `.hide-scrollbar` para no mostrar barra.
+ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-rosver-muted) var(--color-rosver-soft);
+}
+
+*::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--color-rosver-soft);
+  border-radius: 9999px;
+  margin-block: 6px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--color-rosver-muted);
+  border-radius: 9999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-rosver-red);
+}
+
+*::-webkit-scrollbar-thumb:active {
+  background-color: var(--color-rosver-red-dark);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.hide-scrollbar {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+button {
+  font: inherit;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translate(0, 0);
+  }
+  50% {
+    transform: translate(-18px, 22px);
+  }
+}
+
+@keyframes brand-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

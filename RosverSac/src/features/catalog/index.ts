@@ -1,0 +1,6 @@
+export { HomePage } from './ui/HomePage'
+export { CatalogPage } from './ui/CatalogPage'
+export { OffersPage } from './ui/OffersPage'
+export { ProductPage } from './ui/ProductPage'
+export { CATEGORIES, PRODUCTS, getWholesalePrice } from './model/mocks'
+export type { Category, Product } from './model/mocks'

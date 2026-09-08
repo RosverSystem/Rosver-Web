@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /cuenta
+
+Sitemap: https://rosversac.com/sitemap.xml

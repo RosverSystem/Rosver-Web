@@ -1,0 +1,26 @@
+---
+description: Paridad Cursor ↔ Claude Code — mismas reglas y docs compartidos
+alwaysApply: true
+---
+
+# Paridad de agentes (Cursor y Claude Code)
+
+Este repo lo trabajan **Cursor** y **Claude Code** con las **mismas** reglas de producto, features, docs y responsive.
+
+## Fuente de verdad compartida
+
+| Qué | Dónde |
+| --- | --- |
+| Resumen agentes | `AGENTS.md` (Cursor) y `CLAUDE.md` (Claude Code) — contenido alineado |
+| Reglas Cursor | `.cursor/rules/` |
+| Reglas Claude Code | `.claude/rules/` |
+| Skills | `.cursor/skills/` y `.claude/skills/` (mismo procedimiento) |
+| Avance del proyecto | `docs/changes/`, `docs/features/`, `docs/architecture/` |
+
+## Obligación al cerrar trabajo (cualquier agente)
+
+1. Registrar en `docs/changes/NNNN-slug.md`.
+2. Actualizar features/architecture si cambió alcance o flujos.
+3. Escribir para que el **otro** agente entienda el avance sin depender del chat.
+
+No dejar decisiones solo en la conversación.

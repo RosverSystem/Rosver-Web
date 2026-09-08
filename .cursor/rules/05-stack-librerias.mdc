@@ -1,0 +1,17 @@
+---
+description: Librerías del proyecto — ver docs/architecture/04-stack-y-librerias.md
+alwaysApply: true
+---
+
+# Stack y librerías
+
+Fuente de verdad: `docs/architecture/04-stack-y-librerias.md`.
+
+Stack actual: React 19, TypeScript, Vite, Tailwind v4, Motion (`motion/react`), React Router DOM, `clsx` + `tailwind-merge` (`cn` en `@/shared/lib`), **`cssvg-icons`** (iconos UI), Lenis, GSAP.
+
+- No añadir librerías sin actualizar `04-stack-y-librerias.md` y `docs/changes/`.
+- **Permiso explícito (producto):** libs, tools o skills orientadas a **optimización** (imágenes, lazy, compress, LCP, code-split) están **permitidas** si mejoran carga real y se documentan en `04` + `docs/changes/`.
+- Preferir primero CSS/SVG/APIs nativas; si una lib liviana aporta mediblemente, usarla.
+- Patrones tipo Aceternity: reimplementar en `shared/ui/`, no asumir paquete Aceternity instalado.
+- Animaciones: `motion/react`; respetar `prefers-reduced-motion` y responsive.
+- Iconos UI nuevos: solo `cssvg-icons` (regla `07-icons-cssvg`).

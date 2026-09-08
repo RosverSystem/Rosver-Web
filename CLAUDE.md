@@ -1,0 +1,80 @@
+# CLAUDE.md — RosverSac (Claude Code)
+
+Instrucciones de proyecto para Claude Code. **Deben coincidir** con `AGENTS.md` y las reglas de Cursor (`.cursor/rules/`).  
+Detalle: `playbook-como-trabajamos.md` y `docs/`.
+
+## Producto (leer antes de UI o lógica)
+
+- Catálogo web de **importaciones** + **gestión** (admin/comercial) + área **cliente**.
+- Stack: React 19 + TypeScript + Vite + Tailwind v4 + Motion + React Router — detalle en `docs/architecture/04-stack-y-librerias.md`.
+- **Fase actual:** visual primero (mocks); lógica después.
+- Fuente de verdad: `docs/architecture/02-producto-rosver-sac.md` y `03-vistas-y-flujos.md`.
+
+## Comandos
+
+```bash
+cd RosverSac
+npm run dev      # UI (Vite, :5173)
+npm run build
+npm run lint
+```
+
+## Estructura
+
+| Qué | Dónde |
+| --- | --- |
+| Código UI | `RosverSac/src/` |
+| Documentación | `docs/` |
+| Reglas Claude | `.claude/rules/` |
+| Skills Claude | `.claude/skills/` |
+| Espejo Cursor | `.cursor/rules/`, `.cursor/skills/`, `AGENTS.md` |
+
+**Alias:** `@` → `RosverSac/src`  
+**Ejemplo:** `import { AuthPage } from '@/features/auth'`
+
+## Capas
+
+- `app/` — shell, providers, routing
+- `features/<nombre>/` — módulo de producto (`index.ts` = único export público)
+- `shared/` — UI/hooks/lib sin negocio de una sola feature
+- `styles/` — CSS global
+
+## Flujo obligatorio
+
+1. **Feature nueva** → skill `create-feature` (`.claude/skills/create-feature/SKILL.md`) antes de codear.
+2. **Al cerrar cualquier tarea** → skill `document-change` → `docs/changes/NNNN-slug.md`.
+3. Feature nueva → ficha en `docs/features/` + fila en índice.
+4. Docs en **español**, concretas.
+5. Si cambia un flujo o regla de negocio → actualizar `02` / `03` en architecture.
+6. Dejar contexto escrito para Cursor (y viceversa): el avance vive en `docs/`, no solo en el chat.
+
+## Reglas clave
+
+- No importar internos de otra feature; solo `@/features/<nombre>`.
+- `shared/` no importa `features/`.
+- Una feature por archivo; no mezclar dominios.
+- Secretos en `.env` (gitignored); nunca commitear credenciales.
+- En fase visual: no API real; datos mock alineados al dominio documentado.
+- **Responsive obligatorio:** móvil, tablet y desktop en toda UI/animación/sección (ver `.claude/rules/03-responsive-ui.md`).
+- **Rendimiento obligatorio:** página rápida — imágenes ligeras, animaciones acotadas, sin libs de más (ver `.claude/rules/06-performance.md`).
+- **Assets / logos:** WebP-AVIF o SVG; tamaños reales; lazy below-fold; banners geométricos en CSS/SVG (ver `.claude/rules/08-assets-optimizacion.md`).
+- **Optimización:** permitido usar skills/libs de optimización si mejoran carga y se documentan en `04-stack-y-librerias.md`.
+- **Iconos UI nuevos:** solo `cssvg-icons` ([icon.cssvg.com](https://icon.cssvg.com)) — ver `.claude/rules/07-icons-cssvg.md`.
+- **Paleta oficial:** solo tokens Rosver (`docs/architecture/06-paleta-colores.md`, `.claude/rules/09-paleta-colores.md`).
+- **Formularios / validación:** toasts flotantes (`FloatingToasts` + `useFormToasts`); nunca bubbles nativos ni errores inline que alarguen el form (`.claude/rules/10-form-toasts.md`).
+
+## Paridad con Cursor
+
+- Mismas convenciones que `.cursor/rules/` y `AGENTS.md`.
+- Al terminar, documentar para que el agente de Cursor retome sin re-explicar.
+
+## Punteros
+
+- Producto: `docs/architecture/02-producto-rosver-sac.md`
+- Vistas/flujos: `docs/architecture/03-vistas-y-flujos.md`
+- Stack / librerías: `docs/architecture/04-stack-y-librerias.md`
+- Paleta: `docs/architecture/06-paleta-colores.md`
+- Features: `docs/features/README.md`
+- Módulos: `docs/architecture/01-modulos-feature.md`
+- Plantillas: `docs/templates/`
+- Cambios recientes: `docs/changes/` (leer el último `NNNN` antes de seguir)

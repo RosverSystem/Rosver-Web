@@ -1,0 +1,45 @@
+---
+description: Iconos UI obligatorios con cssvg-icons (icon.cssvg.com)
+alwaysApply: true
+---
+
+# Iconos — cssvg-icons (obligatorio)
+
+Catálogo de iconos animados: [icon.cssvg.com](https://icon.cssvg.com) · paquete npm `cssvg-icons`.
+
+## Regla
+
+Para **iconos de UI nuevos** (nav, botones, estados, features, widgets) usar **`cssvg-icons`**.  
+No añadir iconos nuevos con `lucide-react` ni SVG sueltos “por costumbre”.
+
+```tsx
+import { Bell, ArrowRight, Heart } from 'cssvg-icons'
+import { withIconControls } from 'cssvg-icons'
+
+const HeartHover = withIconControls(Heart)
+
+<Bell size={24} color="currentColor" strokeWidth={2} />
+<HeartHover size={24} color="currentColor" hoverToAnimate />
+```
+
+Explorar nombres en https://icon.cssvg.com/icons — import PascalCase desde `cssvg-icons`.
+
+## Rendimiento y motion
+
+- Preferir `hoverToAnimate` cuando exista en la versión del paquete; si no, usar el icono directo (`size`, `color`, `strokeWidth`).
+- Respetar `prefers-reduced-motion`.
+- Color: `currentColor` o tokens Rosver (`text-rosver-red` en el padre).
+
+## Excepciones (permitidas)
+
+| Caso | Dónde |
+| --- | --- |
+| Logos / redes con color de marca (FB, IG, WhatsApp…) | `shared/ui/icons.tsx` |
+| Íconos de dominio ya hechos (categorías, badges trust) | `shared/ui/icons.tsx` hasta migrar |
+| Código ya existente con Lucide | No reescribir en masa; **código nuevo** → cssvg |
+
+Si cssvg no tiene el icono: copiar el SVG desde el sitio **o** pedirlo; no instalar otra lib de iconos.
+
+## Docs
+
+Detalle en `docs/architecture/04-stack-y-librerias.md`.
