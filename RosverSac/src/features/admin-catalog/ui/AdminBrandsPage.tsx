@@ -16,6 +16,7 @@ type Brand = {
   sku: string
   name: string
   slug: string
+  logoUrl?: string | null
   visible: boolean
 }
 
@@ -25,6 +26,7 @@ export function AdminBrandsPage() {
   const [loading, setLoading] = useState(true)
   const [name, setName] = useState('')
   const [sku, setSku] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [query, setQuery] = useState('')
 
@@ -57,6 +59,19 @@ export function AdminBrandsPage() {
     void load()
   }, [])
 
+  function resetForm() {
+    setEditingId(null)
+    setName('')
+    setSku('')
+  }
+
+  function startEdit(b: Brand) {
+    setEditingId(b.id)
+    setName(b.name)
+    setSku(b.sku)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     clear()
@@ -69,19 +84,39 @@ export function AdminBrandsPage() {
     }
     setBusy(true)
     try {
-      await api('/api/admin/brands', {
-        method: 'POST',
-        body: JSON.stringify({ name: name.trim(), sku: sku.trim() }),
-      })
-      setName('')
-      setSku('')
+      if (editingId) {
+        await api(`/api/admin/brands/${editingId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ name: name.trim(), sku: sku.trim() }),
+        })
+      } else {
+        await api('/api/admin/brands', {
+          method: 'POST',
+          body: JSON.stringify({ name: name.trim(), sku: sku.trim() }),
+        })
+      }
+      resetForm()
       await load()
     } catch (err) {
       showMessages([
-        err instanceof ApiError ? err.message : 'No se pudo crear la marca',
+        err instanceof ApiError ? err.message : 'No se pudo guardar la marca',
       ])
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function onDelete(id: string, brandName: string) {
+    if (!window.confirm(`¿Eliminar la marca «${brandName}»?`)) return
+    clear()
+    try {
+      await api(`/api/admin/brands/${id}`, { method: 'DELETE' })
+      if (editingId === id) resetForm()
+      await load()
+    } catch (err) {
+      showMessages([
+        err instanceof ApiError ? err.message : 'No se pudo eliminar',
+      ])
     }
   }
 
@@ -102,7 +137,20 @@ export function AdminBrandsPage() {
         onSubmit={onSubmit}
         className="rounded-2xl border border-rosver-line bg-white p-4 shadow-sm sm:p-5"
       >
-        <p className="mb-4 text-sm font-semibold text-rosver-ink">Nueva marca</p>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-semibold text-rosver-ink">
+            {editingId ? 'Editar marca' : 'Nueva marca'}
+          </p>
+          {editingId ? (
+            <button
+              type="button"
+              onClick={resetForm}
+              className="text-xs font-semibold text-rosver-muted hover:text-rosver-red"
+            >
+              Cancelar edición
+            </button>
+          ) : null}
+        </div>
         <div className="grid gap-4 sm:grid-cols-[1fr_12rem_auto]">
           <AdminField label="Nombre comercial" htmlFor="brand-name">
             <AdminInput
@@ -127,7 +175,7 @@ export function AdminBrandsPage() {
               disabled={busy}
               className="h-11 w-full rounded-xl bg-rosver-red px-5 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60 sm:w-auto"
             >
-              {busy ? 'Guardando…' : 'Crear marca'}
+              {busy ? 'Guardando…' : editingId ? 'Guardar' : 'Crear marca'}
             </button>
           </div>
         </div>
@@ -149,7 +197,7 @@ export function AdminBrandsPage() {
           <div className="col-span-full rounded-2xl border border-rosver-line bg-white">
             <AdminEmptyState
               title="Todavía no hay marcas"
-              detail="Agrega la primera marca para asociarla a tus productos."
+              detail="Agrega la primera marca para asociarla a tus productos y al filtro de la tienda."
             />
           </div>
         ) : (
@@ -178,6 +226,22 @@ export function AdminBrandsPage() {
                 <p className="mt-0.5 text-xs text-rosver-muted">
                   Código #{b.code} · {b.sku}
                 </p>
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => startEdit(b)}
+                    className="text-xs font-semibold text-rosver-red hover:underline"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void onDelete(b.id, b.name)}
+                    className="text-xs font-semibold text-rosver-muted hover:text-rosver-red"
+                  >
+                    Eliminar
+                  </button>
+                </div>
               </div>
             </article>
           ))

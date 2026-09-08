@@ -1,4 +1,5 @@
-import { BRANDS, type Brand } from '@/features/catalog/model/brands'
+import type { Brand } from '@/features/catalog/model/brands'
+import { useCatalog } from '@/features/catalog/model/catalog-store'
 import { cn } from '@/shared/lib'
 import { prefersReducedMotion } from '@/shared/lib/gsap'
 import { ArrowRight } from 'cssvg-icons'
@@ -7,9 +8,12 @@ import { Link } from 'react-router-dom'
 /**
  * Franja de marcas bajo el hero: sin tarjeta ni cajas por logo.
  * Label fijo a la izquierda + marquee (como referencia “tecnologías”).
+ * Datos: marcas visibles desde DB (o mocks si aún no hay).
  */
 export function BrandCarousel() {
-  const brands = BRANDS.filter((b) => b.visible !== false)
+  const { brands: catalogBrands } = useCatalog()
+  const brands = catalogBrands
+    .filter((b) => b.visible !== false)
     .slice()
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
 

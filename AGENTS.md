@@ -66,6 +66,7 @@ npm run lint
 - **ERP selects / copy:** `AdminSelect` + lenguaje cotidiano; sin jerga ni textos de ayuda técnicos (regla `14-erp-selects-copy`).
 - **Despliegues / versiones:** documentar en `08` + `docs/changes/`. **Todo cambio cerrado → push GitHub `main` + deploy Railway** (regla `11-despliegues-versiones`). Infra: Railway (web + Postgres), Cloudflare R2 (media).
 - **Base de datos continua:** si el cambio requiere persistencia → migración `RosverSac/server/sql/NNN_*.sql` en el mismo trabajo (regla `15-database-migraciones`).
+- **CRUD completo:** al tocar una tabla/módulo de datos → Create + Read + Update + Delete (o soft-delete) en API y admin; vincular a la tienda si es público (regla `16-crud-completo`).
 - **Pendientes / recomendaciones:** actualizar `docs/pendientes/` al cerrar o dejar trabajo a medias (regla `12-pendientes-recomendaciones`).
 
 ## Punteros

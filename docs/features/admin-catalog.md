@@ -1,7 +1,7 @@
 # Feature: admin-catalog (SystemRSV)
 
 **Slug:** `features/admin-catalog/`  
-**Estado:** activa (v1 precios / marcas / categorías)
+**Estado:** activa (v1.1 taxonomía live + home)
 
 ## Propósito
 
@@ -9,16 +9,16 @@ Gestión ERP del catálogo: marcas, categorías/subcategorías, productos, empaq
 
 ## Alcance
 
-- Incluido: CRUD básico marcas/categorías; listado productos; empaques; upsert precios; API admin + `/api/catalog` live.
-- Fuera: import CSV, stock físico, UI specs completa, selector empaque en carrito tienda, módulo ofertas ERP.
+- Incluido: CRUD marcas/categorías (incl. campos home: tagline, puntos, imagen, show_on_home/nav); listado productos; empaques; upsert precios; API admin + `/api/catalog` (categorías/marcas live aunque no haya productos).
+- Fuera: import CSV, stock físico, UI specs completa, selector empaque en carrito tienda, módulo ofertas ERP, upload R2 de imagen de categoría.
 
 ## API pública
 
 | Export | Descripción |
 | --- | --- |
 | `AdminProductsPage` | Listado + panel precios |
-| `AdminCategoriesPage` | Árbol categorías |
-| `AdminBrandsPage` | Marcas |
+| `AdminCategoriesPage` | CRUD + card inicio |
+| `AdminBrandsPage` | CRUD marcas |
 | `AdminOffersPage` | Placeholder ofertas |
 
 ## Pantallas
@@ -26,14 +26,15 @@ Gestión ERP del catálogo: marcas, categorías/subcategorías, productos, empaq
 | Ruta | Notas |
 | --- | --- |
 | `/admin/productos` | Precios / empaques |
-| `/admin/categorias` | Raíz + sub |
-| `/admin/marcas` | SKU + code auto |
+| `/admin/categorias` | Raíz + sub + campos Explora por categoría |
+| `/admin/marcas` | Crear / editar / eliminar |
 | `/admin/ofertas` | Vacío |
 
 ## Verificación
 
-- [ ] Migración `002_catalog_core` aplicada
-- [ ] Crear marca → aparece en listado
-- [ ] Crear categoría raíz + sub
-- [ ] Crear producto → empaque → precio lista → Modificar / Guardar como nuevo
-- [ ] Con productos en DB, `/api/catalog` responde `live: true`
+- [ ] Migraciones `002` + `003` aplicadas
+- [ ] Crear marca → filtro tienda + marquee
+- [ ] Crear categoría principal con inicio → card en home + menú
+- [ ] Editar / eliminar categoría y marca
+- [ ] Crear producto → empaque → precio lista
+- [ ] Con taxonomía en DB, `/api/catalog` trae `liveCategories` / `liveBrands`

@@ -3,10 +3,24 @@ import { pool } from '../db.js'
 
 /**
  * Catálogo público.
- * Si hay productos visibles en DB → live: true (tienda sin F5 vía CatalogProvider).
- * Si no → live: false (cliente usa mocks del bundle).
+ * - Categorías / marcas desde DB siempre que existan (menú, inicio, filtros).
+ * - Productos: liveProducts si hay filas; si no, cliente puede usar mocks.
  */
 export const catalogRoutes = new Hono()
+
+function parseHighlightPoints(raw: unknown): string[] {
+  if (Array.isArray(raw)) {
+    return raw.filter((x): x is string => typeof x === 'string' && x.trim().length > 0).slice(0, 3)
+  }
+  if (typeof raw === 'string') {
+    try {
+      return parseHighlightPoints(JSON.parse(raw))
+    } catch {
+      return []
+    }
+  }
+  return []
+}
 
 catalogRoutes.get('/', async (c) => {
   try {
@@ -16,7 +30,7 @@ catalogRoutes.get('/', async (c) => {
     )
     const categories = await pool.query(
       `SELECT id, parent_id, code, sku, name, slug, icon_key, image_url,
-              visible, sort_order, show_in_nav
+              visible, sort_order, show_in_nav, show_on_home, tagline, highlight_points
        FROM categories WHERE visible = true ORDER BY sort_order, name`,
     )
     const products = await pool.query(
@@ -53,62 +67,72 @@ catalogRoutes.get('/', async (c) => {
        LIMIT 1000`,
     )
 
-    if (products.rows.length === 0) {
-      return c.json({
-        ok: true,
-        live: false,
-        updatedAt: new Date().toISOString(),
-        products: [],
-        categories: [],
-        brands: brands.rows.map(mapBrand),
-        message: 'Sin productos en DB; cliente usa mocks.',
-      })
-    }
+    const mappedCategories = categories.rows.map((r) => ({
+      id: r.id,
+      parentId: r.parent_id,
+      slug: r.slug,
+      name: r.name,
+      imageUrl: r.image_url,
+      visible: r.visible,
+      sortOrder: r.sort_order,
+      showInNav: r.show_in_nav,
+      showOnHome: Boolean(r.show_on_home),
+      tagline: r.tagline ?? undefined,
+      points: parseHighlightPoints(r.highlight_points),
+    }))
+
+    const mappedBrands = brands.rows.map(mapBrand)
+    const mappedProducts = products.rows.map((r) => ({
+      id: r.id,
+      slug: r.slug,
+      name: r.name,
+      sku: r.sku,
+      vendor: r.brand_name || r.brand_sku || 'Rosver',
+      category: r.category_slug || 'general',
+      price:
+        r.availability === 'quote_only' || r.list_price == null
+          ? null
+          : Number(r.list_price),
+      originalPrice: r.compare_at != null ? Number(r.compare_at) : undefined,
+      wholesalePrice: r.wholesale_price != null ? Number(r.wholesale_price) : undefined,
+      featured: r.featured,
+      rating: Number(r.rating),
+      reviewCount: r.review_count,
+      origin: r.origin,
+      moq: Number(r.moq),
+      description: r.description,
+      imageUrl: r.image_url || undefined,
+      visible: r.visible,
+      availability: r.availability,
+    }))
+
+    const liveProducts = mappedProducts.length > 0
+    const liveTaxonomy = mappedCategories.length > 0 || mappedBrands.length > 0
 
     return c.json({
       ok: true,
-      live: true,
+      live: liveProducts || liveTaxonomy,
+      liveProducts,
+      liveCategories: mappedCategories.length > 0,
+      liveBrands: mappedBrands.length > 0,
       updatedAt: new Date().toISOString(),
-      brands: brands.rows.map(mapBrand),
-      categories: categories.rows.map((r) => ({
-        id: r.id,
-        parentId: r.parent_id,
-        slug: r.slug,
-        name: r.name,
-        imageUrl: r.image_url,
-        visible: r.visible,
-        sortOrder: r.sort_order,
-        showInNav: r.show_in_nav,
-      })),
-      products: products.rows.map((r) => ({
-        id: r.id,
-        slug: r.slug,
-        name: r.name,
-        sku: r.sku,
-        vendor: r.brand_name || r.brand_sku || 'Rosver',
-        category: r.category_slug || 'general',
-        price:
-          r.availability === 'quote_only' || r.list_price == null
-            ? null
-            : Number(r.list_price),
-        originalPrice: r.compare_at != null ? Number(r.compare_at) : undefined,
-        wholesalePrice: r.wholesale_price != null ? Number(r.wholesale_price) : undefined,
-        featured: r.featured,
-        rating: Number(r.rating),
-        reviewCount: r.review_count,
-        origin: r.origin,
-        moq: Number(r.moq),
-        description: r.description,
-        imageUrl: r.image_url || undefined,
-        visible: r.visible,
-        availability: r.availability,
-      })),
+      brands: mappedBrands,
+      categories: mappedCategories,
+      products: mappedProducts,
+      message: liveProducts
+        ? undefined
+        : liveTaxonomy
+          ? 'Categorías/marcas desde DB; productos aún mock en cliente si vacío.'
+          : 'Sin datos en DB; cliente usa mocks.',
     })
   } catch (err) {
     console.error('catalog GET', err)
     return c.json({
       ok: true,
       live: false,
+      liveProducts: false,
+      liveCategories: false,
+      liveBrands: false,
       updatedAt: new Date().toISOString(),
       products: [],
       categories: [],
@@ -126,5 +150,7 @@ function mapBrand(r: Record<string, unknown>) {
     name: r.name,
     slug: r.slug,
     logoUrl: r.logo_url,
+    visible: r.visible,
+    sortOrder: r.sort_order,
   }
 }

@@ -28,6 +28,10 @@ export type Category = {
   /** null/undefined = raíz (topbar); con padre = subcategoría */
   parentId?: string | null
   showInNav?: boolean
+  /** Card en inicio «Explora por categoría» */
+  showOnHome?: boolean
+  tagline?: string
+  points?: string[]
 }
 
 export type Product = {
@@ -70,6 +74,10 @@ export const CATEGORIES: Category[] = [
     icon: IconWrench,
     sortOrder: 1,
     visible: true,
+    showInNav: true,
+    showOnHome: true,
+    tagline: 'Listas para obra y taller',
+    points: ['Marcas de importación', 'Stock continuo', 'Asesoría técnica'],
     imageUrl:
       'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=640&h=480&q=75',
   },
@@ -80,6 +88,10 @@ export const CATEGORIES: Category[] = [
     icon: IconBolt,
     sortOrder: 2,
     visible: true,
+    showInNav: true,
+    showOnHome: true,
+    tagline: 'Insumos al por mayor',
+    points: ['Precio por volumen', 'MOQ flexible', 'Despacho nacional'],
     imageUrl:
       'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?auto=format&fit=crop&w=640&h=480&q=75',
   },
@@ -90,6 +102,10 @@ export const CATEGORIES: Category[] = [
     icon: IconChip,
     sortOrder: 3,
     visible: true,
+    showInNav: true,
+    showOnHome: true,
+    tagline: 'Equipos y componentes',
+    points: ['Garantía local', 'Modelos actuales', 'Soporte postventa'],
     imageUrl:
       'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=640&h=480&q=75',
   },
@@ -100,6 +116,10 @@ export const CATEGORIES: Category[] = [
     icon: IconHome,
     sortOrder: 4,
     visible: true,
+    showInNav: true,
+    showOnHome: true,
+    tagline: 'Para retail y proyectos',
+    points: ['Líneas rotativas', 'Calidad verificada', 'Entrega ágil'],
     imageUrl:
       'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=640&h=480&q=75',
   },
@@ -110,6 +130,10 @@ export const CATEGORIES: Category[] = [
     icon: IconShirt,
     sortOrder: 5,
     visible: true,
+    showInNav: true,
+    showOnHome: true,
+    tagline: 'Textil industrial y retail',
+    points: ['Volúmenes a medida', 'Variedad de SKU', 'Cotiza rápido'],
     imageUrl:
       'https://images.unsplash.com/photo-1558171813-4c088753af8f?auto=format&fit=crop&w=640&h=480&q=75',
   },
@@ -120,6 +144,10 @@ export const CATEGORIES: Category[] = [
     icon: IconBulb,
     sortOrder: 6,
     visible: true,
+    showInNav: true,
+    showOnHome: true,
+    tagline: 'LED y soluciones de luz',
+    points: ['Eficiencia energética', 'Uso comercial', 'Stock en Lima'],
     imageUrl:
       'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&w=640&h=480&q=75',
   },
@@ -130,6 +158,10 @@ export const CATEGORIES: Category[] = [
     icon: IconSpray,
     sortOrder: 7,
     visible: true,
+    showInNav: true,
+    showOnHome: true,
+    tagline: 'Mantenimiento industrial',
+    points: ['Insumos profesionales', 'Rubros varios', 'Reposición fácil'],
     imageUrl:
       'https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=640&h=480&q=75',
   },
@@ -140,6 +172,10 @@ export const CATEGORIES: Category[] = [
     icon: IconTrowel,
     sortOrder: 8,
     visible: true,
+    showInNav: true,
+    showOnHome: true,
+    tagline: 'Materiales para obra',
+    points: ['Proyectos y ferreterías', 'Importación directa', 'Acompañamiento'],
     imageUrl:
       'https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=640&h=480&q=75',
   },

@@ -54,7 +54,7 @@ function sortProducts(products: Product[], sort: SortKey): Product[] {
 
 export function CatalogPage() {
   const { categorySlug } = useParams()
-  const { products, categories } = useCatalog()
+  const { products, categories, brands } = useCatalog()
   const category = categories.find((c) => c.slug === categorySlug)
 
   const [filters, setFilters] = useState<CatalogFilterState>(EMPTY_FILTERS)
@@ -75,13 +75,15 @@ export function CatalogPage() {
     [categories, visibleProducts],
   )
 
-  const vendors = useMemo(
-    () =>
-      Array.from(new Set(visibleProducts.map((p) => p.vendor))).sort((a, b) =>
-        a.localeCompare(b, 'es'),
-      ),
-    [visibleProducts],
-  )
+  const vendors = useMemo(() => {
+    const fromBrands = brands
+      .filter((b) => b.visible !== false)
+      .map((b) => b.name)
+    const fromProducts = visibleProducts.map((p) => p.vendor)
+    return Array.from(new Set([...fromBrands, ...fromProducts])).sort((a, b) =>
+      a.localeCompare(b, 'es'),
+    )
+  }, [brands, visibleProducts])
 
   const filtered = useMemo(() => {
     const byCategory = categorySlug

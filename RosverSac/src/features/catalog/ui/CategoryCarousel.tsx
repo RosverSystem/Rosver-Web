@@ -14,48 +14,21 @@ const CARD_TONES = [
   { bg: 'bg-[#f0f2f5]', accent: 'text-rosver-red', dot: 'bg-rosver-red' },
 ] as const
 
-const CATEGORY_COPY: Record<string, { tagline: string; points: string[] }> = {
-  herramientas: {
-    tagline: 'Listas para obra y taller',
-    points: ['Marcas de importación', 'Stock continuo', 'Asesoría técnica'],
-  },
-  ferreteria: {
-    tagline: 'Insumos al por mayor',
-    points: ['Precio por volumen', 'MOQ flexible', 'Despacho nacional'],
-  },
-  electronica: {
-    tagline: 'Equipos y componentes',
-    points: ['Garantía local', 'Modelos actuales', 'Soporte postventa'],
-  },
-  hogar: {
-    tagline: 'Para retail y proyectos',
-    points: ['Líneas rotativas', 'Calidad verificada', 'Entrega ágil'],
-  },
-  textil: {
-    tagline: 'Textil industrial y retail',
-    points: ['Volúmenes a medida', 'Variedad de SKU', 'Cotiza rápido'],
-  },
-  iluminacion: {
-    tagline: 'LED y soluciones de luz',
-    points: ['Eficiencia energética', 'Uso comercial', 'Stock en Lima'],
-  },
-  limpieza: {
-    tagline: 'Mantenimiento industrial',
-    points: ['Insumos profesionales', 'Rubros varios', 'Reposición fácil'],
-  },
-  construccion: {
-    tagline: 'Materiales para obra',
-    points: ['Proyectos y ferreterías', 'Importación directa', 'Acompañamiento'],
-  },
+const FALLBACK_COPY = {
+  tagline: 'Importaciones Rosver',
+  points: ['Stock disponible', 'Cotiza sin compromiso', 'Despacho nacional'],
 }
 
 /**
  * Categorías tipo landing: cards suaves, CTA rojo uniforme,
  * carrusel con flechas (sin barra de scroll visible).
+ * Datos: categorías principales con showOnHome (DB o mocks).
  */
 export function CategoryCarousel({ categories }: { categories: Category[] }) {
   const items = categories
     .filter((c) => c.visible !== false)
+    .filter((c) => !c.parentId)
+    .filter((c) => c.showOnHome === true)
     .slice()
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
 
@@ -161,10 +134,9 @@ function FeatureCategoryCard({
   category: Category
   tone: (typeof CARD_TONES)[number]
 }) {
-  const copy = CATEGORY_COPY[category.slug] ?? {
-    tagline: 'Importaciones Rosver',
-    points: ['Stock disponible', 'Cotiza sin compromiso', 'Despacho nacional'],
-  }
+  const tagline = category.tagline?.trim() || FALLBACK_COPY.tagline
+  const points =
+    category.points?.filter((p) => p.trim()).slice(0, 3) ?? FALLBACK_COPY.points
   const Icon = category.icon
 
   return (
@@ -177,13 +149,13 @@ function FeatureCategoryCard({
     >
       <div className="relative z-[1] flex flex-1 flex-col p-5 pb-3 sm:p-6">
         <p className={cn('text-[11px] font-bold tracking-wide uppercase', tone.accent)}>
-          {copy.tagline}
+          {tagline}
         </p>
         <h3 className="mt-1 font-display text-xl font-bold text-rosver-ink uppercase sm:text-2xl">
           {category.name}
         </h3>
         <ul className="mt-3 space-y-1.5 text-sm text-rosver-ink/75">
-          {copy.points.map((point) => (
+          {points.map((point) => (
             <li key={point} className="flex items-start gap-2">
               <span className={cn('mt-1.5 size-1.5 shrink-0 rounded-full', tone.dot)} aria-hidden />
               {point}

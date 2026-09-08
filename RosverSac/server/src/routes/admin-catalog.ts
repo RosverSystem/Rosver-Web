@@ -35,6 +35,20 @@ function mapBrand(row: Record<string, unknown>) {
   }
 }
 
+function parseHighlightPoints(raw: unknown): string[] {
+  if (Array.isArray(raw)) {
+    return raw.filter((x): x is string => typeof x === 'string' && x.trim().length > 0).slice(0, 3)
+  }
+  if (typeof raw === 'string') {
+    try {
+      return parseHighlightPoints(JSON.parse(raw))
+    } catch {
+      return []
+    }
+  }
+  return []
+}
+
 function mapCategory(row: Record<string, unknown>) {
   return {
     id: row.id,
@@ -48,6 +62,9 @@ function mapCategory(row: Record<string, unknown>) {
     visible: row.visible,
     sortOrder: row.sort_order,
     showInNav: row.show_in_nav,
+    showOnHome: row.show_on_home ?? false,
+    tagline: row.tagline ?? null,
+    highlightPoints: parseHighlightPoints(row.highlight_points),
   }
 }
 
@@ -131,6 +148,22 @@ adminCatalogRoutes.patch('/brands/:id', async (c) => {
   return c.json({ brand: mapBrand(rows[0]) })
 })
 
+adminCatalogRoutes.delete('/brands/:id', async (c) => {
+  const id = c.req.param('id')
+  try {
+    const { rowCount } = await pool.query(`DELETE FROM brands WHERE id = $1`, [id])
+    if (!rowCount) return c.json({ error: 'Marca no encontrada' }, 404)
+    return c.json({ ok: true })
+  } catch {
+    const { rows } = await pool.query(
+      `UPDATE brands SET visible = false, updated_at = now() WHERE id = $1 RETURNING id`,
+      [id],
+    )
+    if (!rows[0]) return c.json({ error: 'Marca no encontrada' }, 404)
+    return c.json({ ok: true, softDeleted: true })
+  }
+})
+
 /* ——— Categorías ——— */
 adminCatalogRoutes.get('/categories', async (c) => {
   const { rows } = await pool.query(
@@ -150,29 +183,51 @@ adminCatalogRoutes.post('/categories', async (c) => {
       imageUrl: z.string().trim().optional(),
       visible: z.boolean().optional(),
       showInNav: z.boolean().optional(),
+      showOnHome: z.boolean().optional(),
+      tagline: z.string().trim().max(120).optional().nullable(),
+      highlightPoints: z.array(z.string().trim().min(1).max(80)).max(3).optional(),
       sortOrder: z.number().int().optional(),
     })
     .safeParse(await c.req.json().catch(() => null))
   if (!body.success) {
     return c.json({ error: body.error.issues[0]?.message ?? 'Datos inválidos' }, 400)
   }
-  const slug = body.data.slug || slugify(body.data.name)
+  const d = body.data
+  const isRoot = !d.parentId
+  const showOnHome = isRoot ? (d.showOnHome ?? false) : false
+  if (showOnHome) {
+    if (!d.tagline?.trim()) {
+      return c.json({ error: 'Para el inicio necesitas la etiqueta corta' }, 400)
+    }
+    if (!d.highlightPoints?.length) {
+      return c.json({ error: 'Para el inicio agrega al menos un punto destacado' }, 400)
+    }
+    if (!d.imageUrl?.trim()) {
+      return c.json({ error: 'Para el inicio necesitas la URL de la imagen' }, 400)
+    }
+  }
+  const slug = d.slug || slugify(d.name)
+  const points = JSON.stringify(d.highlightPoints ?? [])
   try {
     const { rows } = await pool.query(
       `INSERT INTO categories
-         (parent_id, sku, name, slug, icon_key, image_url, visible, show_in_nav, sort_order)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+         (parent_id, sku, name, slug, icon_key, image_url, visible, show_in_nav,
+          show_on_home, tagline, highlight_points, sort_order)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb,$12)
        RETURNING *`,
       [
-        body.data.parentId ?? null,
-        body.data.sku || null,
-        body.data.name,
+        d.parentId ?? null,
+        d.sku || null,
+        d.name,
         slug,
-        body.data.iconKey || null,
-        body.data.imageUrl || null,
-        body.data.visible ?? true,
-        body.data.showInNav ?? true,
-        body.data.sortOrder ?? 0,
+        d.iconKey || null,
+        d.imageUrl || null,
+        d.visible ?? true,
+        d.showInNav ?? true,
+        showOnHome,
+        d.tagline?.trim() || null,
+        points,
+        d.sortOrder ?? 0,
       ],
     )
     return c.json({ category: mapCategory(rows[0]) }, 201)
@@ -193,11 +248,45 @@ adminCatalogRoutes.patch('/categories/:id', async (c) => {
       imageUrl: z.string().trim().nullable().optional(),
       visible: z.boolean().optional(),
       showInNav: z.boolean().optional(),
+      showOnHome: z.boolean().optional(),
+      tagline: z.string().trim().max(120).nullable().optional(),
+      highlightPoints: z.array(z.string().trim().min(1).max(80)).max(3).optional(),
       sortOrder: z.number().int().optional(),
     })
     .safeParse(await c.req.json().catch(() => null))
   if (!body.success) return c.json({ error: 'Datos inválidos' }, 400)
   const d = body.data
+
+  const current = await pool.query(`SELECT * FROM categories WHERE id = $1`, [id])
+  if (!current.rows[0]) return c.json({ error: 'Categoría no encontrada' }, 404)
+  const cur = current.rows[0] as Record<string, unknown>
+  const nextParent =
+    d.parentId !== undefined ? d.parentId : (cur.parent_id as string | null)
+  const isRoot = !nextParent
+  const nextShowOnHome = isRoot
+    ? (d.showOnHome !== undefined ? d.showOnHome : Boolean(cur.show_on_home))
+    : false
+  const nextTagline =
+    d.tagline !== undefined ? d.tagline : (cur.tagline as string | null)
+  const nextPoints =
+    d.highlightPoints !== undefined
+      ? d.highlightPoints
+      : parseHighlightPoints(cur.highlight_points)
+  const nextImage =
+    d.imageUrl !== undefined ? d.imageUrl : (cur.image_url as string | null)
+
+  if (nextShowOnHome) {
+    if (!nextTagline?.trim()) {
+      return c.json({ error: 'Para el inicio necesitas la etiqueta corta' }, 400)
+    }
+    if (!nextPoints.length) {
+      return c.json({ error: 'Para el inicio agrega al menos un punto destacado' }, 400)
+    }
+    if (!nextImage?.trim()) {
+      return c.json({ error: 'Para el inicio necesitas la URL de la imagen' }, 400)
+    }
+  }
+
   const { rows } = await pool.query(
     `UPDATE categories SET
        name = COALESCE($2, name),
@@ -205,10 +294,13 @@ adminCatalogRoutes.patch('/categories/:id', async (c) => {
        sku = COALESCE($4, sku),
        parent_id = CASE WHEN $5::boolean THEN $6::uuid ELSE parent_id END,
        icon_key = COALESCE($7, icon_key),
-       image_url = COALESCE($8, image_url),
-       visible = COALESCE($9, visible),
-       show_in_nav = COALESCE($10, show_in_nav),
-       sort_order = COALESCE($11, sort_order),
+       image_url = CASE WHEN $8::boolean THEN $9 ELSE image_url END,
+       visible = COALESCE($10, visible),
+       show_in_nav = COALESCE($11, show_in_nav),
+       show_on_home = $12,
+       tagline = CASE WHEN $13::boolean THEN $14 ELSE tagline END,
+       highlight_points = CASE WHEN $15::boolean THEN $16::jsonb ELSE highlight_points END,
+       sort_order = COALESCE($17, sort_order),
        updated_at = now()
      WHERE id = $1
      RETURNING *`,
@@ -220,14 +312,36 @@ adminCatalogRoutes.patch('/categories/:id', async (c) => {
       d.parentId !== undefined,
       d.parentId ?? null,
       d.iconKey === undefined ? null : d.iconKey,
-      d.imageUrl === undefined ? null : d.imageUrl,
+      d.imageUrl !== undefined,
+      d.imageUrl ?? null,
       d.visible ?? null,
       d.showInNav ?? null,
+      nextShowOnHome,
+      d.tagline !== undefined,
+      d.tagline ?? null,
+      d.highlightPoints !== undefined,
+      d.highlightPoints !== undefined ? JSON.stringify(d.highlightPoints) : null,
       d.sortOrder ?? null,
     ],
   )
-  if (!rows[0]) return c.json({ error: 'Categoría no encontrada' }, 404)
   return c.json({ category: mapCategory(rows[0]) })
+})
+
+adminCatalogRoutes.delete('/categories/:id', async (c) => {
+  const id = c.req.param('id')
+  try {
+    const { rowCount } = await pool.query(`DELETE FROM categories WHERE id = $1`, [id])
+    if (!rowCount) return c.json({ error: 'Categoría no encontrada' }, 404)
+    return c.json({ ok: true })
+  } catch {
+    const { rows } = await pool.query(
+      `UPDATE categories SET visible = false, show_in_nav = false, show_on_home = false, updated_at = now()
+       WHERE id = $1 RETURNING id`,
+      [id],
+    )
+    if (!rows[0]) return c.json({ error: 'Categoría no encontrada' }, 404)
+    return c.json({ ok: true, softDeleted: true })
+  }
 })
 
 /* ——— Tipos de unidad ——— */
