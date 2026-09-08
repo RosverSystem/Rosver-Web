@@ -17,25 +17,29 @@ Infra de la web **Rosver SAC** y del ERP **SystemRSV**. Actualizar este archivo 
 
 ## 2. Railway (web + Postgres)
 
-- **Proyecto / servicio:** pendiente de primer `railway up` (token CLI inválido hasta ahora)
+| Recurso | ID / valor |
+| --- | --- |
+| Proyecto | `rosver-web` (`325c8738-10e7-4be6-bdd4-41d19848fb1f`) |
+| Entorno | `production` |
+| Servicio web (GitHub) | `Rosver-Web` (`0bb3658a-7121-4bc4-b492-0ee2d0938228`) |
+| Repo | `RosverSystem/Rosver-Web` · root `RosverSac` |
+| Dominio (servicio vacío `web`) | `web-production-e1349.up.railway.app` — preferir dominio del servicio GitHub |
+| Postgres | servicio `Postgres` (`058b448f-…`) — verificar volumen/health |
+
 - **Root directory:** `RosverSac`
-- **Build:** `npm ci && npm run build`
-- **Start:** `npx --yes serve -s dist -l $PORT` (`railway.toml`)
-- **Script deploy:** `scripts/railway-deploy.ps1` / `scripts/railway-deploy.sh`
-- **Postgres:** `railway add --database postgres` → `DATABASE_URL` (backend futuro; no al front)
+- **Node:** `22` (`nixpacks.toml` + `NIXPACKS_NODE_VERSION`) — Vite 8 no corre en Node 18
+- **Build:** `npm run build` (Nixpacks ya hace `npm ci`; no repetirlo → evita `EBUSY` en `node_modules/.cache`)
+- **Start:** `npx --yes serve@14 -s dist -l tcp://0.0.0.0:$PORT`
+- **Config en repo:** `RosverSac/railway.toml`, `RosverSac/nixpacks.toml`
+- **Token:** workspace token en `.env` → `RAILWAY_TOKEN` (GraphQL API; CLI `whoami` puede seguir Unauthorized)
+- **Script deploy:** `scripts/railway-deploy.ps1` / `.sh` (si el CLI acepta el token)
 
-### Cómo obtener `RAILWAY_TOKEN` válido
+### Variables en el servicio web
 
-1. Entra a https://railway.app/account/tokens  
-2. **Create Token** → Account Token  
-3. Copia el token (suele ser largo, **no** es el UUID del proyecto)  
-4. Pégalo en `.env` → `RAILWAY_TOKEN=...`  
-5. Ejecuta `.\scripts\railway-deploy.ps1` o pide al agente que despliegue
-
-### Variables en el servicio web (Railway dashboard)
-
-Ver `RosverSac/.env.railway.example`. En fase visual la SPA **no** necesita keys R2 ni `DATABASE_URL` en el browser.  
-`DATABASE_URL` la usa solo un servicio API futuro. R2 keys solo en backend / local `.env`.
+- `NIXPACKS_NODE_VERSION=22`
+- `NODE_ENV=production`
+- Fase visual: **no** poner R2 ni `DATABASE_URL` en `VITE_*` / browser.
+- Ver `RosverSac/.env.railway.example`.
 
 ---
 

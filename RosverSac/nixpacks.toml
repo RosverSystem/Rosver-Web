@@ -1,0 +1,8 @@
+# Vite 8 / React Router 7 requieren Node 20+
+providers = ["node"]
+
+[variables]
+NIXPACKS_NODE_VERSION = "22"
+
+[phases.setup]
+nixPkgs = ["nodejs_22", "npm-10_x"]

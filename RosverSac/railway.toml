@@ -1,6 +1,8 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "npm ci && npm run build"
+# Nixpacks ya corre `npm ci`; un segundo `npm ci` choca con el cache mount
+# (`EBUSY` en node_modules/.cache) y falla el build.
+buildCommand = "npm run build"
 
 [deploy]
 # SPA: -s hace fallback a index.html (React Router)
