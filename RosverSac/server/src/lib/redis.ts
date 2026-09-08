@@ -13,22 +13,36 @@ export function getRedisClient(): Redis | null {
 
 function getClient(): Redis | null {
   if (client !== undefined) return client
-  const url = config.redisUrl
-  if (!url) {
+  const cfg = config.redis
+  if (!cfg.configured) {
     client = null
     return null
   }
   try {
-    client = new Redis(url, {
-      maxRetriesPerRequest: 1,
-      connectTimeout: 4_000,
-      enableOfflineQueue: false,
-      // Evita spam infinito de reconnect con WRONGPASS.
-      retryStrategy(times) {
-        if (times > 5) return null
-        return Math.min(times * 500, 3_000)
-      },
-    })
+    // Host/port/password evita rarezas de URL (`redis://:pass@host`) en ioredis.
+    client =
+      cfg.host != null
+        ? new Redis({
+            host: cfg.host,
+            port: cfg.port ?? 6379,
+            password: cfg.password,
+            maxRetriesPerRequest: 1,
+            connectTimeout: 4_000,
+            enableOfflineQueue: false,
+            retryStrategy(times) {
+              if (times > 5) return null
+              return Math.min(times * 500, 3_000)
+            },
+          })
+        : new Redis(cfg.url!, {
+            maxRetriesPerRequest: 1,
+            connectTimeout: 4_000,
+            enableOfflineQueue: false,
+            retryStrategy(times) {
+              if (times > 5) return null
+              return Math.min(times * 500, 3_000)
+            },
+          })
     client.on('error', (err) => {
       const msg = err.message || String(err)
       console.warn('[redis]', msg)
@@ -146,7 +160,7 @@ export async function invalidateCatalogHomeCaches() {
 export function redisStatus() {
   const r = getClient()
   return {
-    configured: Boolean(config.redisUrl),
+    configured: config.redis.configured,
     status: r?.status ?? 'disabled',
   }
 }

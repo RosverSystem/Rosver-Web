@@ -58,31 +58,56 @@ export const config = {
     publicBaseUrl: req('R2_PUBLIC_BASE_URL'),
   },
   /** Redis Railway — caché home/featured; opcional (degrada a Postgres) */
-  redisUrl: buildRedisUrl(),
+  redis: buildRedisConnection(),
   isProd: req('NODE_ENV') === 'production',
 }
 
-function buildRedisUrl() {
+export type RedisConnection = {
+  /** Solo para health / logs (sin password). */
+  configured: boolean
+  host?: string
+  port?: number
+  password?: string
+  /** URL normalizada sin user `default` (fallback ioredis). */
+  url?: string
+}
+
+/**
+ * Alpine + `--requirepass`: no enviar username `default` (ACL → WRONGPASS).
+ * Preferimos host/port/password explícitos; la URL es respaldo.
+ */
+function buildRedisConnection(): RedisConnection {
   const full = req('REDIS_URL') || req('REDIS_PRIVATE_URL')
-  // Redis alpine / requirepass: no usar user "default" (provoca WRONGPASS con ACL).
   if (full) {
     try {
       const u = new URL(full)
-      if (u.username === 'default' && u.password) {
-        u.username = ''
-        return u.toString().replace('redis:///', 'redis://')
-      }
+      const password = decodeURIComponent(u.password || '')
+      const host = u.hostname
+      const port = u.port ? Number(u.port) : 6379
+      // Quitar user "default" / vacío en URL de respaldo
+      u.username = ''
+      const url = password
+        ? `redis://:${encodeURIComponent(password)}@${host}:${port}`
+        : `redis://${host}:${port}`
+      return { configured: true, host, port, password: password || undefined, url }
     } catch {
-      /* usar tal cual */
+      return { configured: true, url: full }
     }
-    return full
   }
   const host = req('REDISHOST') || req('REDIS_HOST')
-  const port = req('REDISPORT') || req('REDIS_PORT', '6379')
+  const port = Number(req('REDISPORT') || req('REDIS_PORT', '6379'))
   const password = req('REDISPASSWORD') || req('REDIS_PASSWORD')
-  if (!host) return ''
-  if (password) return `redis://:${encodeURIComponent(password)}@${host}:${port}`
-  return `redis://${host}:${port}`
+  if (!host) return { configured: false }
+  const url = password
+    ? `redis://:${encodeURIComponent(password)}@${host}:${port}`
+    : `redis://${host}:${port}`
+  return {
+    configured: true,
+    host,
+    port,
+    password: password || undefined,
+    url,
+  }
 }
 
 if (!config.databaseUrl) {

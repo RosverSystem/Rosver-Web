@@ -27,7 +27,7 @@ Infra de la web **Rosver SAC** y del ERP **SystemRSV**. Actualizar este archivo 
 | URL pública | https://rosver-web-production.up.railway.app |
 | Health API | https://rosver-web-production.up.railway.app/api/health |
 | Postgres | `Postgres` (`d07bb6a5-395a-4fe8-a092-e9ef6d906006`) · **Online** |
-| Redis | `Redis` (`49da02e2-8e98-4b71-a8b8-a4e3d8a161b5`) · imagen `redis:7-alpine` · caché destacados |
+| Redis | `Redis` (`49da02e2-8e98-4b71-a8b8-a4e3d8a161b5`) · imagen `redis:7-alpine` · start: `sh -c 'redis-server --requirepass "$REDISPASSWORD" …'` (expande env; sin `sh -c` → WRONGPASS) |
 | TCP proxy Postgres | `altaria.proxy.rlwy.net:17586` → `:5432` (solo admin/local) |
 
 - **Root directory:** `RosverSac`
