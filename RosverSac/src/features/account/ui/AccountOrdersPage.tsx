@@ -1,3 +1,4 @@
+import { readLocalOrders } from '@/features/account/model/local-orders'
 import {
   ORDERS,
   ORDER_STATUS_LABEL,
@@ -7,6 +8,7 @@ import {
 } from '@/features/account/model/mocks'
 import { Badge } from '@/shared/ui/badge'
 import { StatusStepper } from '@/shared/ui/status-stepper'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 function OrderCard({ order }: { order: Order }) {
@@ -51,6 +53,9 @@ function OrderCard({ order }: { order: Order }) {
                 loading="lazy"
                 decoding="async"
                 className="size-16 shrink-0 rounded-xl object-cover ring-1 ring-rosver-line"
+                onError={(e) => {
+                  e.currentTarget.style.visibility = 'hidden'
+                }}
               />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-rosver-ink">
@@ -84,7 +89,28 @@ function OrderCard({ order }: { order: Order }) {
   )
 }
 
+function mergeOrders(): Order[] {
+  const local = readLocalOrders()
+  const ids = new Set(local.map((o) => o.id))
+  return [...local, ...ORDERS.filter((o) => !ids.has(o.id))]
+}
+
 export function AccountOrdersPage() {
+  const [orders, setOrders] = useState<Order[]>(() => mergeOrders())
+
+  useEffect(() => {
+    function reload() {
+      setOrders(mergeOrders())
+    }
+    reload()
+    window.addEventListener('focus', reload)
+    window.addEventListener('storage', reload)
+    return () => {
+      window.removeEventListener('focus', reload)
+      window.removeEventListener('storage', reload)
+    }
+  }, [])
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-end justify-between gap-3">
@@ -93,15 +119,15 @@ export function AccountOrdersPage() {
             Mis pedidos
           </h2>
           <p className="text-sm text-rosver-muted">
-            Seguimiento con fotos y estados de avance
+            Pedidos desde el carrito (sesión) + demos de seguimiento
           </p>
         </div>
-        <span className="rounded-full bg-rosver-yellow px-2.5 py-1 text-[10px] font-bold text-rosver-ink">
-          Demo
+        <span className="rounded-full bg-rosver-soft px-2.5 py-1 text-[10px] font-bold text-rosver-muted">
+          Local + demo
         </span>
       </div>
       <div className="flex flex-col gap-4">
-        {ORDERS.map((order) => (
+        {orders.map((order) => (
           <OrderCard key={order.id} order={order} />
         ))}
       </div>

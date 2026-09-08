@@ -6,7 +6,7 @@
 | --- | --- | --- | --- | --- |
 | P01 | Google OAuth (Client ID + Secret) | Auth completo | bloqueado | Falta credenciales Google Cloud |
 | P02 | Facebook login | UI login/registro | pendiente | Botón placeholder |
-| P03 | Pedidos / cotizaciones reales en `/cuenta` | Auth + cuenta | pendiente | Siguen mocks |
+| P03 | Pedidos / cotizaciones reales en `/cuenta` | Auth + cuenta | parcial | Local desde carrito (v0.1.32); falta API Postgres |
 | P04 | UI admin roles/permisos | Auth RBAC | pendiente | API lista |
 | P10 | CRUD Productos ERP + API | Pedido ERP | hecho | v0.1.15 ficha + imagen R2 + specs |
 | P15 | Catálogo vivo en tienda (sin F5) | Pedido UX SPA | hecho | Poll + live taxonomía/productos |
@@ -40,9 +40,11 @@
 | P40 | Almacenamiento «Todos» vacío (Delimiter R2) | Bug ERP | hecho | v0.1.29 |
 | P41 | Lógica carrito (persistencia + sync catálogo) | Pedido lógica | hecho | v0.1.30 localStorage |
 | P42 | Continuar pedido: PDF cotización + WhatsApp | Pedido UX | hecho | v0.1.31 jspdf; WA sin adjunto auto |
+| P43 | Badge carrito fantasma + pedido ligado a sesión | Bug + lógica | hecho | v0.1.32 visibleCount + local orders |
 
 ## Hechos recientes
 
+- Badge carrito solo catálogo + Continuar pedido con sesión/prefill + pedidos locales (v0.1.32)
 - Continuar pedido: modal PDF estilo factura + WhatsApp (v0.1.31)
 - Lógica carrito: localStorage, sync catálogo, sin seed fantasma (v0.1.30)
 - Fix listado R2 «Todos» sin Delimiter (v0.1.29)

@@ -1,5 +1,5 @@
 import { SessionAccountMenu } from '@/features/auth'
-import { useCart } from '@/features/cart'
+import { useCart, visibleCartItemCount } from '@/features/cart'
 import { useCatalog } from '@/features/catalog'
 import { cn } from '@/shared/lib'
 import { IconBag, IconChevronDown, IconSearch } from '@/shared/ui/icons'
@@ -18,8 +18,12 @@ const NAV_LINKS = [
 
 export function PublicNavbar() {
   const { pathname } = useLocation()
-  const { itemCount } = useCart()
-  const { categories } = useCatalog()
+  const { lines } = useCart()
+  const { categories, products } = useCatalog()
+  const itemCount = useMemo(
+    () => visibleCartItemCount(lines, products),
+    [lines, products],
+  )
   const [mobileOpen, setMobileOpen] = useState(false)
   const [categoriesOpen, setCategoriesOpen] = useState(false)
   const [query, setQuery] = useState('')

@@ -1,3 +1,4 @@
+import { readLocalOrders } from '@/features/account/model/local-orders'
 import {
   ORDERS,
   ORDER_STATUS_LABEL,
@@ -10,7 +11,12 @@ import { Link, useParams } from 'react-router-dom'
 
 export function AccountOrderDetailPage() {
   const { id } = useParams()
-  const order = ORDERS.find((o) => o.id === id) ?? ORDERS[0]
+  const local = readLocalOrders()
+  const order =
+    local.find((o) => o.id === id) ??
+    ORDERS.find((o) => o.id === id) ??
+    local[0] ??
+    ORDERS[0]
   const stepIndex = Math.max(0, ORDER_STATUS_STEPS.indexOf(order.status))
 
   return (

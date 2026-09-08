@@ -1,3 +1,9 @@
+import { useAuth } from '@/features/auth'
+import {
+  cartLinesToOrderItems,
+  createLocalOrderFromCart,
+  saveLocalOrder,
+} from '@/features/account/model/local-orders'
 import { useCatalog, type Product } from '@/features/catalog'
 import { useCart } from '@/features/cart'
 import {
@@ -11,6 +17,7 @@ import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { FloatingToasts } from '@/shared/ui/floating-toasts'
 import { IconWhatsApp } from '@/shared/ui/icons'
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 type Props = {
   open: boolean
@@ -18,13 +25,13 @@ type Props = {
 }
 
 /**
- * Continuar pedido: datos negocio + Descargar PDF cotización / WhatsApp.
- * Nota: WhatsApp Web/App no permite adjuntar PDF por enlace wa.me —
- * se descarga el PDF y se abre el chat con el resumen.
+ * Continuar pedido: datos negocio + PDF / WhatsApp.
+ * Con sesión: prefill y guarda pedido local en /cuenta/pedidos (sin forzar login).
  */
 export function ContinueOrderModal({ open, onClose }: Props) {
   const { products } = useCatalog()
   const { lines } = useCart()
+  const { user } = useAuth()
   const { toasts, showMessages, dismiss, clear } = useFormToasts()
 
   const [name, setName] = useState('')
@@ -32,6 +39,7 @@ export function ContinueOrderModal({ open, onClose }: Props) {
   const [phone, setPhone] = useState('')
   const [city, setCity] = useState('')
   const [busy, setBusy] = useState(false)
+  const [savedOrderId, setSavedOrderId] = useState<string | null>(null)
   const [invalid, setInvalid] = useState<{
     name?: boolean
     phone?: boolean
@@ -50,6 +58,17 @@ export function ContinueOrderModal({ open, onClose }: Props) {
       window.removeEventListener('keydown', onKey)
     }
   }, [open, onClose])
+
+  useEffect(() => {
+    if (!open) {
+      setSavedOrderId(null)
+      return
+    }
+    if (!user) return
+    setName((prev) => prev || user.companyName || user.fullName || '')
+    setTaxId((prev) => prev || user.documentNumber || '')
+    setPhone((prev) => prev || user.phone || '')
+  }, [open, user])
 
   const resolved = useMemo(() => {
     return lines
@@ -109,6 +128,28 @@ export function ContinueOrderModal({ open, onClose }: Props) {
     return true
   }
 
+  function persistLocalOrderIfLoggedIn(docNumber: string) {
+    if (!user) return null
+    const order = createLocalOrderFromCart({
+      customerName: name.trim(),
+      docNumber,
+      phone: phone.trim(),
+      city: city.trim(),
+      total,
+      items: cartLinesToOrderItems(
+        resolved.map(({ line, product }) => ({
+          line,
+          name: product.name,
+          unitPrice: unitPriceOfLine(line, product),
+          imageUrl: product.imageUrl,
+        })),
+      ),
+    })
+    saveLocalOrder(order)
+    setSavedOrderId(order.id)
+    return order.id
+  }
+
   async function makePdf() {
     return buildQuotePdf({
       customer: {
@@ -128,7 +169,15 @@ export function ContinueOrderModal({ open, onClose }: Props) {
     try {
       const pdf = await makePdf()
       downloadBlob(pdf.blob, pdf.fileName)
-      showMessages(['PDF descargado — ábrelo o adjúntalo en WhatsApp'])
+      const orderId = persistLocalOrderIfLoggedIn(pdf.docNumber)
+      showMessages(
+        orderId
+          ? [
+              'PDF descargado',
+              `Pedido ${orderId} guardado en tu cuenta`,
+            ]
+          : ['PDF descargado — ábrelo o adjúntalo en WhatsApp'],
+      )
     } catch {
       showMessages(['No se pudo generar el PDF'])
     } finally {
@@ -143,6 +192,7 @@ export function ContinueOrderModal({ open, onClose }: Props) {
     try {
       const pdf = await makePdf()
       downloadBlob(pdf.blob, pdf.fileName)
+      const orderId = persistLocalOrderIfLoggedIn(pdf.docNumber)
 
       const itemText = pdfLines
         .map((l) => {
@@ -154,10 +204,16 @@ export function ContinueOrderModal({ open, onClose }: Props) {
         })
         .join('\n')
 
+      const sessionLine = user
+        ? `Cuenta: ${user.fullName || user.email} (${user.email})`
+        : null
+
       const msg = [
         'Hola Rosver, quiero continuar este pedido / cotización:',
         '',
         `N° ${pdf.docNumber}`,
+        orderId ? `Ref. cuenta: ${orderId}` : null,
+        sessionLine,
         `Empresa: ${name.trim()}`,
         `RUC/DNI: ${taxId.trim() || '—'}`,
         `Tel/WhatsApp: ${phone.trim()}`,
@@ -178,9 +234,16 @@ export function ContinueOrderModal({ open, onClose }: Props) {
         '_blank',
         'noopener,noreferrer',
       )
-      showMessages([
-        'PDF descargado. En WhatsApp puedes adjuntar el archivo al chat.',
-      ])
+      showMessages(
+        orderId
+          ? [
+              'PDF descargado. En WhatsApp puedes adjuntar el archivo.',
+              `Pedido ${orderId} en Mi cuenta → Pedidos`,
+            ]
+          : [
+              'PDF descargado. En WhatsApp puedes adjuntar el archivo al chat.',
+            ],
+      )
     } catch {
       showMessages(['No se pudo preparar el envío'])
     } finally {
@@ -189,6 +252,8 @@ export function ContinueOrderModal({ open, onClose }: Props) {
   }
 
   if (!open) return null
+
+  const sessionName = user?.fullName || user?.email || null
 
   return (
     <div className="fixed inset-0 z-[90] flex items-end justify-center p-0 sm:items-center sm:p-4">
@@ -215,7 +280,9 @@ export function ContinueOrderModal({ open, onClose }: Props) {
                 Continuar pedido / cotización
               </h2>
               <p className="mt-1 text-xs text-white/70">
-                Descarga el PDF o envía el resumen por WhatsApp
+                {sessionName
+                  ? `Sesión: ${sessionName} — no hace falta volver a entrar`
+                  : 'Descarga el PDF o envía el resumen por WhatsApp'}
               </p>
             </div>
             <button
@@ -229,6 +296,33 @@ export function ContinueOrderModal({ open, onClose }: Props) {
         </header>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-5">
+          {user ? (
+            <p className="rounded-xl border border-rosver-success/30 bg-rosver-success/10 px-3 py-2 text-xs text-rosver-ink">
+              Ya iniciaste sesión. Al generar el PDF o WhatsApp, el pedido queda
+              en{' '}
+              <Link
+                to="/cuenta/pedidos"
+                className="font-bold text-rosver-red underline-offset-2 hover:underline"
+                onClick={onClose}
+              >
+                Mi cuenta → Pedidos
+              </Link>
+              .
+            </p>
+          ) : (
+            <p className="rounded-xl border border-rosver-line bg-rosver-soft/60 px-3 py-2 text-xs text-rosver-muted">
+              Puedes continuar sin cuenta. Si quieres ver el pedido después,{' '}
+              <Link
+                to="/login"
+                className="font-semibold text-rosver-red underline-offset-2 hover:underline"
+                onClick={onClose}
+              >
+                inicia sesión
+              </Link>{' '}
+              primero (opcional).
+            </p>
+          )}
+
           <p className="rounded-xl border border-rosver-line bg-rosver-soft/60 px-3 py-2 text-xs text-rosver-muted">
             WhatsApp no permite adjuntar el PDF automáticamente desde la web.
             Al continuar se descarga el archivo para que lo adjuntes en el chat.
@@ -334,6 +428,16 @@ export function ContinueOrderModal({ open, onClose }: Props) {
               </span>
             </div>
           </div>
+
+          {savedOrderId ? (
+            <Link
+              to={`/cuenta/pedidos/${savedOrderId}`}
+              onClick={onClose}
+              className="block rounded-xl border border-rosver-red/30 bg-rosver-red/5 px-3 py-2.5 text-center text-sm font-bold text-rosver-red"
+            >
+              Ver pedido {savedOrderId} en mi cuenta
+            </Link>
+          ) : null}
         </div>
 
         <footer className="flex shrink-0 flex-col gap-2 border-t border-rosver-line bg-rosver-soft/40 px-4 py-3 sm:flex-row sm:px-5">

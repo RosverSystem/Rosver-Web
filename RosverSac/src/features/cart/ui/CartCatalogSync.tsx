@@ -1,21 +1,22 @@
 import { useCatalog } from '@/features/catalog'
 import { useCart } from '@/features/cart'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 /**
- * Sincroniza el carrito con el catálogo vivo: quita slugs que ya no existen
- * (evita badge/banner con unidades fantasma del seed mock).
+ * Sincroniza el carrito con el catálogo: quita slugs que ya no existen.
  */
 export function CartCatalogSync() {
-  const { products, liveProducts, refreshing } = useCatalog()
+  const { products } = useCatalog()
   const { syncWithCatalog, ready } = useCart()
+  const lastKey = useRef('')
 
   useEffect(() => {
-    if (!ready || refreshing) return
-    // Con catálogo live o mocks cargados: siempre hay lista usable.
-    if (products.length === 0 && liveProducts) return
+    if (!ready || products.length === 0) return
+    const key = products.map((p) => p.slug).sort().join('|')
+    if (key === lastKey.current) return
+    lastKey.current = key
     syncWithCatalog(products.map((p) => p.slug))
-  }, [products, liveProducts, refreshing, ready, syncWithCatalog])
+  }, [products, ready, syncWithCatalog])
 
   return null
 }

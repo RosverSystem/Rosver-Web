@@ -1,3 +1,4 @@
+import { useAuth } from '@/features/auth'
 import { useCart } from '@/features/cart'
 import { PRODUCTS, type Product } from '@/features/catalog'
 import { cnField, isValidPhone, WHATSAPP_NUMBER } from '@/shared/lib'
@@ -91,6 +92,7 @@ function linesFromCart(
 export function QuoteRequestPage() {
   const reduce = prefersReducedMotion()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const { lines: cartLines, replaceAll, itemCount } = useCart()
 
   const [business, setBusiness] = useState<BusinessForm>({
@@ -109,6 +111,16 @@ export function QuoteRequestPage() {
     linesFromCart(cartLines),
   )
   const [status, setStatus] = useState<'idle' | 'sent'>('idle')
+
+  useEffect(() => {
+    if (!user) return
+    setBusiness((prev) => ({
+      name: prev.name || user.companyName || user.fullName || '',
+      document: prev.document || user.documentNumber || '',
+      phone: prev.phone || user.phone || '',
+      city: prev.city,
+    }))
+  }, [user])
 
   const resolved = useMemo(
     () =>
