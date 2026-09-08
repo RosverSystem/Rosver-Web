@@ -9,6 +9,7 @@ import {
   AdminPageHeader,
   AdminSelect,
 } from '@/shared/ui/admin-field'
+import { AdminModal } from '@/shared/ui/admin-modal'
 import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 
@@ -45,6 +46,8 @@ type Price = {
   isActive: boolean
 }
 
+type ModalKind = 'pack-create' | 'pack-edit' | 'price' | 'unit-create' | null
+
 const KIND_LABEL: Record<string, string> = {
   list: 'Venta',
   wholesale: 'Mayorista',
@@ -62,6 +65,7 @@ function packagingTitle(pk: Packaging) {
  * Listado de precios — flujo tipo ubicación:
  * 1) tipo de unidad + cantidad → presentación
  * 2) dentro de esa presentación → varios precios (venta, mayorista, oferta…)
+ * Formularios create/edit en AdminModal (regla 17).
  */
 export function AdminPriceListPage() {
   const { toasts, showMessages, dismiss, clear } = useFormToasts()
@@ -73,6 +77,7 @@ export function AdminPriceListPage() {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [query, setQuery] = useState('')
+  const [modal, setModal] = useState<ModalKind>(null)
 
   const [unitTypeId, setUnitTypeId] = useState('')
   const [contentQty, setContentQty] = useState('1')
@@ -167,8 +172,11 @@ export function AdminPriceListPage() {
   async function openProduct(id: string) {
     clear()
     setSelectedId(id)
+    setModal(null)
     setPackLabel('')
     setContentQty('1')
+    setListAmount('')
+    setWholesaleAmount('')
     setAmount('')
     setCompareAt('')
     setMinQty('1')
@@ -192,7 +200,49 @@ export function AdminPriceListPage() {
     )
   }, [products, query])
 
-  async function createUnitTypeInline() {
+  function closeModal() {
+    setModal(null)
+    setNewUnitName('')
+    setEditingPriceId(null)
+    setAmount('')
+    setCompareAt('')
+    setMinQty('1')
+    setPriceKind('list')
+  }
+
+  function openCreatePack() {
+    setPackLabel('')
+    setContentQty('1')
+    setListAmount('')
+    setWholesaleAmount('')
+    if (!unitTypeId && unitTypes[0]) setUnitTypeId(unitTypes[0].id)
+    setModal('pack-create')
+  }
+
+  function openEditPack() {
+    if (!activePack) return
+    setEditPackQty(String(activePack.contentQty))
+    setEditPackLabel(activePack.label ?? '')
+    setEditPackUnitId(activePack.unitTypeId)
+    setModal('pack-edit')
+  }
+
+  function openCreatePrice() {
+    setEditingPriceId(null)
+    setAmount('')
+    setCompareAt('')
+    setMinQty('1')
+    setPriceKind('list')
+    setModal('price')
+  }
+
+  function openUnitCreate() {
+    setNewUnitName('')
+    setModal('unit-create')
+  }
+
+  async function createUnitType(e: React.FormEvent) {
+    e.preventDefault()
     clear()
     const name = newUnitName.trim()
     if (!name) {
@@ -213,7 +263,8 @@ export function AdminPriceListPage() {
         const match = list.find((u) => u.name.toLowerCase() === name.toLowerCase())
         if (match) setUnitTypeId(match.id)
       }
-      showMessages(['Tipo creado — ahora indica las unidades'])
+      setModal(null)
+      showMessages(['Tipo creado'])
     } catch (err) {
       showMessages([
         err instanceof ApiError ? err.message : 'No se pudo crear el tipo',
@@ -327,6 +378,7 @@ export function AdminPriceListPage() {
       setContentQty('1')
       setListAmount('')
       setWholesaleAmount('')
+      setModal(null)
       await loadDetail(selectedId, packId)
       showMessages(['Presentación creada con precio'])
     } catch (err) {
@@ -375,6 +427,7 @@ export function AdminPriceListPage() {
           label: editPackLabel.trim() || null,
         }),
       })
+      setModal(null)
       await loadDetail(selectedId, packagingId)
       showMessages(['Presentación actualizada'])
     } catch (err) {
@@ -423,6 +476,7 @@ export function AdminPriceListPage() {
       await api(`/api/admin/products/${selectedId}/packagings/${id}`, {
         method: 'DELETE',
       })
+      if (modal === 'pack-edit' && packagingId === id) setModal(null)
       await loadDetail(selectedId)
     } catch (err) {
       showMessages([
@@ -477,6 +531,7 @@ export function AdminPriceListPage() {
       setCompareAt('')
       setMinQty('1')
       setEditingPriceId(null)
+      setModal(null)
       showMessages([editingPriceId ? 'Precio actualizado' : 'Precio agregado'])
     } catch (err) {
       showMessages([
@@ -495,6 +550,7 @@ export function AdminPriceListPage() {
     setCompareAt(
       pr.compareAtAmount != null ? String(pr.compareAtAmount) : '',
     )
+    setModal('price')
   }
 
   async function removePrice(id: string) {
@@ -505,6 +561,10 @@ export function AdminPriceListPage() {
       await api(`/api/admin/products/${selectedId}/prices/${id}`, {
         method: 'DELETE',
       })
+      if (editingPriceId === id) {
+        setEditingPriceId(null)
+        setModal(null)
+      }
       await loadDetail(selectedId, packagingId)
     } catch (err) {
       showMessages([
@@ -528,6 +588,7 @@ export function AdminPriceListPage() {
                 setSelectedId(null)
                 setPackagings([])
                 setPrices([])
+                setModal(null)
               }}
               className="rounded-full border border-rosver-line bg-white px-3 py-1.5 text-xs font-semibold text-rosver-ink hover:border-rosver-red/40 hover:text-rosver-red"
             >
@@ -544,149 +605,66 @@ export function AdminPriceListPage() {
           </p>
         </div>
 
-        {/* 1 — Crear presentación: tipo + cantidad */}
         <section className="space-y-3 rounded-2xl border border-rosver-line bg-white p-4 shadow-sm sm:p-5">
-          <div>
-            <h2 className="text-sm font-bold text-rosver-ink">
-              1. Nueva presentación
-            </h2>
-            <p className="mt-1 text-xs text-rosver-muted">
-              Tipo → cantidad → precio de venta (y mayorista si quieres). Todo
-              junto.
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-bold text-rosver-ink">Tipos de unidad</h2>
+            <button
+              type="button"
+              onClick={openUnitCreate}
+              className="rounded-full border border-rosver-line bg-white px-3 py-1.5 text-xs font-semibold text-rosver-ink hover:border-rosver-red/40 hover:text-rosver-red"
+            >
+              Crear tipo
+            </button>
+          </div>
+          {unitTypes.length === 0 ? (
+            <p className="text-sm text-rosver-muted">
+              Aún no hay tipos. Crea uno para armar presentaciones.
             </p>
-          </div>
-
-          <div className="space-y-2 rounded-xl border border-dashed border-rosver-line bg-rosver-soft/30 p-3">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-              <AdminField
-                label="¿Falta un tipo? Créalo"
-                htmlFor="pl-new-unit"
-                className="flex-1"
-              >
-                <AdminInput
-                  id="pl-new-unit"
-                  value={newUnitName}
-                  onChange={(e) => setNewUnitName(e.target.value)}
-                  placeholder="Ej. Caja"
-                />
-              </AdminField>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void createUnitTypeInline()}
-                className="h-11 rounded-xl border border-rosver-line bg-white px-4 text-sm font-semibold text-rosver-ink hover:border-rosver-red/40 disabled:opacity-60"
-              >
-                Crear tipo
-              </button>
-            </div>
-            {unitTypes.length > 0 ? (
-              <ul className="flex flex-wrap gap-2">
-                {unitTypes.map((u) => (
-                  <li
-                    key={u.id}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-rosver-line bg-white px-2.5 py-1 text-xs"
+          ) : (
+            <ul className="flex flex-wrap gap-2">
+              {unitTypes.map((u) => (
+                <li
+                  key={u.id}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-rosver-line bg-rosver-soft/40 px-2.5 py-1 text-xs"
+                >
+                  <span className="font-semibold text-rosver-ink">{u.name}</span>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void renameUnitType(u.id, u.name)}
+                    className="font-semibold text-rosver-red"
                   >
-                    <span className="font-semibold text-rosver-ink">{u.name}</span>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => void renameUnitType(u.id, u.name)}
-                      className="font-semibold text-rosver-red"
-                    >
-                      Editar
-                    </button>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => void removeUnitType(u.id, u.name)}
-                      className="font-semibold text-rosver-muted hover:text-rosver-red"
-                    >
-                      Borrar
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-          </div>
-
-          <form
-            noValidate
-            onSubmit={addPresentation}
-            className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3"
-          >
-            <AdminField label="Tipo de unidad" htmlFor="pl-unit">
-              <AdminSelect
-                id="pl-unit"
-                value={unitTypeId}
-                onChange={(e) => setUnitTypeId(e.target.value)}
-              >
-                {unitTypes.length === 0 ? (
-                  <option value="">Crea un tipo arriba</option>
-                ) : (
-                  unitTypes.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                    </option>
-                  ))
-                )}
-              </AdminSelect>
-            </AdminField>
-            <AdminField label="Unidades por presentación" htmlFor="pl-qty">
-              <AdminInput
-                id="pl-qty"
-                inputMode="decimal"
-                value={contentQty}
-                onChange={(e) => setContentQty(e.target.value)}
-                placeholder="1, 12, 24…"
-              />
-            </AdminField>
-            <AdminField label="Nombre (opcional)" htmlFor="pl-label">
-              <AdminInput
-                id="pl-label"
-                value={packLabel}
-                onChange={(e) => setPackLabel(e.target.value)}
-                placeholder="Ej. Caja x12"
-              />
-            </AdminField>
-            <AdminField label="Precio de venta (S/)" htmlFor="pl-list">
-              <AdminInput
-                id="pl-list"
-                inputMode="decimal"
-                value={listAmount}
-                onChange={(e) => setListAmount(e.target.value)}
-                placeholder="200.00"
-              />
-            </AdminField>
-            <AdminField label="Precio mayorista (S/)" htmlFor="pl-wh">
-              <AdminInput
-                id="pl-wh"
-                inputMode="decimal"
-                value={wholesaleAmount}
-                onChange={(e) => setWholesaleAmount(e.target.value)}
-                placeholder="Opcional"
-              />
-            </AdminField>
-            <div className="flex items-end">
-              <button
-                type="submit"
-                disabled={busy || !unitTypeId}
-                className="h-11 w-full rounded-xl bg-rosver-red text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
-              >
-                Crear con precio
-              </button>
-            </div>
-          </form>
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void removeUnitType(u.id, u.name)}
+                    className="font-semibold text-rosver-muted hover:text-rosver-red"
+                  >
+                    Borrar
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
-        {/* 2 — Lista de presentaciones */}
         <section className="space-y-3 rounded-2xl border border-rosver-line bg-white p-4 shadow-sm sm:p-5">
-          <h2 className="text-sm font-bold text-rosver-ink">
-            2. Presentaciones
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-sm font-bold text-rosver-ink">Presentaciones</h2>
+            <button
+              type="button"
+              onClick={openCreatePack}
+              className="rounded-full bg-rosver-red px-3 py-1.5 text-xs font-semibold text-white hover:bg-rosver-red-dark"
+            >
+              Nueva presentación
+            </button>
+          </div>
 
           {packagings.length === 0 ? (
             <p className="rounded-xl border border-rosver-line px-4 py-6 text-center text-sm text-rosver-muted">
-              Aún no hay presentaciones. Crea una arriba.
+              Aún no hay presentaciones. Usa «Nueva presentación».
             </p>
           ) : (
             <ul className="grid gap-2 sm:grid-cols-2">
@@ -724,221 +702,381 @@ export function AdminPriceListPage() {
                           : `${count} precio${count === 1 ? '' : 's'}`}
                       </p>
                     </button>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => void removePresentation(pk.id)}
-                      className="shrink-0 text-xs font-semibold text-rosver-muted hover:text-rosver-red"
-                    >
-                      Eliminar
-                    </button>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      {active ? (
+                        <button
+                          type="button"
+                          onClick={openEditPack}
+                          className="text-xs font-semibold text-rosver-red"
+                        >
+                          Editar
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void removePresentation(pk.id)}
+                        className="text-xs font-semibold text-rosver-muted hover:text-rosver-red"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
                   </li>
                 )
               })}
             </ul>
           )}
 
-          {activePack ? (
-            <form
-              noValidate
-              onSubmit={updatePresentation}
-              className="grid gap-3 rounded-xl border border-rosver-line bg-rosver-soft/30 p-3 sm:grid-cols-2 lg:grid-cols-4"
+          {activePack && !activePack.isDefault ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void setDefaultPresentation()}
+              className="text-xs font-semibold text-rosver-ink hover:text-rosver-red"
             >
-              <p className="sm:col-span-2 lg:col-span-4 text-xs font-semibold text-rosver-ink">
-                Editar presentación seleccionada
-              </p>
-              <AdminField label="Tipo de unidad" htmlFor="pl-edit-unit">
-                <AdminSelect
-                  id="pl-edit-unit"
-                  value={editPackUnitId}
-                  onChange={(e) => setEditPackUnitId(e.target.value)}
-                >
-                  {unitTypes.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                    </option>
-                  ))}
-                </AdminSelect>
-              </AdminField>
-              <AdminField label="Unidades por presentación" htmlFor="pl-edit-qty">
-                <AdminInput
-                  id="pl-edit-qty"
-                  value={editPackQty}
-                  onChange={(e) => setEditPackQty(e.target.value)}
-                />
-              </AdminField>
-              <AdminField label="Nombre" htmlFor="pl-edit-label">
-                <AdminInput
-                  id="pl-edit-label"
-                  value={editPackLabel}
-                  onChange={(e) => setEditPackLabel(e.target.value)}
-                />
-              </AdminField>
-              <div className="flex flex-wrap items-end gap-2">
-                <button
-                  type="submit"
-                  disabled={busy}
-                  className="h-11 rounded-xl bg-rosver-ink px-4 text-sm font-semibold text-white hover:bg-rosver-red disabled:opacity-60"
-                >
-                  Guardar
-                </button>
-                {!activePack.isDefault ? (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void setDefaultPresentation()}
-                    className="h-11 rounded-xl border border-rosver-line px-3 text-xs font-semibold text-rosver-ink"
-                  >
-                    Hacer principal
-                  </button>
-                ) : null}
-              </div>
-            </form>
+              Marcar «{packagingTitle(activePack)}» como principal
+            </button>
           ) : null}
         </section>
 
-        {/* 3 — Precios de la presentación seleccionada */}
         <section className="space-y-3 rounded-2xl border border-rosver-line bg-white p-4 shadow-sm sm:p-5">
-          <div>
-            <h2 className="text-sm font-bold text-rosver-ink">
-              3. Precios
-            </h2>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-bold text-rosver-ink">Precios</h2>
+              {activePack ? (
+                <p className="mt-1 text-xs text-rosver-muted">
+                  {packagingTitle(activePack)}
+                </p>
+              ) : (
+                <p className="mt-1 text-xs text-rosver-muted">
+                  Selecciona una presentación.
+                </p>
+              )}
+            </div>
             {activePack ? (
-              <p className="mt-1 text-xs text-rosver-muted">
-                {packagingTitle(activePack)}
-              </p>
-            ) : (
-              <p className="mt-1 text-xs text-rosver-muted">
-                Selecciona una presentación.
-              </p>
-            )}
+              <button
+                type="button"
+                onClick={openCreatePrice}
+                className="rounded-full bg-rosver-red px-3 py-1.5 text-xs font-semibold text-white hover:bg-rosver-red-dark"
+              >
+                Agregar precio
+              </button>
+            ) : null}
           </div>
 
           {activePack ? (
-            <>
-              <form
-                noValidate
-                onSubmit={savePrice}
-                className="grid gap-3 rounded-xl border border-rosver-line bg-rosver-soft/20 p-3 sm:grid-cols-2 lg:grid-cols-5"
-              >
-                <AdminField label="Tipo de precio" htmlFor="pl-kind">
-                  <AdminSelect
-                    id="pl-kind"
-                    value={priceKind}
-                    onChange={(e) =>
-                      setPriceKind(
-                        e.target.value as 'list' | 'wholesale' | 'offer',
-                      )
-                    }
+            <ul className="divide-y divide-rosver-line rounded-xl border border-rosver-line">
+              {pricesForPack.length === 0 ? (
+                <li className="px-4 py-4 text-sm text-rosver-muted">
+                  Sin precios. Agrega al menos Venta.
+                </li>
+              ) : (
+                pricesForPack.map((pr) => (
+                  <li
+                    key={pr.id}
+                    className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-sm"
                   >
-                    <option value="list">Venta</option>
-                    <option value="wholesale">Mayorista</option>
-                    <option value="offer">Oferta</option>
-                  </AdminSelect>
-                </AdminField>
-                <AdminField label="Precio (S/)" htmlFor="pl-amt">
-                  <AdminInput
-                    id="pl-amt"
-                    inputMode="decimal"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    placeholder="0.00"
-                  />
-                </AdminField>
-                <AdminField label="Precio tachado" htmlFor="pl-cmp">
-                  <AdminInput
-                    id="pl-cmp"
-                    inputMode="decimal"
-                    value={compareAt}
-                    onChange={(e) => setCompareAt(e.target.value)}
-                    placeholder="Opcional"
-                  />
-                </AdminField>
-                <AdminField label="Desde (unidades)" htmlFor="pl-min">
-                  <AdminInput
-                    id="pl-min"
-                    inputMode="decimal"
-                    value={minQty}
-                    onChange={(e) => setMinQty(e.target.value)}
-                  />
-                </AdminField>
-                <div className="flex flex-wrap items-end gap-2">
-                  <button
-                    type="submit"
-                    disabled={busy}
-                    className="h-11 flex-1 rounded-xl bg-rosver-red text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
-                  >
-                    {editingPriceId ? 'Guardar cambios' : 'Agregar precio'}
-                  </button>
-                  {editingPriceId ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditingPriceId(null)
-                        setAmount('')
-                        setCompareAt('')
-                        setMinQty('1')
-                      }}
-                      className="h-11 rounded-xl border border-rosver-line px-3 text-xs font-semibold text-rosver-muted"
-                    >
-                      Cancelar
-                    </button>
-                  ) : null}
-                </div>
-              </form>
-
-              <ul className="divide-y divide-rosver-line rounded-xl border border-rosver-line">
-                {pricesForPack.length === 0 ? (
-                  <li className="px-4 py-4 text-sm text-rosver-muted">
-                    Sin precios. Agrega al menos Venta.
+                    <div>
+                      <span className="rounded-full bg-rosver-soft px-2 py-0.5 text-[11px] font-bold text-rosver-ink">
+                        {KIND_LABEL[pr.priceKind] ?? pr.priceKind}
+                      </span>
+                      <span className="ml-2 text-xs text-rosver-muted">
+                        desde {pr.minQty}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      {pr.compareAtAmount != null &&
+                      pr.compareAtAmount > pr.amount ? (
+                        <span className="text-xs text-rosver-muted line-through">
+                          S/ {pr.compareAtAmount.toFixed(2)}
+                        </span>
+                      ) : null}
+                      <span className="font-bold text-rosver-red">
+                        S/ {pr.amount.toFixed(2)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => startEditPrice(pr)}
+                        className="text-xs font-semibold text-rosver-red"
+                      >
+                        Editar
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => void removePrice(pr.id)}
+                        className="text-xs font-semibold text-rosver-muted hover:text-rosver-red"
+                      >
+                        Quitar
+                      </button>
+                    </div>
                   </li>
-                ) : (
-                  pricesForPack.map((pr) => (
-                    <li
-                      key={pr.id}
-                      className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-sm"
-                    >
-                      <div>
-                        <span className="rounded-full bg-rosver-soft px-2 py-0.5 text-[11px] font-bold text-rosver-ink">
-                          {KIND_LABEL[pr.priceKind] ?? pr.priceKind}
-                        </span>
-                        <span className="ml-2 text-xs text-rosver-muted">
-                          desde {pr.minQty}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        {pr.compareAtAmount != null &&
-                        pr.compareAtAmount > pr.amount ? (
-                          <span className="text-xs text-rosver-muted line-through">
-                            S/ {pr.compareAtAmount.toFixed(2)}
-                          </span>
-                        ) : null}
-                        <span className="font-bold text-rosver-red">
-                          S/ {pr.amount.toFixed(2)}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => startEditPrice(pr)}
-                          className="text-xs font-semibold text-rosver-red"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          type="button"
-                          disabled={busy}
-                          onClick={() => void removePrice(pr.id)}
-                          className="text-xs font-semibold text-rosver-muted hover:text-rosver-red"
-                        >
-                          Quitar
-                        </button>
-                      </div>
-                    </li>
-                  ))
-                )}
-              </ul>
-            </>
+                ))
+              )}
+            </ul>
           ) : null}
         </section>
+
+        <AdminModal
+          open={modal === 'unit-create'}
+          onClose={closeModal}
+          title="Crear tipo de unidad"
+          size="md"
+          footer={
+            <>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="h-10 rounded-xl border border-rosver-line px-4 text-sm font-semibold text-rosver-muted"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                form="pl-unit-form"
+                disabled={busy}
+                className="h-10 rounded-xl bg-rosver-red px-5 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
+              >
+                {busy ? 'Guardando…' : 'Crear tipo'}
+              </button>
+            </>
+          }
+        >
+          <form id="pl-unit-form" noValidate onSubmit={createUnitType} className="space-y-4">
+            <AdminField label="Nombre del tipo" htmlFor="pl-new-unit">
+              <AdminInput
+                id="pl-new-unit"
+                value={newUnitName}
+                onChange={(e) => setNewUnitName(e.target.value)}
+                placeholder="Ej. Caja"
+              />
+            </AdminField>
+          </form>
+        </AdminModal>
+
+        <AdminModal
+          open={modal === 'pack-create'}
+          onClose={closeModal}
+          title="Nueva presentación"
+          size="lg"
+          footer={
+            <>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="h-10 rounded-xl border border-rosver-line px-4 text-sm font-semibold text-rosver-muted"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                form="pl-pack-create-form"
+                disabled={busy || !unitTypeId}
+                className="h-10 rounded-xl bg-rosver-red px-5 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
+              >
+                {busy ? 'Guardando…' : 'Crear con precio'}
+              </button>
+            </>
+          }
+        >
+          <form
+            id="pl-pack-create-form"
+            noValidate
+            onSubmit={addPresentation}
+            className="grid gap-3 sm:grid-cols-2"
+          >
+            <AdminField label="Tipo de unidad" htmlFor="pl-unit">
+              <AdminSelect
+                id="pl-unit"
+                value={unitTypeId}
+                onChange={(e) => setUnitTypeId(e.target.value)}
+              >
+                {unitTypes.length === 0 ? (
+                  <option value="">Crea un tipo primero</option>
+                ) : (
+                  unitTypes.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name}
+                    </option>
+                  ))
+                )}
+              </AdminSelect>
+            </AdminField>
+            <AdminField label="Unidades por presentación" htmlFor="pl-qty">
+              <AdminInput
+                id="pl-qty"
+                inputMode="decimal"
+                value={contentQty}
+                onChange={(e) => setContentQty(e.target.value)}
+                placeholder="1, 12, 24…"
+              />
+            </AdminField>
+            <AdminField label="Nombre (opcional)" htmlFor="pl-label">
+              <AdminInput
+                id="pl-label"
+                value={packLabel}
+                onChange={(e) => setPackLabel(e.target.value)}
+                placeholder="Ej. Caja x12"
+              />
+            </AdminField>
+            <AdminField label="Precio de venta (S/)" htmlFor="pl-list">
+              <AdminInput
+                id="pl-list"
+                inputMode="decimal"
+                value={listAmount}
+                onChange={(e) => setListAmount(e.target.value)}
+                placeholder="200.00"
+              />
+            </AdminField>
+            <AdminField label="Precio mayorista (S/)" htmlFor="pl-wh" className="sm:col-span-2">
+              <AdminInput
+                id="pl-wh"
+                inputMode="decimal"
+                value={wholesaleAmount}
+                onChange={(e) => setWholesaleAmount(e.target.value)}
+                placeholder="Opcional"
+              />
+            </AdminField>
+          </form>
+        </AdminModal>
+
+        <AdminModal
+          open={modal === 'pack-edit'}
+          onClose={closeModal}
+          title="Editar presentación"
+          size="lg"
+          footer={
+            <>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="h-10 rounded-xl border border-rosver-line px-4 text-sm font-semibold text-rosver-muted"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                form="pl-pack-edit-form"
+                disabled={busy}
+                className="h-10 rounded-xl bg-rosver-red px-5 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
+              >
+                {busy ? 'Guardando…' : 'Guardar'}
+              </button>
+            </>
+          }
+        >
+          <form
+            id="pl-pack-edit-form"
+            noValidate
+            onSubmit={updatePresentation}
+            className="grid gap-3 sm:grid-cols-2"
+          >
+            <AdminField label="Tipo de unidad" htmlFor="pl-edit-unit">
+              <AdminSelect
+                id="pl-edit-unit"
+                value={editPackUnitId}
+                onChange={(e) => setEditPackUnitId(e.target.value)}
+              >
+                {unitTypes.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name}
+                  </option>
+                ))}
+              </AdminSelect>
+            </AdminField>
+            <AdminField label="Unidades por presentación" htmlFor="pl-edit-qty">
+              <AdminInput
+                id="pl-edit-qty"
+                value={editPackQty}
+                onChange={(e) => setEditPackQty(e.target.value)}
+              />
+            </AdminField>
+            <AdminField label="Nombre" htmlFor="pl-edit-label" className="sm:col-span-2">
+              <AdminInput
+                id="pl-edit-label"
+                value={editPackLabel}
+                onChange={(e) => setEditPackLabel(e.target.value)}
+              />
+            </AdminField>
+          </form>
+        </AdminModal>
+
+        <AdminModal
+          open={modal === 'price'}
+          onClose={closeModal}
+          title={editingPriceId ? 'Editar precio' : 'Agregar precio'}
+          size="lg"
+          footer={
+            <>
+              <button
+                type="button"
+                onClick={closeModal}
+                className="h-10 rounded-xl border border-rosver-line px-4 text-sm font-semibold text-rosver-muted"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                form="pl-price-form"
+                disabled={busy}
+                className="h-10 rounded-xl bg-rosver-red px-5 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
+              >
+                {busy
+                  ? 'Guardando…'
+                  : editingPriceId
+                    ? 'Guardar cambios'
+                    : 'Agregar precio'}
+              </button>
+            </>
+          }
+        >
+          <form
+            id="pl-price-form"
+            noValidate
+            onSubmit={savePrice}
+            className="grid gap-3 sm:grid-cols-2"
+          >
+            <AdminField label="Tipo de precio" htmlFor="pl-kind">
+              <AdminSelect
+                id="pl-kind"
+                value={priceKind}
+                onChange={(e) =>
+                  setPriceKind(e.target.value as 'list' | 'wholesale' | 'offer')
+                }
+              >
+                <option value="list">Venta</option>
+                <option value="wholesale">Mayorista</option>
+                <option value="offer">Oferta</option>
+              </AdminSelect>
+            </AdminField>
+            <AdminField label="Precio (S/)" htmlFor="pl-amt">
+              <AdminInput
+                id="pl-amt"
+                inputMode="decimal"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+              />
+            </AdminField>
+            <AdminField label="Precio tachado" htmlFor="pl-cmp">
+              <AdminInput
+                id="pl-cmp"
+                inputMode="decimal"
+                value={compareAt}
+                onChange={(e) => setCompareAt(e.target.value)}
+                placeholder="Opcional"
+              />
+            </AdminField>
+            <AdminField label="Desde (unidades)" htmlFor="pl-min">
+              <AdminInput
+                id="pl-min"
+                inputMode="decimal"
+                value={minQty}
+                onChange={(e) => setMinQty(e.target.value)}
+              />
+            </AdminField>
+          </form>
+        </AdminModal>
       </div>
     )
   }

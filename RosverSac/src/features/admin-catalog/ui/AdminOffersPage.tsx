@@ -9,6 +9,7 @@ import {
   AdminSelect,
 } from '@/shared/ui/admin-field'
 import { AdminImageUpload } from '@/shared/ui/admin-image-upload'
+import { AdminModal } from '@/shared/ui/admin-modal'
 import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 
@@ -28,6 +29,7 @@ type CatalogOption = { id: string; name: string; sku?: string }
 
 /**
  * Ofertas ERP → tienda /ofertas (Postgres, sin mocks).
+ * Alta en AdminModal (regla 17).
  */
 export function AdminOffersPage() {
   const { toasts, showMessages, dismiss, clear } = useFormToasts()
@@ -37,6 +39,7 @@ export function AdminOffersPage() {
   const [categories, setCategories] = useState<CatalogOption[]>([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
 
   const [mode, setMode] = useState<'existing' | 'new'>('new')
   const [productId, setProductId] = useState('')
@@ -89,6 +92,17 @@ export function AdminOffersPage() {
     setImageUrl('')
     setListPrice('')
     setOfferPrice('')
+    setMode('new')
+  }
+
+  function openCreate() {
+    resetForm()
+    setModalOpen(true)
+  }
+
+  function closeModal() {
+    setModalOpen(false)
+    resetForm()
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -138,7 +152,7 @@ export function AdminOffersPage() {
               },
         ),
       })
-      resetForm()
+      closeModal()
       await load()
       showMessages(['Oferta publicada en la tienda'])
     } catch (err) {
@@ -169,158 +183,25 @@ export function AdminOffersPage() {
       <AdminPageHeader
         title="Ofertas"
         actions={
-          <Link
-            to="/ofertas"
-            target="_blank"
-            rel="noreferrer"
-            className="rounded-full border border-rosver-line bg-white px-3 py-1.5 text-xs font-semibold text-rosver-ink hover:border-rosver-red/40 hover:text-rosver-red"
-          >
-            Ver en la tienda
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              to="/ofertas"
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full border border-rosver-line bg-white px-3 py-1.5 text-xs font-semibold text-rosver-ink hover:border-rosver-red/40 hover:text-rosver-red"
+            >
+              Ver en la tienda
+            </Link>
+            <button
+              type="button"
+              onClick={openCreate}
+              className="h-9 rounded-xl bg-rosver-red px-4 text-xs font-semibold text-white hover:bg-rosver-red-dark"
+            >
+              Nueva oferta
+            </button>
+          </div>
         }
       />
-
-      <form
-        noValidate
-        onSubmit={onSubmit}
-        className="space-y-4 rounded-2xl border border-rosver-line bg-white p-4 shadow-sm sm:p-5"
-      >
-        <p className="text-sm font-semibold text-rosver-ink">Nueva oferta</p>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setMode('new')}
-            className={`rounded-full px-3 py-1.5 text-xs font-bold ${
-              mode === 'new'
-                ? 'bg-rosver-red text-white'
-                : 'bg-rosver-soft text-rosver-muted'
-            }`}
-          >
-            Producto nuevo
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode('existing')}
-            className={`rounded-full px-3 py-1.5 text-xs font-bold ${
-              mode === 'existing'
-                ? 'bg-rosver-red text-white'
-                : 'bg-rosver-soft text-rosver-muted'
-            }`}
-          >
-            Producto ya creado
-          </button>
-        </div>
-
-        {mode === 'existing' ? (
-          <AdminField label="Producto" htmlFor="offer-prod">
-            <AdminSelect
-              id="offer-prod"
-              value={productId}
-              onChange={(e) => setProductId(e.target.value)}
-            >
-              <option value="">Elegir producto</option>
-              {allProducts.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.sku})
-                </option>
-              ))}
-            </AdminSelect>
-          </AdminField>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2">
-            <AdminField label="Nombre" htmlFor="offer-name">
-              <AdminInput
-                id="offer-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ej. Multímetro digital CAT III"
-              />
-            </AdminField>
-            <AdminField label="Código" htmlFor="offer-sku">
-              <AdminInput
-                id="offer-sku"
-                value={sku}
-                onChange={(e) => setSku(e.target.value)}
-                placeholder="RS-4201"
-                className="uppercase"
-              />
-            </AdminField>
-            <AdminField label="Marca" htmlFor="offer-brand">
-              <AdminSelect
-                id="offer-brand"
-                value={brandId}
-                onChange={(e) => setBrandId(e.target.value)}
-              >
-                <option value="">Sin marca</option>
-                {brands.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </AdminSelect>
-            </AdminField>
-            <AdminField label="Categoría" htmlFor="offer-cat">
-              <AdminSelect
-                id="offer-cat"
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-              >
-                <option value="">Elegir categoría</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </AdminSelect>
-            </AdminField>
-            <AdminField label="Descripción" htmlFor="offer-desc" className="sm:col-span-2">
-              <AdminInput
-                id="offer-desc"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Breve descripción para la card"
-              />
-            </AdminField>
-          </div>
-        )}
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <AdminField label="Precio normal (S/)" htmlFor="offer-list">
-            <AdminInput
-              id="offer-list"
-              value={listPrice}
-              onChange={(e) => setListPrice(e.target.value)}
-              placeholder="99.00"
-              inputMode="decimal"
-            />
-          </AdminField>
-          <AdminField label="Precio oferta (S/)" htmlFor="offer-price">
-            <AdminInput
-              id="offer-price"
-              value={offerPrice}
-              onChange={(e) => setOfferPrice(e.target.value)}
-              placeholder="79.00"
-              inputMode="decimal"
-            />
-          </AdminField>
-        </div>
-
-        <AdminImageUpload
-          folder="products"
-          value={imageUrl}
-          onChange={setImageUrl}
-          onError={(msg) => showMessages([msg])}
-          label="Foto (opcional)"
-        />
-
-        <button
-          type="submit"
-          disabled={busy}
-          className="h-11 rounded-xl bg-rosver-red px-5 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
-        >
-          {busy ? 'Publicando…' : 'Publicar oferta'}
-        </button>
-      </form>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {loading ? (
@@ -331,7 +212,7 @@ export function AdminOffersPage() {
           <div className="col-span-full rounded-2xl border border-rosver-line bg-white">
             <AdminEmptyState
               title="Todavía no hay ofertas"
-              detail="Publica la primera arriba. Se verá en /ofertas de la tienda."
+              detail="Usa «Nueva oferta» para publicar en la tienda."
             />
           </div>
         ) : (
@@ -391,6 +272,167 @@ export function AdminOffersPage() {
           })
         )}
       </div>
+
+      <AdminModal
+        open={modalOpen}
+        onClose={closeModal}
+        title="Nueva oferta"
+        size="xl"
+        layer={80}
+        closeOnEscape={false}
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={closeModal}
+              className="h-10 rounded-xl border border-rosver-line px-4 text-sm font-semibold text-rosver-muted"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              form="offer-form"
+              disabled={busy}
+              className="h-10 rounded-xl bg-rosver-red px-5 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
+            >
+              {busy ? 'Publicando…' : 'Publicar oferta'}
+            </button>
+          </>
+        }
+      >
+        <form id="offer-form" noValidate onSubmit={onSubmit} className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setMode('new')}
+              className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                mode === 'new'
+                  ? 'bg-rosver-red text-white'
+                  : 'bg-rosver-soft text-rosver-muted'
+              }`}
+            >
+              Producto nuevo
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('existing')}
+              className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+                mode === 'existing'
+                  ? 'bg-rosver-red text-white'
+                  : 'bg-rosver-soft text-rosver-muted'
+              }`}
+            >
+              Producto ya creado
+            </button>
+          </div>
+
+          {mode === 'existing' ? (
+            <AdminField label="Producto" htmlFor="offer-prod">
+              <AdminSelect
+                id="offer-prod"
+                value={productId}
+                onChange={(e) => setProductId(e.target.value)}
+              >
+                <option value="">Elegir producto</option>
+                {allProducts.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.sku})
+                  </option>
+                ))}
+              </AdminSelect>
+            </AdminField>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <AdminField label="Nombre" htmlFor="offer-name">
+                <AdminInput
+                  id="offer-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ej. Multímetro digital CAT III"
+                />
+              </AdminField>
+              <AdminField label="Código" htmlFor="offer-sku">
+                <AdminInput
+                  id="offer-sku"
+                  value={sku}
+                  onChange={(e) => setSku(e.target.value)}
+                  placeholder="RS-4201"
+                  className="uppercase"
+                />
+              </AdminField>
+              <AdminField label="Marca" htmlFor="offer-brand">
+                <AdminSelect
+                  id="offer-brand"
+                  value={brandId}
+                  onChange={(e) => setBrandId(e.target.value)}
+                >
+                  <option value="">Sin marca</option>
+                  {brands.map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.name}
+                    </option>
+                  ))}
+                </AdminSelect>
+              </AdminField>
+              <AdminField label="Categoría" htmlFor="offer-cat">
+                <AdminSelect
+                  id="offer-cat"
+                  value={categoryId}
+                  onChange={(e) => setCategoryId(e.target.value)}
+                >
+                  <option value="">Elegir categoría</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </AdminSelect>
+              </AdminField>
+              <AdminField
+                label="Descripción"
+                htmlFor="offer-desc"
+                className="sm:col-span-2"
+              >
+                <AdminInput
+                  id="offer-desc"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Breve descripción para la card"
+                />
+              </AdminField>
+            </div>
+          )}
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            <AdminField label="Precio normal (S/)" htmlFor="offer-list">
+              <AdminInput
+                id="offer-list"
+                value={listPrice}
+                onChange={(e) => setListPrice(e.target.value)}
+                placeholder="99.00"
+                inputMode="decimal"
+              />
+            </AdminField>
+            <AdminField label="Precio oferta (S/)" htmlFor="offer-price">
+              <AdminInput
+                id="offer-price"
+                value={offerPrice}
+                onChange={(e) => setOfferPrice(e.target.value)}
+                placeholder="79.00"
+                inputMode="decimal"
+              />
+            </AdminField>
+          </div>
+
+          <AdminImageUpload
+            folder="products"
+            value={imageUrl}
+            onChange={setImageUrl}
+            onError={(msg) => showMessages([msg])}
+            label="Foto (opcional)"
+          />
+        </form>
+      </AdminModal>
     </div>
   )
 }

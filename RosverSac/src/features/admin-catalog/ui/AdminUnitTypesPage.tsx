@@ -7,6 +7,7 @@ import {
   AdminInput,
   AdminPageHeader,
 } from '@/shared/ui/admin-field'
+import { AdminModal } from '@/shared/ui/admin-modal'
 import { useEffect, useState } from 'react'
 
 type UnitType = {
@@ -21,6 +22,7 @@ export function AdminUnitTypesPage() {
   const { toasts, showMessages, dismiss, clear } = useFormToasts()
   const [units, setUnits] = useState<UnitType[]>([])
   const [loading, setLoading] = useState(true)
+  const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const [code, setCode] = useState('')
@@ -50,10 +52,21 @@ export function AdminUnitTypesPage() {
     setCode('')
   }
 
+  function openCreate() {
+    reset()
+    setModalOpen(true)
+  }
+
   function startEdit(u: UnitType) {
     setEditingId(u.id)
     setName(u.name)
     setCode(u.code)
+    setModalOpen(true)
+  }
+
+  function closeModal() {
+    setModalOpen(false)
+    reset()
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -80,7 +93,7 @@ export function AdminUnitTypesPage() {
           body: JSON.stringify(payload),
         })
       }
-      reset()
+      closeModal()
       await load()
     } catch (err) {
       showMessages([
@@ -96,7 +109,7 @@ export function AdminUnitTypesPage() {
     clear()
     try {
       await api(`/api/admin/unit-types/${u.id}`, { method: 'DELETE' })
-      if (editingId === u.id) reset()
+      if (editingId === u.id) closeModal()
       await load()
     } catch (err) {
       showMessages([
@@ -108,60 +121,27 @@ export function AdminUnitTypesPage() {
   return (
     <div className="space-y-5">
       <FloatingToasts toasts={toasts} onDismiss={dismiss} />
-      <AdminPageHeader title="Tipos de unidad" />
-
-      <form
-        noValidate
-        onSubmit={onSubmit}
-        className="rounded-2xl border border-rosver-line bg-white p-4 shadow-sm sm:p-5"
-      >
-        <p className="mb-4 text-sm font-semibold text-rosver-ink">
-          {editingId ? 'Editar unidad' : 'Nueva unidad'}
-        </p>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <AdminField label="Nombre" htmlFor="unit-name">
-            <AdminInput
-              id="unit-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Ej. Caja"
-            />
-          </AdminField>
-          <AdminField label="Código (opcional)" htmlFor="unit-code">
-            <AdminInput
-              id="unit-code"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="caja"
-              className="lowercase"
-            />
-          </AdminField>
-          <div className="flex items-end gap-2">
-            <button
-              type="submit"
-              disabled={busy}
-              className="h-11 rounded-xl bg-rosver-red px-5 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
-            >
-              {busy ? 'Guardando…' : editingId ? 'Guardar' : 'Crear'}
-            </button>
-            {editingId ? (
-              <button
-                type="button"
-                onClick={reset}
-                className="h-11 rounded-xl border border-rosver-line px-4 text-sm font-semibold text-rosver-muted"
-              >
-                Cancelar
-              </button>
-            ) : null}
-          </div>
-        </div>
-      </form>
+      <AdminPageHeader
+        title="Tipos de unidad"
+        actions={
+          <button
+            type="button"
+            onClick={openCreate}
+            className="h-9 rounded-xl bg-rosver-red px-4 text-xs font-semibold text-white hover:bg-rosver-red-dark"
+          >
+            Nueva unidad
+          </button>
+        }
+      />
 
       <div className="overflow-hidden rounded-2xl border border-rosver-line bg-white shadow-sm">
         {loading ? (
           <AdminEmptyState title="Cargando…" />
         ) : units.length === 0 ? (
-          <AdminEmptyState title="Sin unidades" detail="Crea unidad, paquete o caja." />
+          <AdminEmptyState
+            title="Sin unidades"
+            detail="Usa «Nueva unidad» para crear unidad, paquete o caja."
+          />
         ) : (
           <ul className="divide-y divide-rosver-line">
             {units.map((u) => (
@@ -197,6 +177,53 @@ export function AdminUnitTypesPage() {
           </ul>
         )}
       </div>
+
+      <AdminModal
+        open={modalOpen}
+        onClose={closeModal}
+        title={editingId ? 'Editar unidad' : 'Nueva unidad'}
+        size="md"
+        layer={80}
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={closeModal}
+              className="h-10 rounded-xl border border-rosver-line px-4 text-sm font-semibold text-rosver-muted"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              form="unit-type-form"
+              disabled={busy}
+              className="h-10 rounded-xl bg-rosver-red px-5 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
+            >
+              {busy ? 'Guardando…' : editingId ? 'Guardar' : 'Crear'}
+            </button>
+          </>
+        }
+      >
+        <form id="unit-type-form" noValidate onSubmit={onSubmit} className="space-y-4">
+          <AdminField label="Nombre" htmlFor="unit-name">
+            <AdminInput
+              id="unit-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Ej. Caja"
+            />
+          </AdminField>
+          <AdminField label="Código (opcional)" htmlFor="unit-code">
+            <AdminInput
+              id="unit-code"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="caja"
+              className="lowercase"
+            />
+          </AdminField>
+        </form>
+      </AdminModal>
     </div>
   )
 }

@@ -9,6 +9,7 @@ import {
   AdminSelect,
 } from '@/shared/ui/admin-field'
 import { AdminImageUpload } from '@/shared/ui/admin-image-upload'
+import { AdminModal } from '@/shared/ui/admin-modal'
 import { useEffect, useMemo, useState } from 'react'
 
 type Category = {
@@ -43,6 +44,7 @@ export function AdminCategoriesPage() {
   const { toasts, showMessages, dismiss, clear } = useFormToasts()
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
+  const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState(emptyForm)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -85,6 +87,16 @@ export function AdminCategoriesPage() {
     void load()
   }, [])
 
+  function resetForm() {
+    setEditingId(null)
+    setForm(emptyForm())
+  }
+
+  function openCreate() {
+    resetForm()
+    setModalOpen(true)
+  }
+
   function startEdit(cat: Category) {
     const pts = cat.highlightPoints ?? []
     setEditingId(cat.id)
@@ -100,12 +112,12 @@ export function AdminCategoriesPage() {
       showInNav: cat.showInNav,
       showOnHome: Boolean(cat.showOnHome),
     })
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    setModalOpen(true)
   }
 
-  function resetForm() {
-    setEditingId(null)
-    setForm(emptyForm())
+  function closeModal() {
+    setModalOpen(false)
+    resetForm()
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -158,7 +170,7 @@ export function AdminCategoriesPage() {
           body: JSON.stringify(payload),
         })
       }
-      resetForm()
+      closeModal()
       await load()
     } catch (err) {
       showMessages([
@@ -176,7 +188,7 @@ export function AdminCategoriesPage() {
     clear()
     try {
       await api(`/api/admin/categories/${id}`, { method: 'DELETE' })
-      if (editingId === id) resetForm()
+      if (editingId === id) closeModal()
       await load()
     } catch (err) {
       showMessages([
@@ -191,194 +203,27 @@ export function AdminCategoriesPage() {
       <AdminPageHeader
         title="Categorías"
         actions={
-          <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-rosver-muted ring-1 ring-rosver-line">
-            {categories.length} en total
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-rosver-muted ring-1 ring-rosver-line">
+              {categories.length} en total
+            </span>
+            <button
+              type="button"
+              onClick={openCreate}
+              className="h-9 rounded-xl bg-rosver-red px-4 text-xs font-semibold text-white hover:bg-rosver-red-dark"
+            >
+              Nueva categoría
+            </button>
+          </div>
         }
       />
 
-      <form
-        noValidate
-        onSubmit={onSubmit}
-        className="rounded-2xl border border-rosver-line bg-white p-4 shadow-sm sm:p-5"
-      >
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-semibold text-rosver-ink">
-            {editingId ? 'Editar categoría' : 'Nueva categoría'}
-          </p>
-          {editingId ? (
-            <button
-              type="button"
-              onClick={resetForm}
-              className="text-xs font-semibold text-rosver-muted hover:text-rosver-red"
-            >
-              Cancelar edición
-            </button>
-          ) : null}
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <AdminField label="Nombre" htmlFor="cat-name">
-            <AdminInput
-              id="cat-name"
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              placeholder="Ej. Herramientas"
-            />
-          </AdminField>
-          <AdminField label="Código interno (opcional)" htmlFor="cat-sku">
-            <AdminInput
-              id="cat-sku"
-              value={form.sku}
-              onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))}
-              placeholder="Opcional"
-              className="uppercase"
-            />
-          </AdminField>
-          <AdminField label="Ubicación" htmlFor="cat-parent">
-            <AdminSelect
-              id="cat-parent"
-              value={form.parentId}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  parentId: e.target.value,
-                  showOnHome: e.target.value ? false : f.showOnHome,
-                }))
-              }
-            >
-              <option value="">Categoría principal (menú)</option>
-              {roots
-                .filter((r) => r.id !== editingId)
-                .map((r) => (
-                  <option key={r.id} value={r.id}>
-                    Dentro de: {r.name}
-                  </option>
-                ))}
-            </AdminSelect>
-          </AdminField>
-        </div>
-
-        {isRoot ? (
-          <div className="mt-4 space-y-4 rounded-xl border border-rosver-line bg-rosver-soft/40 p-4">
-            <p className="text-sm font-semibold text-rosver-ink">
-              Card en inicio — «Explora por categoría»
-            </p>
-            <label className="flex items-center gap-2 text-sm text-rosver-ink">
-              <input
-                type="checkbox"
-                checked={form.showOnHome}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, showOnHome: e.target.checked }))
-                }
-                className="size-4 rounded border-rosver-line text-rosver-red"
-              />
-              Mostrar en el inicio
-            </label>
-            <label className="flex items-center gap-2 text-sm text-rosver-ink">
-              <input
-                type="checkbox"
-                checked={form.showInNav}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, showInNav: e.target.checked }))
-                }
-                className="size-4 rounded border-rosver-line text-rosver-red"
-              />
-              Mostrar en menú «Ver categorías»
-            </label>
-            {form.showOnHome ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <AdminField label="Etiqueta corta" htmlFor="cat-tagline">
-                  <AdminInput
-                    id="cat-tagline"
-                    value={form.tagline}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, tagline: e.target.value }))
-                    }
-                    placeholder="Ej. Listas para obra y taller"
-                  />
-                </AdminField>
-                <div className="sm:col-span-2">
-                  <AdminImageUpload
-                    folder="categories"
-                    value={form.imageUrl}
-                    onChange={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
-                    onError={(msg) => showMessages([msg])}
-                    label="Imagen de la card"
-                  />
-                </div>
-                <AdminField label="Punto 1" htmlFor="cat-p1">
-                  <AdminInput
-                    id="cat-p1"
-                    value={form.point1}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, point1: e.target.value }))
-                    }
-                    placeholder="Ej. Marcas de importación"
-                  />
-                </AdminField>
-                <AdminField label="Punto 2" htmlFor="cat-p2">
-                  <AdminInput
-                    id="cat-p2"
-                    value={form.point2}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, point2: e.target.value }))
-                    }
-                    placeholder="Ej. Stock continuo"
-                  />
-                </AdminField>
-                <AdminField label="Punto 3" htmlFor="cat-p3">
-                  <AdminInput
-                    id="cat-p3"
-                    value={form.point3}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, point3: e.target.value }))
-                    }
-                    placeholder="Ej. Asesoría técnica"
-                  />
-                </AdminField>
-              </div>
-            ) : null}
-          </div>
-        ) : (
-          <div className="mt-4">
-            <label className="flex items-center gap-2 text-sm text-rosver-ink">
-              <input
-                type="checkbox"
-                checked={form.showInNav}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, showInNav: e.target.checked }))
-                }
-                className="size-4 rounded border-rosver-line text-rosver-red"
-              />
-              Mostrar en el menú (bajo su categoría padre)
-            </label>
-          </div>
-        )}
-
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button
-            type="submit"
-            disabled={busy}
-            className="h-11 rounded-xl bg-rosver-red px-5 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
-          >
-            {busy
-              ? 'Guardando…'
-              : editingId
-                ? 'Guardar cambios'
-                : 'Agregar categoría'}
-          </button>
-        </div>
-      </form>
-
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <AdminInput
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar categoría…"
-          className="max-w-sm"
-        />
-      </div>
+      <AdminInput
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Buscar categoría…"
+        className="max-w-sm"
+      />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {loading ? (
@@ -389,7 +234,7 @@ export function AdminCategoriesPage() {
           <div className="col-span-full rounded-2xl border border-rosver-line bg-white">
             <AdminEmptyState
               title="Todavía no hay categorías"
-              detail="Crea una categoría principal para el menú y el inicio."
+              detail="Usa «Nueva categoría» para crear una."
             />
           </div>
         ) : (
@@ -495,6 +340,177 @@ export function AdminCategoriesPage() {
           })
         )}
       </div>
+
+      <AdminModal
+        open={modalOpen}
+        onClose={closeModal}
+        title={editingId ? 'Editar categoría' : 'Nueva categoría'}
+        size="xl"
+        layer={80}
+        closeOnEscape={false}
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={closeModal}
+              className="h-10 rounded-xl border border-rosver-line px-4 text-sm font-semibold text-rosver-muted"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              form="category-form"
+              disabled={busy}
+              className="h-10 rounded-xl bg-rosver-red px-5 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
+            >
+              {busy
+                ? 'Guardando…'
+                : editingId
+                  ? 'Guardar cambios'
+                  : 'Agregar categoría'}
+            </button>
+          </>
+        }
+      >
+        <form id="category-form" noValidate onSubmit={onSubmit} className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <AdminField label="Nombre" htmlFor="cat-name">
+              <AdminInput
+                id="cat-name"
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                placeholder="Ej. Herramientas"
+              />
+            </AdminField>
+            <AdminField label="Código interno (opcional)" htmlFor="cat-sku">
+              <AdminInput
+                id="cat-sku"
+                value={form.sku}
+                onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))}
+                placeholder="Opcional"
+                className="uppercase"
+              />
+            </AdminField>
+            <AdminField label="Ubicación" htmlFor="cat-parent">
+              <AdminSelect
+                id="cat-parent"
+                value={form.parentId}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    parentId: e.target.value,
+                    showOnHome: e.target.value ? false : f.showOnHome,
+                  }))
+                }
+              >
+                <option value="">Categoría principal (menú)</option>
+                {roots
+                  .filter((r) => r.id !== editingId)
+                  .map((r) => (
+                    <option key={r.id} value={r.id}>
+                      Dentro de: {r.name}
+                    </option>
+                  ))}
+              </AdminSelect>
+            </AdminField>
+          </div>
+
+          {isRoot ? (
+            <div className="space-y-4 rounded-xl border border-rosver-line bg-rosver-soft/40 p-4">
+              <p className="text-sm font-semibold text-rosver-ink">
+                Card en inicio — «Explora por categoría»
+              </p>
+              <label className="flex items-center gap-2 text-sm text-rosver-ink">
+                <input
+                  type="checkbox"
+                  checked={form.showOnHome}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, showOnHome: e.target.checked }))
+                  }
+                  className="size-4 rounded border-rosver-line text-rosver-red"
+                />
+                Mostrar en el inicio
+              </label>
+              <label className="flex items-center gap-2 text-sm text-rosver-ink">
+                <input
+                  type="checkbox"
+                  checked={form.showInNav}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, showInNav: e.target.checked }))
+                  }
+                  className="size-4 rounded border-rosver-line text-rosver-red"
+                />
+                Mostrar en menú «Ver categorías»
+              </label>
+              {form.showOnHome ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <AdminField label="Etiqueta corta" htmlFor="cat-tagline">
+                    <AdminInput
+                      id="cat-tagline"
+                      value={form.tagline}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, tagline: e.target.value }))
+                      }
+                      placeholder="Ej. Listas para obra y taller"
+                    />
+                  </AdminField>
+                  <div className="sm:col-span-2">
+                    <AdminImageUpload
+                      folder="categories"
+                      value={form.imageUrl}
+                      onChange={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
+                      onError={(msg) => showMessages([msg])}
+                      label="Imagen de la card"
+                    />
+                  </div>
+                  <AdminField label="Punto 1" htmlFor="cat-p1">
+                    <AdminInput
+                      id="cat-p1"
+                      value={form.point1}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, point1: e.target.value }))
+                      }
+                      placeholder="Ej. Marcas de importación"
+                    />
+                  </AdminField>
+                  <AdminField label="Punto 2" htmlFor="cat-p2">
+                    <AdminInput
+                      id="cat-p2"
+                      value={form.point2}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, point2: e.target.value }))
+                      }
+                      placeholder="Ej. Stock continuo"
+                    />
+                  </AdminField>
+                  <AdminField label="Punto 3" htmlFor="cat-p3">
+                    <AdminInput
+                      id="cat-p3"
+                      value={form.point3}
+                      onChange={(e) =>
+                        setForm((f) => ({ ...f, point3: e.target.value }))
+                      }
+                      placeholder="Ej. Asesoría técnica"
+                    />
+                  </AdminField>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <label className="flex items-center gap-2 text-sm text-rosver-ink">
+              <input
+                type="checkbox"
+                checked={form.showInNav}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, showInNav: e.target.checked }))
+                }
+                className="size-4 rounded border-rosver-line text-rosver-red"
+              />
+              Mostrar en el menú (bajo su categoría padre)
+            </label>
+          )}
+        </form>
+      </AdminModal>
     </div>
   )
 }

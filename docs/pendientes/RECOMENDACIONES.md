@@ -18,5 +18,5 @@ Ideas útiles **no pedidas** aún. No implementar solas; esperar OK del usuario.
 | R12 | Historial de precios (auditoría) en ERP | Compliance / márgenes | media |
 | R14 | Seed categorías demo con tagline/puntos/imagen | Arranque tienda sin mocks | hecho | Migración `007` |
 | R15 | Logo marca en admin (upload R2) | Filtro + marquee con logo real | hecho | v0.1.15 |
-| R17 | Categorías / productos: mismos modales + media picker | Paridad UX con marcas | media |
+| R17 | Categorías / productos: mismos modales + media picker | Paridad UX con marcas | hecho | Catálogo admin en AdminModal (0119: cats, unidades, productos wizard, precios) |
 

@@ -10,6 +10,7 @@ import {
   AdminSelect,
 } from '@/shared/ui/admin-field'
 import { AdminImageUpload } from '@/shared/ui/admin-image-upload'
+import { AdminModal } from '@/shared/ui/admin-modal'
 import { useEffect, useMemo, useState } from 'react'
 
 type ProductRow = {
@@ -631,28 +632,89 @@ export function AdminProductsPage() {
     }
   }
 
-  if (mode === 'wizard') {
-    return (
-      <div className="space-y-5">
-        <FloatingToasts toasts={toasts} onDismiss={dismiss} />
-        <AdminPageHeader
-          title={selectedId ? 'Editar producto' : 'Nuevo producto'}
-          actions={
-            <button
-              type="button"
-              onClick={() => {
-                setMode('list')
-                resetWizard()
-              }}
-              className="rounded-full border border-rosver-line bg-white px-3 py-1.5 text-xs font-semibold text-rosver-muted hover:text-rosver-red"
-            >
-              Volver al listado
-            </button>
-          }
-        />
+  function closeWizard() {
+    setMode('list')
+    resetWizard()
+  }
 
-        {/* Stepper */}
-        <ol className="flex flex-wrap gap-2">
+  return (
+    <div className="space-y-5">
+      <FloatingToasts toasts={toasts} onDismiss={dismiss} />
+      <AdminPageHeader
+        title="Productos"
+        actions={
+          <button
+            type="button"
+            onClick={startCreate}
+            className="rounded-full bg-rosver-red px-4 py-2 text-xs font-semibold text-white hover:bg-rosver-red-dark"
+          >
+            Nuevo producto
+          </button>
+        }
+      />
+
+      <AdminInput
+        value={listQuery}
+        onChange={(e) => setListQuery(e.target.value)}
+        placeholder="Buscar producto…"
+        className="max-w-md"
+      />
+
+      <div className="overflow-hidden rounded-2xl border border-rosver-line bg-white shadow-sm">
+        {loading ? (
+          <AdminEmptyState title="Cargando…" />
+        ) : filteredProducts.length === 0 ? (
+          <AdminEmptyState
+            title="Todavía no hay productos"
+            detail="Usa «Nuevo producto» y completa las fases."
+          />
+        ) : (
+          <ul className="divide-y divide-rosver-line">
+            {filteredProducts.map((p) => (
+              <li
+                key={p.id}
+                className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-rosver-ink">{p.name}</p>
+                  <p className="text-xs text-rosver-muted">
+                    {p.sku}
+                    {p.brandName ? ` · ${p.brandName}` : ''}
+                    {p.categoryName ? ` · ${p.categoryName}` : ''}
+                    {' · '}
+                    {Number(p.rating).toFixed(1)}★ ({p.reviewCount})
+                  </p>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => void startEdit(p.id)}
+                    className="text-xs font-semibold text-rosver-red"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void softDelete(p.id, p.name)}
+                    className="text-xs font-semibold text-rosver-muted hover:text-rosver-red"
+                  >
+                    Ocultar
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <AdminModal
+        open={mode === 'wizard'}
+        onClose={closeWizard}
+        title={selectedId ? 'Editar producto' : 'Nuevo producto'}
+        size="xl"
+        closeOnEscape={false}
+      >
+        <ol className="mb-4 flex flex-wrap gap-2">
           {STEPS.map((s) => {
             const active = step === s.id
             const done = step > s.id
@@ -684,7 +746,7 @@ export function AdminProductsPage() {
           })}
         </ol>
 
-        <div className="rounded-2xl border border-rosver-line bg-white p-4 shadow-sm sm:p-6">
+        <div className="space-y-4">
           {step === 1 ? (
             <div className="space-y-4">
               <p className="text-sm font-semibold text-rosver-ink">
@@ -744,7 +806,11 @@ export function AdminProductsPage() {
                     })}
                   </AdminSelect>
                 </AdminField>
-                <AdminField label="Descripción" htmlFor="w-desc" className="sm:col-span-2">
+                <AdminField
+                  label="Descripción"
+                  htmlFor="w-desc"
+                  className="sm:col-span-2"
+                >
                   <textarea
                     id="w-desc"
                     value={description}
@@ -843,7 +909,8 @@ export function AdminProductsPage() {
                   {rating.toFixed(1)} · {reviewCount} reseñas
                 </span>
                 <span className="mt-1 block text-xs">
-                  La pone el cliente desde su cuenta. Aquí solo se muestra el promedio.
+                  La pone el cliente desde su cuenta. Aquí solo se muestra el
+                  promedio.
                 </span>
               </div>
             </div>
@@ -1084,8 +1151,8 @@ export function AdminProductsPage() {
                 Fase 4 — Especificaciones
               </p>
               <p className="text-sm text-rosver-muted">
-                Tú defines el tipo (ej. Material, Voltaje) y su descripción o valor.
-                No hay campos fijos obligatorios.
+                Tú defines el tipo (ej. Material, Voltaje) y su descripción o
+                valor. No hay campos fijos obligatorios.
               </p>
               <div className="space-y-3">
                 {specRows.map((row, idx) => (
@@ -1102,7 +1169,8 @@ export function AdminProductsPage() {
                           const typeName = e.target.value
                           const match = specAttrs.find(
                             (a) =>
-                              a.name.toLowerCase() === typeName.trim().toLowerCase(),
+                              a.name.toLowerCase() ===
+                              typeName.trim().toLowerCase(),
                           )
                           setSpecRows((rows) =>
                             rows.map((r, i) =>
@@ -1120,7 +1188,10 @@ export function AdminProductsPage() {
                         placeholder="Ej. Material"
                       />
                     </AdminField>
-                    <AdminField label="Descripción / valor" htmlFor={`spec-v-${idx}`}>
+                    <AdminField
+                      label="Descripción / valor"
+                      htmlFor={`spec-v-${idx}`}
+                    >
                       <AdminInput
                         id={`spec-v-${idx}`}
                         value={row.value}
@@ -1152,7 +1223,9 @@ export function AdminProductsPage() {
                       <button
                         type="button"
                         onClick={() =>
-                          setSpecRows((rows) => rows.filter((_, i) => i !== idx))
+                          setSpecRows((rows) =>
+                            rows.filter((_, i) => i !== idx),
+                          )
                         }
                         className="h-11 text-xs font-semibold text-rosver-muted hover:text-rosver-red"
                       >
@@ -1197,93 +1270,30 @@ export function AdminProductsPage() {
             >
               Anterior
             </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void goNext()}
-              className="h-11 rounded-xl bg-rosver-red px-5 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
-            >
-              {busy
-                ? 'Guardando…'
-                : step === 4
-                  ? 'Guardar y cerrar'
-                  : 'Guardar y continuar'}
-            </button>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={closeWizard}
+                className="h-11 rounded-xl border border-rosver-line px-4 text-sm font-semibold text-rosver-muted"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void goNext()}
+                className="h-11 rounded-xl bg-rosver-red px-5 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
+              >
+                {busy
+                  ? 'Guardando…'
+                  : step === 4
+                    ? 'Guardar y cerrar'
+                    : 'Guardar y continuar'}
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-5">
-      <FloatingToasts toasts={toasts} onDismiss={dismiss} />
-      <AdminPageHeader
-        title="Productos"
-        actions={
-          <button
-            type="button"
-            onClick={startCreate}
-            className="rounded-full bg-rosver-red px-4 py-2 text-xs font-semibold text-white hover:bg-rosver-red-dark"
-          >
-            Nuevo producto
-          </button>
-        }
-      />
-
-      <AdminInput
-        value={listQuery}
-        onChange={(e) => setListQuery(e.target.value)}
-        placeholder="Buscar producto…"
-        className="max-w-md"
-      />
-
-      <div className="overflow-hidden rounded-2xl border border-rosver-line bg-white shadow-sm">
-        {loading ? (
-          <AdminEmptyState title="Cargando…" />
-        ) : filteredProducts.length === 0 ? (
-          <AdminEmptyState
-            title="Todavía no hay productos"
-            detail="Usa «Nuevo producto» y completa las fases."
-          />
-        ) : (
-          <ul className="divide-y divide-rosver-line">
-            {filteredProducts.map((p) => (
-              <li
-                key={p.id}
-                className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-semibold text-rosver-ink">{p.name}</p>
-                  <p className="text-xs text-rosver-muted">
-                    {p.sku}
-                    {p.brandName ? ` · ${p.brandName}` : ''}
-                    {p.categoryName ? ` · ${p.categoryName}` : ''}
-                    {' · '}
-                    {Number(p.rating).toFixed(1)}★ ({p.reviewCount})
-                  </p>
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => void startEdit(p.id)}
-                    className="text-xs font-semibold text-rosver-red"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void softDelete(p.id, p.name)}
-                    className="text-xs font-semibold text-rosver-muted hover:text-rosver-red"
-                  >
-                    Ocultar
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+      </AdminModal>
     </div>
   )
 }

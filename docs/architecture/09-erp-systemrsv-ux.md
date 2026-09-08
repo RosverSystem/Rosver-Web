@@ -28,3 +28,9 @@ Skill: `erp-systemrsv-saas-ux`.
 - Shell `h-dvh overflow-hidden`; solo el `main` hace scroll.
 - Sidebar y top bar no se mueven con el contenido.
 - Lenis (scroll suave) **desactivado** en `/admin`.
+
+## Formularios
+
+- Alta/edición en **`AdminModal`** (regla `17-erp-forms-modal`). Listado + CTA en la página; no forms inline permanentes.
+- No aplica a la tienda pública.
+- Selects: `AdminSelect` (regla `14`).

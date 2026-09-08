@@ -50,6 +50,7 @@ Referencia: sidebar clara colapsable (iconos / iconos+labels) + top bar limpia. 
 - Tablas “planas” como única UI de listados: preferir cards / filas densas con jerarquía.
 - Textos de ayuda técnicos bajo el título (regla `14-erp-selects-copy`).
 - Selects nativos sin `AdminSelect` / jerga (“sin padre”, “raíz”).
+- Formularios create/edit inline permanentes (regla `17-erp-forms-modal` → `AdminModal`).
 
 ## Checklist
 
@@ -60,3 +61,4 @@ Referencia: sidebar clara colapsable (iconos / iconos+labels) + top bar limpia. 
 - [ ] `cssvg-icons` + docs `09-erp-systemrsv-ux.md`
 - [ ] Selects con `AdminSelect` + copy cotidiano
 - [ ] Sin mensajes de ayuda de arquitectura en UI
+- [ ] Alta/edición en `AdminModal` (no card form encima del listado)
