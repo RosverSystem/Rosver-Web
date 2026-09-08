@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { pool } from '../db.js'
+import { featuredCache } from '../lib/redis.js'
 import {
   requireAuth,
   requireRole,
@@ -407,6 +408,7 @@ adminCatalogRoutes.get('/products', async (c) => {
       rating: Number(r.rating),
       reviewCount: r.review_count,
       featured: r.featured,
+      featuredSort: Number(r.featured_sort ?? 0),
       visible: r.visible,
       availability: r.availability,
       imageUrl: r.image_url,
@@ -456,6 +458,7 @@ adminCatalogRoutes.get('/products/:id', async (c) => {
       rating: Number(p.rating),
       reviewCount: p.review_count,
       featured: p.featured,
+      featuredSort: Number(p.featured_sort ?? 0),
       visible: p.visible,
       availability: p.availability,
       imageUrl: p.image_url,
@@ -512,6 +515,7 @@ adminCatalogRoutes.post('/products', async (c) => {
       moq: z.number().positive().optional(),
       availability: z.enum(['in_stock', 'quote_only', 'out_of_stock']).optional(),
       featured: z.boolean().optional(),
+      featuredSort: z.number().int().min(0).max(9999).optional(),
       visible: z.boolean().optional(),
       imageUrl: z.string().optional(),
       rating: z.number().min(0).max(5).optional(),
@@ -527,8 +531,8 @@ adminCatalogRoutes.post('/products', async (c) => {
     const { rows } = await client.query(
       `INSERT INTO products
          (sku, slug, name, brand_id, category_id, description, origin, moq,
-          availability, featured, visible, image_url, rating)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+          availability, featured, featured_sort, visible, image_url, rating)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
        RETURNING *`,
       [
         body.data.sku.toUpperCase(),
@@ -541,6 +545,7 @@ adminCatalogRoutes.post('/products', async (c) => {
         body.data.moq ?? 1,
         body.data.availability ?? 'in_stock',
         body.data.featured ?? false,
+        body.data.featuredSort ?? 0,
         body.data.visible ?? true,
         body.data.imageUrl ?? null,
         body.data.rating ?? 0,
@@ -559,6 +564,7 @@ adminCatalogRoutes.post('/products', async (c) => {
       )
     }
     await client.query('COMMIT')
+    await featuredCache.invalidate()
     return c.json({ product: { id: productId, sku: rows[0].sku, slug: rows[0].slug } }, 201)
   } catch (e) {
     await client.query('ROLLBACK')
@@ -566,6 +572,94 @@ adminCatalogRoutes.post('/products', async (c) => {
   } finally {
     client.release()
   }
+})
+
+adminCatalogRoutes.patch('/products/:id', async (c) => {
+  const id = c.req.param('id')
+  const body = z
+    .object({
+      name: z.string().trim().min(2).max(200).optional(),
+      sku: z.string().trim().min(1).max(60).optional(),
+      slug: z.string().trim().min(1).max(120).optional(),
+      brandId: z.string().uuid().nullable().optional(),
+      categoryId: z.string().uuid().nullable().optional(),
+      description: z.string().optional(),
+      origin: z.string().optional(),
+      moq: z.number().positive().optional(),
+      availability: z.enum(['in_stock', 'quote_only', 'out_of_stock']).optional(),
+      featured: z.boolean().optional(),
+      featuredSort: z.number().int().min(0).max(9999).optional(),
+      visible: z.boolean().optional(),
+      imageUrl: z.string().nullable().optional(),
+      rating: z.number().min(0).max(5).optional(),
+    })
+    .safeParse(await c.req.json().catch(() => null))
+  if (!body.success) return c.json({ error: 'Datos inválidos' }, 400)
+  const d = body.data
+  const { rows } = await pool.query(
+    `UPDATE products SET
+       name = COALESCE($2, name),
+       sku = COALESCE($3, sku),
+       slug = COALESCE($4, slug),
+       brand_id = CASE WHEN $5::boolean THEN $6::uuid ELSE brand_id END,
+       category_id = CASE WHEN $7::boolean THEN $8::uuid ELSE category_id END,
+       description = COALESCE($9, description),
+       origin = COALESCE($10, origin),
+       moq = COALESCE($11, moq),
+       availability = COALESCE($12, availability),
+       featured = COALESCE($13, featured),
+       featured_sort = COALESCE($14, featured_sort),
+       visible = COALESCE($15, visible),
+       image_url = CASE WHEN $16::boolean THEN $17 ELSE image_url END,
+       rating = COALESCE($18, rating),
+       updated_at = now()
+     WHERE id = $1
+     RETURNING *`,
+    [
+      id,
+      d.name ?? null,
+      d.sku?.toUpperCase() ?? null,
+      d.slug ?? null,
+      d.brandId !== undefined,
+      d.brandId ?? null,
+      d.categoryId !== undefined,
+      d.categoryId ?? null,
+      d.description ?? null,
+      d.origin ?? null,
+      d.moq ?? null,
+      d.availability ?? null,
+      d.featured ?? null,
+      d.featuredSort ?? null,
+      d.visible ?? null,
+      d.imageUrl !== undefined,
+      d.imageUrl ?? null,
+      d.rating ?? null,
+    ],
+  )
+  if (!rows[0]) return c.json({ error: 'Producto no encontrado' }, 404)
+  await featuredCache.invalidate()
+  return c.json({
+    product: {
+      id: rows[0].id,
+      featured: rows[0].featured,
+      featuredSort: rows[0].featured_sort,
+      visible: rows[0].visible,
+      name: rows[0].name,
+      sku: rows[0].sku,
+    },
+  })
+})
+
+adminCatalogRoutes.delete('/products/:id', async (c) => {
+  const id = c.req.param('id')
+  const { rows } = await pool.query(
+    `UPDATE products SET visible = false, featured = false, updated_at = now()
+     WHERE id = $1 RETURNING id`,
+    [id],
+  )
+  if (!rows[0]) return c.json({ error: 'Producto no encontrado' }, 404)
+  await featuredCache.invalidate()
+  return c.json({ ok: true, softDeleted: true })
 })
 
 /* ——— Empaques ——— */
@@ -614,6 +708,7 @@ adminCatalogRoutes.post('/products/:id/packagings', async (c) => {
       ],
     )
     await client.query('COMMIT')
+    await featuredCache.invalidate()
     return c.json({
       packaging: {
         id: rows[0].id,
@@ -693,6 +788,7 @@ adminCatalogRoutes.post('/products/:id/prices', async (c) => {
         return c.json({ error: 'Precio no encontrado' }, 404)
       }
       await client.query('COMMIT')
+      await featuredCache.invalidate()
       return c.json({ price: mapPrice(rows[0]), mode: 'updated' })
     }
 
@@ -724,6 +820,7 @@ adminCatalogRoutes.post('/products/:id/prices', async (c) => {
       ],
     )
     await client.query('COMMIT')
+    await featuredCache.invalidate()
     return c.json({ price: mapPrice(rows[0]), mode: 'created' }, 201)
   } catch (e) {
     await client.query('ROLLBACK')

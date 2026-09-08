@@ -13,8 +13,21 @@ import { ScrollReveal } from '@/shared/ui/scroll-reveal'
 import { useMemo } from 'react'
 
 export function HomePage() {
-  const { products, categories } = useCatalog()
-  const featured = useMemo(() => products.slice(0, 8), [products])
+  const { products, categories, live } = useCatalog()
+  const featured = useMemo(() => {
+    const marked = products
+      .filter((p) => p.visible !== false && p.featured)
+      .slice()
+      .sort(
+        (a, b) =>
+          (a.featuredSort ?? 0) - (b.featuredSort ?? 0) ||
+          a.name.localeCompare(b.name, 'es'),
+      )
+    if (marked.length) return marked.slice(0, 12)
+    // Sin DB de productos: mocks; con live y ninguno marcado → sección vacía
+    if (!live) return products.slice(0, 8)
+    return []
+  }, [products, live])
 
   return (
     <>

@@ -21,6 +21,7 @@ App: `RosverSac/` · Alias: `@` → `RosverSac/src`
 | Validación UI | `FloatingToasts` + `useFormToasts` (shared) | Sin bubbles nativos; regla `10-form-toasts` |
 | API auth | Hono (`RosverSac/server`) | Sesiones cookie, RBAC, OTP, TOTP, Google OAuth |
 | DB | `pg` + Postgres Railway | Migraciones SQL en `server/sql/` |
+| Caché | `ioredis` + Redis Railway | Destacados home (`rosver:catalog:featured:v1`, TTL 90s); opcional |
 | Object storage | `@aws-sdk/client-s3` → Cloudflare R2 | Avatares / media (`/api/profile/avatar`, `/api/media`) |
 | Password | `argon2` | argon2id |
 | Mail | `nodemailer` | SMTP Hostinger |

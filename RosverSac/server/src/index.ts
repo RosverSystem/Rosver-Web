@@ -13,6 +13,7 @@ import { adminRoutes } from './routes/admin.js'
 import { adminCatalogRoutes } from './routes/admin-catalog.js'
 import { mediaRoutes } from './routes/media.js'
 import { catalogRoutes } from './routes/catalog.js'
+import { redisStatus } from './lib/redis.js'
 
 const app = new Hono()
 const sacRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
@@ -36,7 +37,12 @@ app.use(
 )
 
 app.get('/api/health', (c) =>
-  c.json({ ok: true, service: 'rosver-api', time: new Date().toISOString() }),
+  c.json({
+    ok: true,
+    service: 'rosver-api',
+    time: new Date().toISOString(),
+    redis: redisStatus(),
+  }),
 )
 
 app.route('/api/auth', authRoutes)

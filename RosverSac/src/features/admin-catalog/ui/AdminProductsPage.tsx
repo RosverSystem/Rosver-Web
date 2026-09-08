@@ -21,6 +21,8 @@ type ProductRow = {
   categoryName: string | null
   availability: string
   visible: boolean
+  featured: boolean
+  featuredSort: number
 }
 
 type Brand = { id: string; name: string; sku: string }
@@ -67,6 +69,9 @@ export function AdminProductsPage() {
   const [sku, setSku] = useState('')
   const [brandId, setBrandId] = useState('')
   const [categoryId, setCategoryId] = useState('')
+  const [createFeatured, setCreateFeatured] = useState(false)
+  const [featuredBusy, setFeaturedBusy] = useState(false)
+  const [featuredSortDraft, setFeaturedSortDraft] = useState('0')
 
   const [unitTypeId, setUnitTypeId] = useState('')
   const [contentQty, setContentQty] = useState('1')
@@ -138,6 +143,11 @@ export function AdminProductsPage() {
     if (selectedId) void loadDetail(selectedId)
   }, [selectedId])
 
+  useEffect(() => {
+    if (!selected) return
+    setFeaturedSortDraft(String(selected.featuredSort ?? 0))
+  }, [selected?.id, selected?.featuredSort])
+
   async function createProduct(e: React.FormEvent) {
     e.preventDefault()
     clear()
@@ -154,16 +164,38 @@ export function AdminProductsPage() {
           sku: sku.trim(),
           brandId: brandId || null,
           categoryId: categoryId || null,
+          featured: createFeatured,
+          featuredSort: createFeatured ? Number(featuredSortDraft) || 0 : 0,
         }),
       })
       setName('')
       setSku('')
+      setCreateFeatured(false)
       await loadList()
       setSelectedId(res.product.id)
     } catch (err) {
       showMessages([err instanceof ApiError ? err.message : 'No se pudo crear'])
     } finally {
       setBusy(false)
+    }
+  }
+
+  async function saveFeatured(next: { featured?: boolean; featuredSort?: number }) {
+    if (!selectedId) return
+    setFeaturedBusy(true)
+    clear()
+    try {
+      await api(`/api/admin/products/${selectedId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(next),
+      })
+      await loadList()
+    } catch (err) {
+      showMessages([
+        err instanceof ApiError ? err.message : 'No se pudo actualizar el destacado',
+      ])
+    } finally {
+      setFeaturedBusy(false)
     }
   }
 
@@ -304,7 +336,27 @@ export function AdminProductsPage() {
             </AdminSelect>
           </AdminField>
         </div>
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+          <label className="flex items-center gap-2 text-sm text-rosver-ink">
+            <input
+              type="checkbox"
+              checked={createFeatured}
+              onChange={(e) => setCreateFeatured(e.target.checked)}
+              className="size-4 rounded border-rosver-line text-rosver-red"
+            />
+            Destacado en el inicio
+          </label>
+          {createFeatured ? (
+            <AdminField label="Orden en el carrusel" htmlFor="prod-feat-sort">
+              <AdminInput
+                id="prod-feat-sort"
+                value={featuredSortDraft}
+                onChange={(e) => setFeaturedSortDraft(e.target.value)}
+                placeholder="0"
+                className="w-24"
+              />
+            </AdminField>
+          ) : null}
           <button
             type="submit"
             disabled={busy}
@@ -359,6 +411,11 @@ export function AdminProductsPage() {
                           {p.categoryName ? ` · ${p.categoryName}` : ''}
                         </span>
                       </span>
+                      {p.featured ? (
+                        <span className="shrink-0 rounded-full bg-rosver-yellow px-2 py-0.5 text-[10px] font-bold text-rosver-ink">
+                          Inicio
+                        </span>
+                      ) : null}
                     </button>
                   </li>
                 ))}
@@ -378,6 +435,48 @@ export function AdminProductsPage() {
               <div>
                 <h3 className="text-lg font-semibold text-rosver-ink">{selected.name}</h3>
                 <p className="text-sm text-rosver-muted">{selected.sku}</p>
+              </div>
+
+              <div className="rounded-xl border border-rosver-line bg-rosver-soft/40 p-3">
+                <p className="mb-2 text-sm font-semibold text-rosver-ink">
+                  Destacados para ti (inicio)
+                </p>
+                <label className="flex items-center gap-2 text-sm text-rosver-ink">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(selected.featured)}
+                    disabled={featuredBusy}
+                    onChange={(e) =>
+                      void saveFeatured({ featured: e.target.checked })
+                    }
+                    className="size-4 rounded border-rosver-line text-rosver-red"
+                  />
+                  Mostrar en el carrusel del inicio
+                </label>
+                {selected.featured ? (
+                  <div className="mt-3 flex flex-wrap items-end gap-2">
+                    <AdminField label="Orden" htmlFor="feat-sort-edit">
+                      <AdminInput
+                        id="feat-sort-edit"
+                        value={featuredSortDraft}
+                        onChange={(e) => setFeaturedSortDraft(e.target.value)}
+                        className="w-24"
+                      />
+                    </AdminField>
+                    <button
+                      type="button"
+                      disabled={featuredBusy}
+                      onClick={() =>
+                        void saveFeatured({
+                          featuredSort: Number(featuredSortDraft) || 0,
+                        })
+                      }
+                      className="h-11 rounded-xl bg-rosver-red px-4 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
+                    >
+                      Guardar orden
+                    </button>
+                  </div>
+                ) : null}
               </div>
 
               <div>

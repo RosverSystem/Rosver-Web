@@ -8,8 +8,8 @@
 | P02 | Facebook login | UI login/registro | pendiente | Botón placeholder |
 | P03 | Pedidos / cotizaciones reales en `/cuenta` | Auth + cuenta | pendiente | Siguen mocks |
 | P04 | UI admin roles/permisos | Auth RBAC | pendiente | API lista |
-| P10 | CRUD Productos ERP + API | Pedido ERP | parcial | Marcas/categorías CRUD OK (v0.1.11). Falta form ficha completa, imágenes R2, ofertas |
-| P15 | Catálogo vivo en tienda (sin F5) | Pedido UX SPA | parcial | Categorías/marcas live sin productos; productos live solo si hay filas |
+| P10 | CRUD Productos ERP + API | Pedido ERP | parcial | Destacado PATCH/DELETE OK (v0.1.12). Falta ficha completa + R2 |
+| P15 | Catálogo vivo en tienda (sin F5) | Pedido UX SPA | parcial | Taxonomía + featured Redis; productos live si hay filas |
 | P16 | Selector empaque + precio en carrito/ficha | Precios unidades | pendiente | Carrito aún por slug; falta packagingId |
 | P17 | Specs UI (atributos + unidades variables) | Specs | pendiente | Tablas `spec_*` listas; falta pantallas ERP/ficha dinámica |
 | P18 | Filtro categoría incluye subcategorías | Filtros | pendiente | Hoy filtra solo por slug exacto |
@@ -25,12 +25,13 @@
 | P09 | CLI railway login | Deploy | pendiente | Deploy GraphQL OK |
 | P14 | Force commitSha deploy | Deploy | parcial | |
 | P23 | UX ERP catálogo (cards + selects claros) | Pedido UX | hecho | v0.1.10; regla 14 |
-| P24 | Regla migraciones DB en cada cambio | Pedido reglas | hecho | Regla `15-database-migraciones` |
-| P25 | Regla CRUD completo + vínculo inicio/menú | Pedido usuario | hecho | Regla 16 + v0.1.11 |
+| P24 | Regla migraciones DB en cada cambio | Pedido reglas | hecho | Regla `15` |
+| P25 | Regla CRUD + vínculo inicio/menú | Pedido usuario | hecho | Regla 16 + v0.1.11 |
 | P26 | Subir imagen categoría a R2 (no solo URL) | Categorías home | pendiente | Hoy pide URL |
+| P27 | Destacados home Postgres + Redis | Pedido lógica | hecho | Doc 05 + v0.1.12 + Redis Railway |
+| P28 | Volumen persistente Redis / Redis oficial template | Infra | recomendado | Hoy imagen `redis:7-alpine` sin volume |
 
 ## Hechos recientes
 
+- Destacados para ti: lógica 100% + Redis Railway (v0.1.12)
 - CRUD categorías/marcas + campos home + live taxonomía (v0.1.11)
-- UX ERP catálogo cards + selects + copy claro (v0.1.10)
-- Modelo precios/unidades + admin marcas/categorías/listado precios (v0.1.9)

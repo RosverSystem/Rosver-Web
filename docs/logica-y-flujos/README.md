@@ -13,5 +13,6 @@ Carpeta de **lógica de producto** (cómo debe comportarse la app), complementar
 | [02-cuenta-cliente.md](./02-cuenta-cliente.md) | Área `/cuenta/*`, perfil, header de sesión |
 | [03-erp-systemrsv.md](./03-erp-systemrsv.md) | Shell ERP, módulos, Productos |
 | [04-catalogo-precios-unidades.md](./04-catalogo-precios-unidades.md) | Precios por unidad/contenido, marcas, categorías, specs, filtros |
+| [05-destacados-home-redis.md](./05-destacados-home-redis.md) | Destacados para ti: Postgres + Redis + admin + cards |
 
 Actualizar estos docs cuando cambie un flujo real (no solo el mock visual).

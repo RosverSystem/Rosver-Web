@@ -11,6 +11,7 @@ Infra de la web **Rosver SAC** y del ERP **SystemRSV**. Actualizar este archivo 
 | Local | `localhost:5173` + API `:8787` | Vite + `npm run dev:api` | Proxy `/api` en Vite |
 | Producción (web+api) | Railway | SPA `dist` + Hono `/api` mismo servicio | https://rosver-web-production.up.railway.app |
 | Base de datos | Railway Postgres | Online | Template oficial; migrate/seed en boot |
+| Caché | Railway Redis | Online | Destacados home (`ioredis` + `REDIS_URL`) |
 | Objetos (media) | Cloudflare R2 | Buckets S3-compatibles | Imágenes, PDFs, adjuntos |
 
 ---
@@ -26,6 +27,7 @@ Infra de la web **Rosver SAC** y del ERP **SystemRSV**. Actualizar este archivo 
 | URL pública | https://rosver-web-production.up.railway.app |
 | Health API | https://rosver-web-production.up.railway.app/api/health |
 | Postgres | `Postgres` (`d07bb6a5-395a-4fe8-a092-e9ef6d906006`) · **Online** |
+| Redis | `Redis` (`49da02e2-8e98-4b71-a8b8-a4e3d8a161b5`) · imagen `redis:7-alpine` · caché destacados |
 | TCP proxy Postgres | `altaria.proxy.rlwy.net:17586` → `:5432` (solo admin/local) |
 
 - **Root directory:** `RosverSac`
@@ -40,6 +42,7 @@ Infra de la web **Rosver SAC** y del ERP **SystemRSV**. Actualizar este archivo 
 - `NIXPACKS_NODE_VERSION=22`
 - `NODE_ENV=production`
 - `DATABASE_URL` = `${{Postgres.DATABASE_URL}}` (sin `DATABASE_PUBLIC_URL` en prod)
+- `REDIS_URL` = `redis://default:${{Redis.REDISPASSWORD}}@${{Redis.RAILWAY_PRIVATE_DOMAIN}}:6379`
 - `APP_URL` / `CORS_ORIGIN` = `https://rosver-web-production.up.railway.app`
 - `SMTP_HOST` `SMTP_PORT` `SMTP_USER` `SMTP_PASS` `SMTP_FROM`
 - `SEED_ADMIN_PASSWORD` / `SEED_CLIENT_PASSWORD`

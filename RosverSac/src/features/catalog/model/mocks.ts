@@ -46,8 +46,10 @@ export type Product = {
   originalPrice?: number
   /** Precio mayorista (MOQ). Si falta y hay `price`, la UI puede estimar. */
   wholesalePrice?: number
-  /** Badge “Destacado” en listados */
+  /** Badge “Destacado” / sección home Top picks */
   featured?: boolean
+  /** Orden en carrusel Destacados (menor = primero) */
+  featuredSort?: number
   rating: number
   reviewCount: number
   origin: string

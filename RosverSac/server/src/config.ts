@@ -57,7 +57,20 @@ export const config = {
     /** Si hay dominio/r2.dev público; si no, se sirve vía /api/media/… */
     publicBaseUrl: req('R2_PUBLIC_BASE_URL'),
   },
+  /** Redis Railway — caché home/featured; opcional (degrada a Postgres) */
+  redisUrl: buildRedisUrl(),
   isProd: req('NODE_ENV') === 'production',
+}
+
+function buildRedisUrl() {
+  const full = req('REDIS_URL') || req('REDIS_PRIVATE_URL')
+  if (full) return full
+  const host = req('REDISHOST') || req('REDIS_HOST')
+  const port = req('REDISPORT') || req('REDIS_PORT', '6379')
+  const password = req('REDISPASSWORD') || req('REDIS_PASSWORD')
+  if (!host) return ''
+  if (password) return `redis://default:${encodeURIComponent(password)}@${host}:${port}`
+  return `redis://${host}:${port}`
 }
 
 if (!config.databaseUrl) {
