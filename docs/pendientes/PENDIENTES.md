@@ -13,8 +13,4 @@
 | P07 | 2FA UI en perfil (activar TOTP) | Auth TOTP | pendiente | API `/api/auth/2fa/*` lista; falta pantalla |
 | P08 | Header sesión visible | Login UX | hecho | `SessionAccountMenu` en navbar/footer; avatar + nombre + menú |
 
-## Hechos recientes (referencia)
-
-- Auth API + deploy Railway unificado web+api
-- SMTP Hostinger configurado en Railway (`SMTP_PASS`)
-- Seed admin + cliente
+| P09 | CLI `railway` no autenticado en esta máquina | Deploy continuo | pendiente | Push GitHub OK; deploy vía GraphQL `serviceInstanceDeploy`. Opcional: `railway login` |
