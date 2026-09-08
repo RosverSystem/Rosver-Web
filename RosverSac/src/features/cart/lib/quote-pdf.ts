@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf'
 import QRCode from 'qrcode'
 import { ROSVER_COMPANY } from '@/shared/lib/company'
+import { amountToWordsEs } from '@/shared/lib/number-to-words-es'
 
 export type QuotePdfCustomer = {
   name: string
@@ -20,6 +21,7 @@ export type QuotePdfLine = {
 export type QuotePdfInput = {
   customer: QuotePdfCustomer
   lines: QuotePdfLine[]
+  /** Número documento ej. C001 N°00001234 */
   docNumber?: string
   currency?: string
 }
@@ -32,12 +34,8 @@ function money(n: number) {
 }
 
 function nextDocNumber() {
-  const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  const seq = String(Math.floor(Math.random() * 9000) + 1000)
-  return `COT-${y}${m}${day}-${seq}`
+  const seq = String(Math.floor(Math.random() * 9000) + 1000).padStart(8, '0')
+  return `C001 N°${seq}`
 }
 
 let logoDataUrlPromise: Promise<string | null> | null = null
@@ -70,8 +68,8 @@ export function quoteLandingUrl(docNumber: string) {
 }
 
 /**
- * PDF de cotización comercial (no factura / no comprobante).
- * Logo + lista de productos + total estimado + pie web + QR.
+ * PDF cotización estilo factura impresa Rosver (A4) + pie web/QR.
+ * No es comprobante SUNAT; el layout replica la plantilla comercial.
  */
 export async function buildQuotePdf(input: QuotePdfInput): Promise<{
   blob: Blob
@@ -80,20 +78,19 @@ export async function buildQuotePdf(input: QuotePdfInput): Promise<{
   total: number
 }> {
   const docNumber = input.docNumber ?? nextDocNumber()
+  const currency = input.currency ?? 'SOLES'
   const co = ROSVER_COMPANY
   const lines = input.lines.filter((l) => l.description.trim())
   const landingUrl = quoteLandingUrl(docNumber)
-  const issued = new Date().toLocaleDateString('es-PE', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  })
 
-  const total = lines.reduce((sum, l) => {
+  const subtotal = lines.reduce((sum, l) => {
     if (l.unitPrice == null) return sum
     return sum + l.unitPrice * l.quantity
   }, 0)
-  const hasConsult = lines.some((l) => l.unitPrice == null)
+  /** Precios de tienda se tratan como inc. IGV 18%. */
+  const base = subtotal / 1.18
+  const igv = subtotal - base
+  const total = subtotal
 
   const [logoDataUrl, qrDataUrl] = await Promise.all([
     loadLogoDataUrl(),
@@ -108,236 +105,329 @@ export async function buildQuotePdf(input: QuotePdfInput): Promise<{
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
   const pageW = doc.internal.pageSize.getWidth()
   const pageH = doc.internal.pageSize.getHeight()
-  const margin = 14
-  let y = 14
+  const margin = 12
+  let y = 12
 
-  // ── Cabecera comercial ──
-  const logoSize = 26
+  // ── Cabecera izquierda: logo + datos empresa ──
+  const logoW = 38
+  const logoH = 22
   if (logoDataUrl) {
-    doc.addImage(logoDataUrl, 'PNG', margin, y - 2, logoSize, logoSize)
+    doc.addImage(logoDataUrl, 'PNG', margin, y, logoW, logoH)
   } else {
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(18)
     doc.setTextColor(227, 6, 19)
-    doc.text('ROSVER', margin, y + 10)
+    doc.text('ROSVER', margin, y + 12)
   }
 
-  const textX = margin + (logoDataUrl ? logoSize + 5 : 0)
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(14)
-  doc.setTextColor(13, 13, 13)
-  doc.text(co.tradeName, textX, y + 5)
+  y = 12 + logoH + 3
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8)
-  doc.setTextColor(90, 90, 90)
-  doc.text('Importaciones · Catálogo B2B', textX, y + 10)
   doc.setFontSize(7)
-  doc.text(`${co.phones}  ·  ${co.email}`, textX, y + 15)
-  doc.text(co.address, textX, y + 19, { maxWidth: 95 })
+  doc.setTextColor(40, 40, 40)
+  const leftInfo = [
+    co.address,
+    `DIR.LOCAL: ${co.localAddress}`,
+    `TELF.: ${co.phones.replace(/\s*\/\s*/g, '-')}`,
+    `E-MAIL: ${co.email}`,
+  ]
+  for (const line of leftInfo) {
+    doc.text(line, margin, y, { maxWidth: 100 })
+    y += 3.4
+  }
 
-  // Título cotización (derecha, sin caja tipo SUNAT)
+  // ── Cabecera derecha: caja RUC / COTIZACIÓN / N° ──
+  const boxW = 72
+  const boxH = 30
+  const boxX = pageW - margin - boxW
+  const boxY = 10
+  doc.setDrawColor(13, 13, 13)
+  doc.setLineWidth(0.7)
+  doc.rect(boxX, boxY, boxW, boxH)
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(18)
-  doc.setTextColor(227, 6, 19)
-  doc.text('COTIZACIÓN', pageW - margin, y + 6, { align: 'right' })
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8)
+  doc.setFontSize(10)
   doc.setTextColor(13, 13, 13)
-  doc.text(`N.º ${docNumber}`, pageW - margin, y + 12, { align: 'right' })
-  doc.setTextColor(100, 100, 100)
-  doc.text(issued, pageW - margin, y + 17, { align: 'right' })
-  doc.text('Vigencia: 48 h hábiles', pageW - margin, y + 21, { align: 'right' })
-
-  y = Math.max(y + logoSize + 2, y + 26) + 4
-
-  doc.setDrawColor(227, 6, 19)
-  doc.setLineWidth(1)
-  doc.line(margin, y, pageW - margin, y)
-  y += 8
-
-  // ── Destinatario ──
-  const c = input.customer
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(9)
-  doc.setTextColor(227, 6, 19)
-  doc.text('COTIZADO PARA', margin, y)
-  y += 5
-  doc.setFont('helvetica', 'bold')
+  doc.text(`R.U.C. ${co.ruc}`, boxX + boxW / 2, boxY + 8, { align: 'center' })
   doc.setFontSize(12)
-  doc.setTextColor(13, 13, 13)
-  doc.text(c.name || 'Cliente', margin, y)
-  y += 5
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8)
-  doc.setTextColor(70, 70, 70)
-  const meta: string[] = []
-  if (c.document.trim()) meta.push(`Doc. ${c.document.trim()}`)
-  if (c.phone.trim()) meta.push(`WhatsApp ${c.phone.trim()}`)
-  if (c.city.trim()) meta.push(c.city.trim())
-  if (meta.length) {
-    doc.text(meta.join('  ·  '), margin, y, { maxWidth: pageW - margin * 2 })
-    y += 5
-  }
-  y += 4
+  doc.text('COTIZACIÓN', boxX + boxW / 2, boxY + 17, { align: 'center' })
+  doc.setFontSize(10)
+  doc.text(docNumber, boxX + boxW / 2, boxY + 25, { align: 'center' })
 
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(9)
-  doc.setTextColor(13, 13, 13)
-  doc.text('Productos de esta cotización', margin, y)
-  y += 5
+  y = Math.max(y, boxY + boxH) + 8
 
-  // Cabecera lista (suave, no grilla de factura)
-  const colProd = margin
-  const colQty = pageW - margin - 72
-  const colUnit = pageW - margin - 48
-  const colPrice = pageW - margin - 28
+  // ── Datos cliente (2 columnas, estilo factura) ──
+  const c = input.customer
+  const issued = new Date().toISOString().slice(0, 10)
+  const col2 = pageW / 2 + 2
+  const rowGap = 4.2
 
-  doc.setFillColor(243, 244, 246)
-  doc.roundedRect(margin, y, pageW - margin * 2, 7, 1.5, 1.5, 'F')
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(7)
-  doc.setTextColor(90, 90, 90)
-  doc.text('PRODUCTO', colProd + 3, y + 4.5)
-  doc.text('CANT.', colQty, y + 4.5)
-  doc.text('UND.', colUnit, y + 4.5)
-  doc.text('TOTAL', colPrice + 20, y + 4.5, { align: 'right' })
-  y += 9
-
-  doc.setFont('helvetica', 'normal')
-  lines.forEach((line, idx) => {
-    if (y > 205) {
-      doc.addPage()
-      y = 18
-    }
-    const lineTotal =
-      line.unitPrice != null ? line.unitPrice * line.quantity : null
-    const title = line.description
-    const sku = line.sku ? `SKU ${line.sku}` : ''
-    const titleLines = doc.splitTextToSize(title, colQty - colProd - 8) as string[]
-    const h = Math.max(10, titleLines.length * 4 + (sku ? 4 : 0) + 3)
-
-    if (idx % 2 === 1) {
-      doc.setFillColor(250, 250, 250)
-      doc.rect(margin, y - 1, pageW - margin * 2, h, 'F')
-    }
-
+  function metaRow(
+    leftLabel: string,
+    leftVal: string,
+    rightLabel: string,
+    rightVal: string,
+  ) {
+    const leftLab = `${leftLabel} : `
+    const rightLab = `${rightLabel} : `
     doc.setFont('helvetica', 'bold')
-    doc.setFontSize(8.5)
-    doc.setTextColor(13, 13, 13)
-    doc.text(titleLines, colProd + 3, y + 3.5)
-    if (sku) {
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(6.5)
-      doc.setTextColor(120, 120, 120)
-      doc.text(sku, colProd + 3, y + 3.5 + titleLines.length * 4)
-    }
-
-    doc.setFont('helvetica', 'normal')
     doc.setFontSize(8)
     doc.setTextColor(13, 13, 13)
-    doc.text(String(line.quantity), colQty + 2, y + 4)
-    doc.text(line.unit.slice(0, 10), colUnit, y + 4)
+    doc.text(leftLab, margin, y)
+    const leftValX = margin + doc.getTextWidth(leftLab)
+    doc.setFont('helvetica', 'normal')
+    doc.text(leftVal || '—', leftValX, y, {
+      maxWidth: col2 - leftValX - 4,
+    })
     doc.setFont('helvetica', 'bold')
-    doc.setTextColor(227, 6, 19)
+    doc.text(rightLab, col2, y)
+    const rightValX = col2 + doc.getTextWidth(rightLab)
+    doc.setFont('helvetica', 'normal')
+    doc.text(rightVal || '—', rightValX, y, {
+      maxWidth: pageW - margin - rightValX,
+    })
+    y += rowGap
+  }
+
+  metaRow('RUC', c.document.trim() || '—', 'FECHA EMISION', issued)
+  metaRow('SEÑOR(ES)', c.name.trim() || '—', 'CLIENTE', c.phone.trim() || '—')
+  metaRow('DIRECCIÓN', c.city.trim() || '—', 'MONEDA', currency)
+  metaRow('CONTACTO', c.phone.trim() || '—', 'VIGENCIA', '48 H HÁBILES')
+  metaRow('FORMA PAGO', 'POR CONFIRMAR', 'O/C', '—')
+  y += 4
+
+  // ── Tabla ítems (columnas con líneas verticales) ──
+  const tableX = margin
+  const tableW = pageW - margin * 2
+  const colXs = [
+    tableX,
+    tableX + 10,
+    tableX + 28,
+    tableX + 42,
+    tableX + tableW - 50,
+    tableX + tableW - 25,
+    tableX + tableW,
+  ]
+  const headerH = 7
+  const footerReserve = 78
+  const tableBottomMax = pageH - footerReserve
+
+  function drawColLines(top: number, bottom: number) {
+    doc.setDrawColor(13, 13, 13)
+    doc.setLineWidth(0.35)
+    for (const x of colXs) {
+      doc.line(x, top, x, bottom)
+    }
+    doc.line(tableX, top, tableX + tableW, top)
+    doc.line(tableX, bottom, tableX + tableW, bottom)
+  }
+
+  let tableTop = y
+
+  function drawTableHeader() {
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(7)
+    doc.setTextColor(13, 13, 13)
+    doc.text('IT.', colXs[0]! + 2, y + 4.8)
+    doc.text('CANT', colXs[1]! + 2, y + 4.8)
+    doc.text('UND', colXs[2]! + 2, y + 4.8)
+    doc.text('DESCRIPCIÓN', colXs[3]! + 2, y + 4.8)
+    doc.text('PRECIO UNITARIO', colXs[5]! - 2, y + 4.8, { align: 'right' })
+    doc.text('PRECIO TOTAL', colXs[6]! - 2, y + 4.8, { align: 'right' })
+    y += headerH
+    doc.setDrawColor(13, 13, 13)
+    doc.setLineWidth(0.5)
+    doc.line(tableX, y, tableX + tableW, y)
+  }
+
+  drawTableHeader()
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(8)
+  lines.forEach((line, idx) => {
+    if (y > tableBottomMax - 20) {
+      drawColLines(tableTop, y)
+      doc.addPage()
+      y = 16
+      tableTop = y
+      drawTableHeader()
+      doc.setFont('helvetica', 'normal')
+      doc.setFontSize(8)
+    }
+
+    const lineTotal =
+      line.unitPrice != null ? line.unitPrice * line.quantity : null
+    const desc = `${line.description}${line.sku ? ` (${line.sku})` : ''}`
+    const descW = colXs[4]! - colXs[3]! - 3
+    const descLines = doc.splitTextToSize(desc, descW) as string[]
+    const h = Math.max(7, descLines.length * 3.6 + 2)
+
+    doc.setTextColor(13, 13, 13)
+    doc.text(String(idx + 1), colXs[0]! + 3, y + 4.5)
+    doc.text(line.quantity.toFixed(2), colXs[2]! - 2, y + 4.5, {
+      align: 'right',
+    })
+    doc.text(line.unit.slice(0, 8).toUpperCase(), colXs[2]! + 2, y + 4.5)
+    doc.text(descLines, colXs[3]! + 2, y + 4.5)
     doc.text(
-      lineTotal != null ? `S/ ${money(lineTotal)}` : 'Consultar',
-      pageW - margin - 3,
-      y + 4,
+      line.unitPrice != null ? money(line.unitPrice) : 'Consultar',
+      colXs[5]! - 2,
+      y + 4.5,
+      { align: 'right' },
+    )
+    doc.text(
+      lineTotal != null ? money(lineTotal) : '—',
+      colXs[6]! - 2,
+      y + 4.5,
       { align: 'right' },
     )
     y += h
   })
 
+  // Cuerpo vacío hasta altura mínima (como factura impresa)
+  const minTableBottom = Math.min(tableBottomMax - 8, Math.max(y + 8, tableTop + 55))
+  if (y < minTableBottom) y = minTableBottom
+  drawColLines(tableTop, y)
   y += 6
-  doc.setDrawColor(229, 231, 235)
+
+  // ── SON: ──
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.setTextColor(13, 13, 13)
+  const words = total > 0 ? amountToWordsEs(total) : 'A CONSULTAR'
+  doc.text(`SON: ${words}`, margin, y, { maxWidth: pageW - margin * 2 })
+  y += 6
+
+  // ── Totales (estilo factura) ──
+  const totLabels = [
+    'OP. GRABADA',
+    'OP. GRATUITA',
+    'OP. INAFECTA',
+    'OP. EXONERADA',
+    'DESCTO',
+    'IGV (18%)',
+    'PRECIO TOTAL',
+  ]
+  const totValues = [
+    money(base),
+    money(0),
+    money(0),
+    money(0),
+    money(0),
+    money(igv),
+    money(total),
+  ]
+  const totW = pageW - margin * 2
+  const cellW = totW / totLabels.length
+  const totX = margin
+  const labelH = 7
+  const valueH = 8
+
+  doc.setDrawColor(13, 13, 13)
   doc.setLineWidth(0.4)
-  doc.line(margin, y, pageW - margin, y)
-  y += 8
-
-  // Total estimado (una sola cifra — no desglose IGV de factura)
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(9)
-  doc.setTextColor(90, 90, 90)
-  doc.text('Total estimado', pageW - margin - 55, y)
   doc.setFont('helvetica', 'bold')
-  doc.setFontSize(16)
-  doc.setTextColor(227, 6, 19)
-  doc.text(
-    total > 0 ? `S/ ${money(total)}` : 'A consultar',
-    pageW - margin,
-    y,
-    { align: 'right' },
-  )
-  y += 6
+  doc.setFontSize(5.5)
+  totLabels.forEach((lab, i) => {
+    const x = totX + i * cellW
+    doc.rect(x, y, cellW, labelH)
+    doc.text(lab, x + cellW / 2, y + 4.5, { align: 'center', maxWidth: cellW - 1 })
+  })
+  y += labelH
   doc.setFont('helvetica', 'normal')
-  doc.setFontSize(7)
-  doc.setTextColor(110, 110, 110)
-  doc.text(
-    hasConsult
-      ? 'Algunos ítems quedan “Consultar”: confirmamos precio al responderte.'
-      : 'Montos referenciales. Confirmamos stock, precio y tipo de cambio al cerrar el pedido.',
-    margin,
-    y,
-    { maxWidth: pageW - margin * 2 },
-  )
-  y += 10
-
-  // ── Pie visita web + QR ──
-  const footerH = 46
-  const footerTop = Math.min(Math.max(y, pageH - 58), pageH - footerH - 8)
-  doc.setFillColor(13, 13, 13)
-  doc.roundedRect(margin, footerTop, pageW - margin * 2, footerH, 2, 2, 'F')
-
-  const qrSize = 30
-  const qrX = margin + 5
-  const qrY = footerTop + (footerH - qrSize) / 2
-  if (qrDataUrl) {
-    doc.setFillColor(255, 255, 255)
-    doc.roundedRect(qrX - 1.5, qrY - 1.5, qrSize + 3, qrSize + 3, 1, 1, 'F')
-    doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize)
-  }
-
-  const footTextX = qrX + qrSize + 8
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(11)
-  doc.setTextColor(227, 6, 19)
-  doc.text('¡Visítanos en la web!', footTextX, footerTop + 12)
-
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(8)
-  doc.setTextColor(255, 255, 255)
-  doc.text(
-    'Mira el catálogo completo, ofertas y más productos.',
-    footTextX,
-    footerTop + 18,
-    { maxWidth: pageW - footTextX - margin - 4 },
-  )
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(8)
-  doc.setTextColor(242, 183, 5)
-  doc.text(co.web.replace(/^https?:\/\//, ''), footTextX, footerTop + 25)
+  doc.setFontSize(7.5)
+  totValues.forEach((val, i) => {
+    const x = totX + i * cellW
+    doc.rect(x, y, cellW, valueH)
+    if (i === totValues.length - 1) {
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(13, 13, 13)
+    } else {
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(13, 13, 13)
+    }
+    doc.text(val, x + cellW / 2, y + 5.5, { align: 'center' })
+  })
+  y += valueH + 6
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(6.5)
-  doc.setTextColor(200, 200, 200)
+  doc.setTextColor(80, 80, 80)
   doc.text(
-    `Escanea el QR · abre tu cotización ${docNumber} en línea`,
+    'Documento de cotización referencial — no es boleta, factura ni comprobante SUNAT.',
+    margin,
+    y,
+  )
+  y += 3.5
+  doc.text(
+    'Precios sujetos a confirmación de stock y tipo de cambio. Vigencia orientativa: 48 h hábiles.',
+    margin,
+    y,
+  )
+  y += 6
+
+  // ── Pie: visita web + QR personalizado (pedido previo) ──
+  const footerH = 42
+  const footerTop = Math.min(Math.max(y, pageH - footerH - 10), pageH - footerH - 8)
+  doc.setFillColor(243, 244, 246)
+  doc.setDrawColor(227, 6, 19)
+  doc.setLineWidth(0.6)
+  doc.rect(margin, footerTop, pageW - margin * 2, footerH, 'FD')
+
+  const qrSize = 28
+  const qrX = margin + 4
+  const qrY = footerTop + (footerH - qrSize) / 2
+  if (qrDataUrl) {
+    doc.setFillColor(255, 255, 255)
+    doc.rect(qrX - 1, qrY - 1, qrSize + 2, qrSize + 2, 'F')
+    doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize)
+  }
+
+  const footTextX = qrX + qrSize + 6
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(10)
+  doc.setTextColor(227, 6, 19)
+  doc.text('¡Visítanos en la web!', footTextX, footerTop + 10)
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(7.5)
+  doc.setTextColor(40, 40, 40)
+  doc.text(
+    'Catálogo, ofertas y más productos importados en un solo lugar.',
     footTextX,
-    footerTop + 32,
+    footerTop + 16,
+    { maxWidth: pageW - footTextX - margin - 4 },
+  )
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.setTextColor(13, 13, 13)
+  doc.text(co.web.replace(/^https?:\/\//, ''), footTextX, footerTop + 23)
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(6.5)
+  doc.setTextColor(90, 90, 90)
+  doc.text(
+    `Escanea el QR para abrir tu cotización ${docNumber} en línea.`,
+    footTextX,
+    footerTop + 29,
+    { maxWidth: pageW - footTextX - margin - 4 },
+  )
+  doc.text(
+    'O escribe la referencia al contactarnos por WhatsApp / correo.',
+    footTextX,
+    footerTop + 34,
     { maxWidth: pageW - footTextX - margin - 4 },
   )
 
-  doc.setFontSize(6)
-  doc.setTextColor(150, 150, 150)
+  doc.setFontSize(5.5)
+  doc.setTextColor(110, 110, 110)
   doc.text(
-    'Esta cotización es informativa. No es boleta, factura ni comprobante SUNAT.',
+    'NO SE ACEPTAN CAMBIOS NI DEVOLUCIONES CON DAÑOS FÍSICOS O ACCESORIOS FALTANTES, SOLO POR FALLAS DE FABRICACIÓN.',
     pageW / 2,
     pageH - 5,
     { align: 'center', maxWidth: pageW - margin * 2 },
   )
 
   const blob = doc.output('blob')
-  const fileName = `Cotizacion-Rosver-${docNumber}.pdf`
+  const safeName = docNumber.replace(/[^\w.-]+/g, '-')
+  const fileName = `Cotizacion-Rosver-${safeName}.pdf`
   return { blob, fileName, docNumber, total }
 }
 

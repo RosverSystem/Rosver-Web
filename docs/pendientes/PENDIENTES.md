@@ -59,9 +59,11 @@
 
 | P58 | Redis WRONGPASS (user `default` vs requirepass) | Ops logs | hecho | v0.1.40 URL sin username + var Railway (0138) |
 | P59 | Redis WRONGPASS residual (`$REDISPASSWORD` sin expandir en start) | Ops logs | hecho | startCommand `sh -c` + cliente host/pass (0139 / v0.1.41) |
+| P60 | PDF cotización igual a factura impresa + pie web/QR | Pedido UX | hecho | v0.1.42 / 0140 |
 
 ## Hechos recientes
 
+- PDF cotización: layout factura Rosver + pie visita web/QR (v0.1.42 / 0140)
 - Fix Redis requirepass: startCommand con shell + ioredis host/password (v0.1.41 / 0139)
 - Fix Redis WRONGPASS: URL sin usuario `default` (v0.1.40 / 0138)
 - Fix Railway EBUSY + redeploy con commit correcto (v0.1.39 / 0137)
