@@ -12,3 +12,5 @@ Ideas útiles **no pedidas** aún. No implementar solas; esperar OK del usuario.
 | R06 | Audit log de logins | ERP / compliance | baja |
 | R07 | Tests e2e login (Playwright) | Regresión auth | media |
 | R08 | Separar servicio API si el tráfico crece | Escala | baja |
+| R09 | Widgets KPIs en dashboard ERP | Valor gestión | media |
+| R10 | Command palette (⌘K) en top bar ERP | Productividad | baja |

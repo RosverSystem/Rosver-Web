@@ -32,12 +32,14 @@ Fuente de verdad para el agente al implementar UI y, después, lógica.
 | `/cuenta/cotizaciones` | Cotizaciones propias | `account` / `quotes` |
 | `/cuenta/perfil` | Datos de cuenta | `account` |
 
-### Gestión (`/admin`)
+### Gestión (`/admin`) — SystemRSV
+
+Shell propio (sidebar oscura + top bar). UX: `docs/architecture/09-erp-systemrsv-ux.md`.
 
 | Ruta | Vista | Roles | Feature |
 | --- | --- | --- | --- |
-| `/admin` | Dashboard resumen | admin, sales | shell admin |
-| `/admin/productos` | Listado productos | admin | `admin-catalog` |
+| `/admin` | Dashboard (placeholder bento) | admin, sales | shell admin |
+| `/admin/productos` | Productos — **vacío** (módulo listo) | admin | `admin-catalog` |
 | `/admin/productos/nuevo` | Alta producto | admin | `admin-catalog` |
 | `/admin/productos/:id` | Edición producto | admin | `admin-catalog` |
 | `/admin/categorias` | Categorías | admin | `admin-catalog` |

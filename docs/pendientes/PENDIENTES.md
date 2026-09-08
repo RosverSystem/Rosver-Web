@@ -7,7 +7,9 @@
 | P01 | Google OAuth (Client ID + Secret) | Auth completo | bloqueado | Falta credenciales Google Cloud; redirect prod: `/api/auth/google/callback` |
 | P02 | Facebook login | UI login/registro | pendiente | Botón placeholder; no pedido aún como OAuth |
 | P03 | Pedidos / cotizaciones reales en `/cuenta` | Auth + cuenta | pendiente | Siguen mocks; falta API de pedidos/quotes |
-| P04 | UI admin roles/permisos | Auth RBAC | pendiente | API `/api/admin/roles` lista; panel SystemRSV en blanco |
+| P04 | UI admin roles/permisos | Auth RBAC | pendiente | API lista; falta pantalla en estilo ERP |
+| P10 | CRUD Productos ERP + API | Pedido ERP | pendiente | Vista vacía montada; falta lógica/API/R2 |
+| P11 | Migrar resto módulos admin al estilo SystemRSV | ERP UX | pendiente | Categorías, leads, etc. aún wireframe |
 | P05 | Recuperación de contraseña | Auth | pendiente | No implementado |
 | P06 | Subida foto perfil a R2 | Perfil | pendiente | Solo avatares SVG default |
 | P07 | 2FA UI en perfil (activar TOTP) | Auth TOTP | pendiente | API `/api/auth/2fa/*` lista; falta pantalla |
@@ -19,5 +21,6 @@
 - Auth API + deploy Railway unificado web+api
 - SMTP Hostinger configurado en Railway
 - Seed admin + cliente
-- Header sesión visible (v0.1.1 / commit `55538bc`)
+- Header sesión visible (v0.1.2)
+- Shell ERP SystemRSV (sidebar + top bar) + Productos vacío (v0.1.3)
 

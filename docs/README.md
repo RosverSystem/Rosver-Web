@@ -10,7 +10,8 @@ Documentación de producto. El código vive en `RosverSac/`; aquí va el **qué*
 4. [`architecture/05-estructura-informacion-y-captacion.md`](./architecture/05-estructura-informacion-y-captacion.md) — cómo organizar contenido y CTAs para captar clientes fácil.
 5. [`architecture/06-banners-hero-y-assets.md`](./architecture/06-banners-hero-y-assets.md) — medidas Canva del banner hero (móvil/tablet/desktop) y assets de marcas.
 6. [`architecture/07-categorias-imagen-erp.md`](./architecture/07-categorias-imagen-erp.md) — categorías con imagen + contrato para ERP.
-7. [`features/README.md`](./features/README.md) — índice de módulos.
+7. [`architecture/08-despliegue-y-almacenamiento.md`](./architecture/08-despliegue-y-almacenamiento.md) — Railway, Postgres, R2.
+8. [`architecture/09-erp-systemrsv-ux.md`](./architecture/09-erp-systemrsv-ux.md) — UX/UI del ERP SystemRSV.
 
 ## Estructura
 
@@ -35,6 +36,7 @@ Documentación de producto. El código vive en `RosverSac/`; aquí va el **qué*
 
 - **create-feature** — nueva feature (`.cursor/skills/` y `.claude/skills/`)
 - **document-change** — registrar cambio (mismo en Cursor y Claude Code)
+- **fullstack-erp-structure** — capas front/API/Postgres/R2 del ERP SystemRSV
 
 ## Agentes
 

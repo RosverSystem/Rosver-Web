@@ -42,11 +42,12 @@ npm run lint
 ## Flujo obligatorio
 
 1. **Feature nueva** → leer skill `create-feature` antes de codear.
-2. **Al cerrar cualquier tarea** → skill `document-change` → `docs/changes/NNNN-slug.md`.
-3. Feature nueva → ficha en `docs/features/` + fila en índice.
-4. Docs en **español**, concretas.
-5. Si cambia un flujo o regla de negocio → actualizar `02` / `03` en architecture.
-6. Escribir docs para que **Claude Code** retome el avance sin el chat.
+2. **Módulo ERP / API** → skill `fullstack-erp-structure`.
+3. **Al cerrar cualquier tarea** → skill `document-change` → `docs/changes/NNNN-slug.md`.
+4. Feature nueva → ficha en `docs/features/` + fila en índice.
+5. Docs en **español**, concretas.
+6. Si cambia un flujo o regla de negocio → actualizar `02` / `03` en architecture.
+7. Escribir docs para que **Claude Code** retome el avance sin el chat.
 
 ## Reglas clave
 
@@ -73,6 +74,7 @@ npm run lint
 - Pendientes: `docs/pendientes/`
 - Stack / librerías: `docs/architecture/04-stack-y-librerias.md`
 - Paleta: `docs/architecture/06-paleta-colores.md`
+- ERP UX: `docs/architecture/09-erp-systemrsv-ux.md`
 - Despliegue / Postgres / R2: `docs/architecture/08-despliegue-y-almacenamiento.md`
 - Features: `docs/features/README.md`
 - Módulos: `docs/architecture/01-modulos-feature.md`
