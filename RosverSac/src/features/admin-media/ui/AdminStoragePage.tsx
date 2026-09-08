@@ -298,8 +298,16 @@ export function AdminStoragePage() {
                   <AdminEmptyState title="Cargando archivos…" />
                 ) : filtered.length === 0 ? (
                   <AdminEmptyState
-                    title="Sin archivos en esta carpeta"
-                    detail="Sube una imagen o elige otra carpeta."
+                    title={
+                      folderId === 'all'
+                        ? 'Todavía no hay archivos en R2'
+                        : 'Sin archivos en esta carpeta'
+                    }
+                    detail={
+                      folderId === 'all'
+                        ? 'Sube una imagen con el botón de arriba.'
+                        : 'Sube una imagen o elige «Todos» / otra carpeta.'
+                    }
                   />
                 ) : (
                   <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5">
@@ -326,6 +334,11 @@ export function AdminStoragePage() {
                                 FILE
                               </span>
                             )}
+                            {folderId === 'all' && obj.key.includes('/') ? (
+                              <span className="absolute top-1.5 left-1.5 rounded-md bg-rosver-ink/80 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white uppercase">
+                                {obj.key.split('/')[0]}
+                              </span>
+                            ) : null}
                           </div>
                           <div className="space-y-0.5 px-2.5 py-2">
                             <p className="truncate text-xs font-semibold text-rosver-ink">

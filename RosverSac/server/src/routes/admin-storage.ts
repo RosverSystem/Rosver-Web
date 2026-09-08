@@ -43,25 +43,32 @@ adminStorageRoutes.get('/storage', async (c) => {
   const q = (c.req.query('q') ?? '').trim().toLowerCase()
 
   try {
+    // Sin Delimiter: «Todos» debe listar archivos dentro de products/, brands/, etc.
+    // Con Delimiter='/' S3 solo devolvía CommonPrefixes y el grid quedaba vacío.
     const listed = await listPublicObjects({
       prefix: prefix || undefined,
       continuationToken: cursor,
-      maxKeys: 120,
-      groupFolders: !prefix,
+      maxKeys: 200,
+      groupFolders: false,
     })
 
     const objects = q
       ? listed.objects.filter((o) => o.key.toLowerCase().includes(q))
       : listed.objects
 
-    const folders = listed.folders.map((p) => {
-      const slug = p.replace(/\/$/, '')
-      return {
-        prefix: p,
-        name: FOLDER_LABELS[slug] ?? slug,
-        id: slug,
-      }
-    })
+    // Carpetas conocidas para UI (el front ya tiene chips; esto ayuda a otros clientes).
+    const known = ['products/', 'categories/', 'brands/', 'avatars/']
+    const folders = (prefix
+      ? []
+      : known.map((p) => {
+          const slug = p.replace(/\/$/, '')
+          return {
+            prefix: p,
+            name: FOLDER_LABELS[slug] ?? slug,
+            id: slug,
+          }
+        })
+    )
 
     return c.json({
       prefix,

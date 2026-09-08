@@ -37,9 +37,11 @@
 | P37 | CRUD completo presentaciones/precios/tipos + AdminSelect | Pedido reglas 14/16 | hecho | v0.1.26 |
 | P38 | Formularios ERP solo en AdminModal (regla 17) | Pedido UX ERP | hecho | v0.1.27 |
 | P39 | Vista previa tienda en producto/categoría ERP | Pedido UX | hecho | v0.1.28 |
+| P40 | Almacenamiento «Todos» vacío (Delimiter R2) | Bug ERP | hecho | v0.1.29 |
 
 ## Hechos recientes
 
+- Fix listado R2 «Todos» sin Delimiter (v0.1.29)
 - Preview ProductCard / CategoryHomeCard en modales ERP (v0.1.28)
 - Regla 17 + Ofertas/Categorías/Productos/Precios/Unidades en `AdminModal` (v0.1.27)
 - CRUD C/R/U/D presentaciones, precios y tipos de unidad + AdminSelect (v0.1.26)
