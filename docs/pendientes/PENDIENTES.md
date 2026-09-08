@@ -15,7 +15,7 @@
 | P07 | 2FA UI en perfil (activar TOTP) | Auth TOTP | pendiente | API `/api/auth/2fa/*` lista; falta pantalla |
 | P08 | Header sesión visible | Login UX | hecho | Menú con primer nombre + logout interno (v0.1.2) |
 | P09 | CLI `railway` no autenticado en esta máquina | Deploy continuo | pendiente | Deploy vía GraphQL; opcional `railway login` |
-| P12 | Vars R2 en Railway prod | Avatar upload | pendiente | Copiar `R2_*` del `.env` local al servicio Rosver-Web |
+| P12 | Vars R2 en Railway prod | Avatar upload | hecho | `R2_*` upsert en Rosver-Web (v0.1.4) |
 
 ## Hechos recientes (referencia)
 
