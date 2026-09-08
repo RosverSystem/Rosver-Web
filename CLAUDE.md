@@ -62,6 +62,7 @@ npm run lint
 - **Iconos UI nuevos:** solo `cssvg-icons` ([icon.cssvg.com](https://icon.cssvg.com)) — ver `.claude/rules/07-icons-cssvg.md`.
 - **Paleta oficial:** solo tokens Rosver (`docs/architecture/06-paleta-colores.md`, `.claude/rules/09-paleta-colores.md`).
 - **Formularios / validación:** toasts flotantes (`FloatingToasts` + `useFormToasts`); nunca bubbles nativos ni errores inline que alarguen el form (`.claude/rules/10-form-toasts.md`).
+- **Despliegues / versiones:** documentar en `08` + `docs/changes/`. **Todo cambio cerrado → push GitHub `main` + deploy Railway** (`.claude/rules/11-despliegues-versiones.md`). Infra: Railway (web + Postgres), Cloudflare R2 (media).
 
 ## Paridad con Cursor
 
@@ -74,6 +75,7 @@ npm run lint
 - Vistas/flujos: `docs/architecture/03-vistas-y-flujos.md`
 - Stack / librerías: `docs/architecture/04-stack-y-librerias.md`
 - Paleta: `docs/architecture/06-paleta-colores.md`
+- Despliegue / Postgres / R2: `docs/architecture/08-despliegue-y-almacenamiento.md`
 - Features: `docs/features/README.md`
 - Módulos: `docs/architecture/01-modulos-feature.md`
 - Plantillas: `docs/templates/`

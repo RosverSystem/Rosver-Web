@@ -3,5 +3,8 @@ dist/
 .env
 .env.*
 !.env.example
+!RosverSac/.env.example
+!RosverSac/.env.railway.example
 *.local
+.r2-token-response.json
 .DS_Store

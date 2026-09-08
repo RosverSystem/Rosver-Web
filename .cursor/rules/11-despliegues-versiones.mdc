@@ -1,0 +1,48 @@
+---
+description: Despliegues, versiones y flujo continuo GitHub + Railway
+alwaysApply: true
+---
+
+# Despliegues, versiones y trabajo en línea
+
+Paridad Cursor ↔ Claude. Flujo obligatorio: **código en GitHub + deploy en Railway**.
+
+## Fuente de verdad
+
+| Qué | Dónde |
+| --- | --- |
+| Entornos, Railway, Postgres, R2 | `docs/architecture/08-despliegue-y-almacenamiento.md` |
+| Historial | `docs/changes/NNNN-slug.md` |
+| Versión app | `RosverSac/package.json` → `version` |
+| Repo | `https://github.com/RosverSystem/Rosver-Web` |
+| Deploy script | `scripts/railway-deploy.ps1` |
+
+## Regla de oro (continuo)
+
+**Todo cambio cerrado debe:**
+
+1. Quedar en `docs/changes/NNNN-slug.md`
+2. **Commit + push a `main`** en GitHub (`RosverSystem/Rosver-Web`)
+3. **Desplegarse en Railway** (misma versión / mismo commit) para probar en línea
+
+No dejar trabajo solo en local. Si el deploy falla, documentar el error y corregir hasta que la URL pública responda.
+
+## Al desplegar
+
+1. Bump `version` en `package.json` si es release.
+2. Change con: URL Railway, servicios (web / Postgres / R2), verificación.
+3. Actualizar `08` si cambian URLs o variables.
+4. **Nunca** commitear tokens / `DATABASE_URL` / keys R2.
+
+## Secretos
+
+- Local: `.env` (gitignored) — incluye `RAILWAY_TOKEN` (Account Token de railway.app/account/tokens).
+- Producción: variables en Railway dashboard (no `VITE_*` con secretos).
+
+## Checklist
+
+- [ ] Build OK (`npm run build` en `RosverSac/`)
+- [ ] Push a GitHub `main`
+- [ ] Deploy Railway OK
+- [ ] URL pública responde; SPA (`/catalogo`, `/admin`) sin 404
+- [ ] Change documentado
