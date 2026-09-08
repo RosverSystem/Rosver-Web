@@ -53,10 +53,11 @@
 | P53 | Pedidos / Leads / Cotizaciones / Contenido: permisos RBAC existen, sin rutas API ni tablas | Auditoría (refina P03) | pendiente | `admin.orders`, `admin.leads`, `admin.quotes`, `admin.content` sin backend; páginas admin son mocks locales; formulario de contacto no persiste lead |
 | P54 | Orden destacado/tendencia a mano + tipo precio confuso | Pedido UX precios | hecho | v0.1.35 orden auto + combobox unidad + solo oferta extra (0133) |
 | P55 | Quitar «Agregar otro producto a la lista» en /cotizar | Pedido UX | hecho | v0.1.36 / 0134 |
-| P56 | PDF cotización: logo + pie web + QR personalizado | Pedido UX | hecho | v0.1.37 / 0135 |
+| P56 | PDF cotización: logo + pie web + QR personalizado | Pedido UX | hecho | v0.1.37 / 0135; rediseño comercial (no factura) v0.1.38 / 0136 |
 
 ## Hechos recientes
 
+- PDF cotización comercial (no factura): total estimado, logo, pie web, QR (v0.1.38 / 0136)
 - PDF cotización: logo `logo_sinfondo.png`, pie visita web, QR con `?ref=` (v0.1.37 / 0135)
 - Cotizar: sin botón «Agregar otro producto a la lista» (v0.1.36 / 0134)
 - Precios ERP: orden auto, unidad escribir/elegir, oferta sin “tipo de precio” (v0.1.35 / 0133)
