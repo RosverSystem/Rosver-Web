@@ -33,6 +33,22 @@ export const ADMIN_NAV: AdminNavEntry[] = [
     Icon: Home,
   },
   {
+    type: 'link',
+    id: 'almacenamiento',
+    name: 'Almacenamiento',
+    link: '/admin/almacenamiento',
+    keywords: [
+      'r2',
+      'media',
+      'imagenes',
+      'archivos',
+      'cloudflare',
+      'almacen',
+      'storage',
+    ],
+    Icon: Hardrive,
+  },
+  {
     type: 'group',
     id: 'productos',
     name: 'Catálogo',
@@ -123,6 +139,7 @@ export function searchAdminModules(query: string): AdminNavLeaf[] {
 }
 
 export function adminPageTitle(pathname: string): string {
+  if (pathname.startsWith('/admin/almacenamiento')) return 'Almacenamiento'
   if (pathname.startsWith('/admin/ofertas')) return 'Ofertas'
   if (pathname.startsWith('/admin/marcas')) return 'Marcas'
   if (pathname.startsWith('/admin/categorias')) return 'Categorías'

@@ -1,5 +1,7 @@
 import {
+  DeleteObjectCommand,
   GetObjectCommand,
+  ListObjectsV2Command,
   PutObjectCommand,
   S3Client,
 } from '@aws-sdk/client-s3'
@@ -34,6 +36,13 @@ function getClient() {
   return client
 }
 
+export function publicUrlForKey(key: string) {
+  if (config.r2.publicBaseUrl) {
+    return `${config.r2.publicBaseUrl.replace(/\/$/, '')}/${key}`
+  }
+  return `/api/media/${key}`
+}
+
 export async function putPublicObject(input: {
   key: string
   body: Buffer
@@ -48,15 +57,66 @@ export async function putPublicObject(input: {
       CacheControl: 'public, max-age=31536000, immutable',
     }),
   )
-  if (config.r2.publicBaseUrl) {
-    return `${config.r2.publicBaseUrl.replace(/\/$/, '')}/${input.key}`
-  }
-  return `/api/media/${input.key}`
+  return publicUrlForKey(input.key)
 }
 
 export async function getPublicObject(key: string) {
   return getClient().send(
     new GetObjectCommand({
+      Bucket: config.r2.bucketPublic,
+      Key: key,
+    }),
+  )
+}
+
+export type ListedObject = {
+  key: string
+  size: number
+  lastModified: string | null
+  url: string
+}
+
+export async function listPublicObjects(input: {
+  prefix?: string
+  continuationToken?: string
+  maxKeys?: number
+  /** Si true, agrupa por carpetas de primer nivel (solo útil sin prefix). */
+  groupFolders?: boolean
+}) {
+  const res = await getClient().send(
+    new ListObjectsV2Command({
+      Bucket: config.r2.bucketPublic,
+      Prefix: input.prefix || undefined,
+      ContinuationToken: input.continuationToken || undefined,
+      MaxKeys: input.maxKeys ?? 100,
+      Delimiter: input.groupFolders ? '/' : undefined,
+    }),
+  )
+
+  const folders = (res.CommonPrefixes ?? [])
+    .map((p) => p.Prefix)
+    .filter((p): p is string => Boolean(p))
+
+  const objects: ListedObject[] = (res.Contents ?? [])
+    .filter((o) => o.Key && !o.Key.endsWith('/'))
+    .map((o) => ({
+      key: o.Key as string,
+      size: Number(o.Size ?? 0),
+      lastModified: o.LastModified ? o.LastModified.toISOString() : null,
+      url: publicUrlForKey(o.Key as string),
+    }))
+
+  return {
+    folders,
+    objects,
+    truncated: Boolean(res.IsTruncated),
+    nextToken: res.NextContinuationToken ?? null,
+  }
+}
+
+export async function deletePublicObject(key: string) {
+  await getClient().send(
+    new DeleteObjectCommand({
       Bucket: config.r2.bucketPublic,
       Key: key,
     }),

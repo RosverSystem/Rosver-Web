@@ -11,6 +11,7 @@
 | [auth](./auth.md) | Login, registro, roles | activa (diseño visual) |
 | [account](./account.md) | Área cliente | activa (wireframe) |
 | [admin-catalog](./admin-catalog.md) | Productos, precios, marcas, categorías ERP | activa (v1 API+UI) |
+| [admin-media](./admin-media.md) | Almacenamiento R2 (grid + modal) | activa |
 | [admin-content](./admin-content.md) | Contenido de la web | activa (wireframe) |
 | [admin-leads](./admin-leads.md) | Bandeja de leads | activa (wireframe) |
 | [admin-orders](./admin-orders.md) | Pedidos en backoffice | activa (wireframe) |

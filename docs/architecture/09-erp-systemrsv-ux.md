@@ -16,11 +16,11 @@ Skill: `erp-systemrsv-saas-ux`.
 | Ítem | Ruta |
 | --- | --- |
 | Inicio | `/admin` |
+| Almacenamiento | `/admin/almacenamiento` (R2, preview modal) |
 | Catálogo → Productos | `/admin/productos` |
-| Catálogo → Listado de precios | `/admin/listado-precios` |
+| Catálogo → Listado de precios | `/admin/listado-precios` (unidades + presentaciones) |
 | Catálogo → Categorías | `/admin/categorias` |
 | Catálogo → Marcas | `/admin/marcas` |
-| Catálogo → Listado de precios | `/admin/listado-precios` (incluye tipos de unidad + presentaciones) |
 | Catálogo → Ofertas | `/admin/ofertas` |
 
 ## Layout estático

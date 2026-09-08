@@ -33,10 +33,11 @@
 | P29 | Tendencia + calificaciones / reseñas | Pedido lógica | hecho | Doc 06 + v0.1.13 |
 | P30 | Reseñas desde cuenta cliente (no solo admin) | Calificaciones | pendiente | Admin ya no carga reseñas en producto; falta UI `/cuenta` |
 | P31 | Slider marcas ↔ módulo marcas + seed | Pedido UI | hecho | v0.1.14 · migración `006` |
-| P33 | Listado precios: crear presentaciones (N unidades) + precios | Pedido UX | hecho | v0.1.20 editor por producto |
+| P34 | Módulo Almacenamiento R2 (grid + modal) | Pedido ERP | hecho | v0.1.22 `/admin/almacenamiento` |
 
 ## Hechos recientes
 
+- Almacenamiento R2: grid + modal preview (v0.1.22)
 - Unidades dentro de Listado de precios; sin menú aparte (v0.1.21)
 - Listado precios: presentaciones con N unidades + precios (v0.1.20)
 - Productos por fases (Odoo) + specs libres + sin reseñas admin (v0.1.19)

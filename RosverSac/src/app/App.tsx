@@ -20,6 +20,7 @@ import {
   AdminPriceListPage,
   AdminProductsPage,
 } from '@/features/admin-catalog'
+import { AdminStoragePage } from '@/features/admin-media'
 import {
   AuthProvider,
   LoginPage,
@@ -107,6 +108,7 @@ export function App() {
                 <Route index element={<AdminDashboardPage />} />
                 <Route path="productos" element={<AdminProductsPage />} />
                 <Route path="listado-precios" element={<AdminPriceListPage />} />
+                <Route path="almacenamiento" element={<AdminStoragePage />} />
                 <Route path="categorias" element={<AdminCategoriesPage />} />
                 <Route path="marcas" element={<AdminBrandsPage />} />
                 <Route
