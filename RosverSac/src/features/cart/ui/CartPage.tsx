@@ -17,6 +17,7 @@ import { Link } from 'react-router-dom'
 import { useCart } from '../model/cart-store'
 import { addInputFromProduct, unitPriceOfLine } from '../model/cart-line'
 import { type CartLine } from '../model/mocks'
+import { ContinueOrderModal } from './ContinueOrderModal'
 
 /** TC referencial mock (fase visual). */
 const TC_REFERENCIAL = 3.75
@@ -56,6 +57,7 @@ export function CartPage() {
   const { products } = useCatalog()
   const { lines, addItem, updateQuantity, removeLine, clear, lineKey } =
     useCart()
+  const [orderModalOpen, setOrderModalOpen] = useState(false)
 
   const items = lines
     .map((l) => resolveLine(l, products))
@@ -224,12 +226,13 @@ export function CartPage() {
             Solicitar cotización
             <ArrowRight size={16} color="#ffffff" strokeWidth={2} />
           </Link>
-          <Link
-            to="/login"
+          <button
+            type="button"
+            onClick={() => setOrderModalOpen(true)}
             className="inline-flex min-h-12 flex-1 items-center justify-center rounded-full border-2 border-rosver-red bg-white px-5 py-3 text-sm font-bold text-rosver-red transition hover:bg-rosver-red/5 sm:flex-none"
           >
             Continuar pedido
-          </Link>
+          </button>
           <button
             type="button"
             onClick={() => {
@@ -286,6 +289,10 @@ export function CartPage() {
           <ArrowRight size={14} color="#ffffff" strokeWidth={2} />
         </Link>
       </div>
+      <ContinueOrderModal
+        open={orderModalOpen}
+        onClose={() => setOrderModalOpen(false)}
+      />
     </main>
   )
 }

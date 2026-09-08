@@ -27,6 +27,7 @@ App: `RosverSac/` · Alias: `@` → `RosverSac/src`
 | Mail | `nodemailer` | SMTP Hostinger |
 | 2FA | `otplib` + `qrcode` | TOTP autenticador |
 | Validación API | `zod` | Schemas en server |
+| PDF cotización | `jspdf` | Cotización estilo factura (carrito → Continuar pedido) |
 | Iconos (UI general) | **`cssvg-icons`** | Obligatorio para iconos UI nuevos — [icon.cssvg.com](https://icon.cssvg.com) |
 | Iconos (legado / marca) | `shared/ui/icons.tsx`, `lucide-react` (solo código ya existente) | No usar Lucide en código nuevo |
 
@@ -175,6 +176,17 @@ Principio: **la página debe sentirse rápida** (móvil incluido). Detalle opera
 - Claude Code: `.claude/rules/06-performance.md`
 
 Al elegir librería (paso 1 arriba): preferir la opción más liviana que cumpla el diseño. Motion + GSAP ya están; no sumar otra lib de animación sin justificar peso.
+
+---
+
+### `qrcode` (^1)
+
+- QR TOTP / también QR en PDF de cotización (`features/cart/lib/quote-pdf.ts`).
+
+### `jspdf` (^3+)
+
+- Generación cliente de PDF cotización (plantilla tipo factura) en «Continuar pedido».
+- WhatsApp no admite adjunto por `wa.me`: se descarga el PDF y se abre el chat con resumen.
 
 ---
 

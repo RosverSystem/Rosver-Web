@@ -27,6 +27,7 @@ Línea = productSlug + packagingId? + quantity + unitPrice (congelado al agregar
 - Banner cuenta solo ítems **resolubles** en el catálogo actual.
 - Subtotal estimado + TC referencial mock.
 - Vaciar / cotizar / seguir comprando.
+- **Continuar pedido** → modal: datos negocio + **Descargar PDF** (plantilla tipo factura) o **WhatsApp** (descarga PDF + chat con resumen; WA no adjunta PDF por enlace).
 
 ## Fuera de alcance (aún)
 

@@ -39,9 +39,11 @@
 | P39 | Vista previa tienda en producto/categoría ERP | Pedido UX | hecho | v0.1.28 |
 | P40 | Almacenamiento «Todos» vacío (Delimiter R2) | Bug ERP | hecho | v0.1.29 |
 | P41 | Lógica carrito (persistencia + sync catálogo) | Pedido lógica | hecho | v0.1.30 localStorage |
+| P42 | Continuar pedido: PDF cotización + WhatsApp | Pedido UX | hecho | v0.1.31 jspdf; WA sin adjunto auto |
 
 ## Hechos recientes
 
+- Continuar pedido: modal PDF estilo factura + WhatsApp (v0.1.31)
 - Lógica carrito: localStorage, sync catálogo, sin seed fantasma (v0.1.30)
 - Fix listado R2 «Todos» sin Delimiter (v0.1.29)
 - Preview ProductCard / CategoryHomeCard en modales ERP (v0.1.28)

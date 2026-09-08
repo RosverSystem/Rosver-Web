@@ -9,8 +9,8 @@ Armar un carrito de productos para pasar a **cotización** o **pedido**.
 
 ## Alcance
 
-- Incluido: añadir/quitar/cantidad, presentación + precio congelado, `localStorage`, sync con catálogo vivo, `/carrito`, CTAs cotizar/pedir.
-- Fuera: pagos, stock real, API pedido (fase siguiente).
+- Incluido: añadir/quitar/cantidad, presentación + precio congelado, `localStorage`, sync con catálogo vivo, `/carrito`, CTAs cotizar/pedir, modal Continuar pedido (PDF + WhatsApp).
+- Fuera: pagos, stock real, API pedido, adjunto PDF automático en WhatsApp (limitación de la plataforma).
 
 ## API pública
 
