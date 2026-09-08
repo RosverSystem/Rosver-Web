@@ -24,7 +24,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 /** TC referencial mock (fase visual). */
 const TC_REFERENCIAL = 3.75
@@ -91,6 +91,8 @@ function linesFromCart(
 export function QuoteRequestPage() {
   const reduce = prefersReducedMotion()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const quoteRef = searchParams.get('ref')?.trim() || null
   const { user } = useAuth()
   const { lines: cartLines, replaceAll, itemCount } = useCart()
 
@@ -277,6 +279,14 @@ export function QuoteRequestPage() {
       <div className="pt-4 sm:pt-6">
         <QuoteBanner reduce={reduce} fromCart={itemCount > 0} />
       </div>
+
+      {quoteRef ? (
+        <p className="rounded-xl border border-rosver-red/25 bg-rosver-red/5 px-4 py-3 text-sm text-rosver-ink">
+          Abriste el QR de la cotización{' '}
+          <span className="font-bold text-rosver-red">{quoteRef}</span>. Completa
+          o actualiza tu lista aquí y escríbenos con esa referencia.
+        </p>
+      ) : null}
 
       {status === 'sent' ? (
         <motion.div

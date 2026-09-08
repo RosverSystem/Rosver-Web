@@ -42,9 +42,39 @@ function nextDocNumber() {
   return `C001-${y}${m}${day}-${seq}`
 }
 
+/** Logo público — se cachea en memoria para no refetch en cada PDF. */
+let logoDataUrlPromise: Promise<string | null> | null = null
+
+function loadLogoDataUrl() {
+  if (!logoDataUrlPromise) {
+    logoDataUrlPromise = (async () => {
+      try {
+        const res = await fetch('/logo_sinfondo.png')
+        if (!res.ok) return null
+        const blob = await res.blob()
+        return await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve(String(reader.result))
+          reader.onerror = () => reject(new Error('logo read'))
+          reader.readAsDataURL(blob)
+        })
+      } catch {
+        return null
+      }
+    })()
+  }
+  return logoDataUrlPromise
+}
+
+/** URL personalizada por cotización (QR funcional). */
+export function quoteLandingUrl(docNumber: string) {
+  const base = ROSVER_COMPANY.web.replace(/\/$/, '')
+  return `${base}/cotizar?ref=${encodeURIComponent(docNumber)}`
+}
+
 /**
  * PDF cotización estilo factura impresa Rosver (A4).
- * WhatsApp no permite adjuntar PDF por enlace: el PDF se descarga aparte.
+ * Logo real + pie con invitación a la web + QR personalizado.
  */
 export async function buildQuotePdf(input: QuotePdfInput): Promise<{
   blob: Blob
@@ -56,6 +86,7 @@ export async function buildQuotePdf(input: QuotePdfInput): Promise<{
   const currency = input.currency ?? 'SOLES'
   const co = ROSVER_COMPANY
   const lines = input.lines.filter((l) => l.description.trim())
+  const landingUrl = quoteLandingUrl(docNumber)
 
   const subtotal = lines.reduce((sum, l) => {
     if (l.unitPrice == null) return sum
@@ -66,71 +97,103 @@ export async function buildQuotePdf(input: QuotePdfInput): Promise<{
   const igv = subtotal - base
   const total = subtotal
 
+  const [logoDataUrl, qrDataUrl] = await Promise.all([
+    loadLogoDataUrl(),
+    QRCode.toDataURL(landingUrl, {
+      margin: 1,
+      width: 280,
+      errorCorrectionLevel: 'M',
+      color: { dark: '#0D0D0D', light: '#FFFFFF' },
+    }).catch(() => null as string | null),
+  ])
+
   const doc = new jsPDF({ unit: 'mm', format: 'a4' })
   const pageW = doc.internal.pageSize.getWidth()
+  const pageH = doc.internal.pageSize.getHeight()
   const margin = 12
-  let y = 14
+  let y = 12
 
-  // Header left — empresa
-  doc.setFont('helvetica', 'bold')
-  doc.setFontSize(16)
-  doc.setTextColor(227, 6, 19)
-  doc.text('ROSVER', margin, y)
-  doc.setTextColor(13, 13, 13)
-  doc.setFontSize(9)
-  doc.text('SAC', margin + 28, y)
-
-  y += 5
-  doc.setFont('helvetica', 'normal')
-  doc.setFontSize(7.5)
-  doc.setTextColor(60, 60, 60)
-  const leftInfo = [
-    co.address,
-    `DIR. LOCAL: ${co.localAddress}`,
-    `TELF.: ${co.phones}`,
-    `EMAIL: ${co.email}`,
-  ]
-  for (const line of leftInfo) {
-    doc.text(line, margin, y, { maxWidth: 95 })
-    y += 3.5
+  // ── Header: logo + datos ──
+  const logoSize = 22
+  if (logoDataUrl) {
+    doc.addImage(logoDataUrl, 'PNG', margin, y - 2, logoSize, logoSize)
+  } else {
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(16)
+    doc.setTextColor(227, 6, 19)
+    doc.text('ROSVER', margin, y + 8)
   }
 
-  // Header right — caja documento
-  const boxX = pageW - margin - 72
+  const textX = margin + (logoDataUrl ? logoSize + 4 : 0)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(12)
+  doc.setTextColor(13, 13, 13)
+  doc.text(co.legalName, textX, y + 4)
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(7)
+  doc.setTextColor(70, 70, 70)
+  const headerLines = [
+    co.address,
+    `TELF.: ${co.phones}`,
+    `EMAIL: ${co.email}`,
+    co.web.replace(/^https?:\/\//, ''),
+  ]
+  let hy = y + 8
+  for (const line of headerLines) {
+    doc.text(line, textX, hy, { maxWidth: 88 })
+    hy += 3.4
+  }
+
+  // Caja RUC / cotización
+  const boxW = 70
+  const boxX = pageW - margin - boxW
   const boxY = 10
+  doc.setDrawColor(227, 6, 19)
+  doc.setLineWidth(0.8)
+  doc.rect(boxX, boxY, boxW, 30)
   doc.setDrawColor(13, 13, 13)
-  doc.setLineWidth(0.6)
-  doc.rect(boxX, boxY, 72, 28)
+  doc.setLineWidth(0.35)
+  doc.rect(boxX + 1.2, boxY + 1.2, boxW - 2.4, 30 - 2.4)
+
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(9)
   doc.setTextColor(13, 13, 13)
-  doc.text(`R.U.C. ${co.ruc}`, boxX + 36, boxY + 8, { align: 'center' })
-  doc.setFontSize(11)
-  doc.text('COTIZACIÓN', boxX + 36, boxY + 16, { align: 'center' })
-  doc.setFontSize(10)
-  doc.text(docNumber, boxX + 36, boxY + 23, { align: 'center' })
+  doc.text(`R.U.C. ${co.ruc}`, boxX + boxW / 2, boxY + 8, { align: 'center' })
+  doc.setTextColor(227, 6, 19)
+  doc.setFontSize(12)
+  doc.text('COTIZACIÓN', boxX + boxW / 2, boxY + 17, { align: 'center' })
+  doc.setTextColor(13, 13, 13)
+  doc.setFontSize(9)
+  doc.text(docNumber, boxX + boxW / 2, boxY + 25, { align: 'center' })
 
-  y = Math.max(y, boxY + 32) + 4
+  y = Math.max(hy, boxY + 34) + 3
+
+  // Línea separadora
+  doc.setDrawColor(227, 6, 19)
+  doc.setLineWidth(0.5)
+  doc.line(margin, y, pageW - margin, y)
+  y += 6
 
   // Cliente
   const c = input.customer
   const issued = new Date().toISOString().slice(0, 10)
   doc.setFontSize(8)
+  doc.setTextColor(13, 13, 13)
   doc.setFont('helvetica', 'bold')
   doc.text(`RUC/DNI: ${c.document || '—'}`, margin, y)
   doc.setFont('helvetica', 'normal')
   doc.text(`FECHA EMISIÓN: ${issued}`, pageW / 2 + 4, y)
-  y += 4
+  y += 4.2
   doc.setFont('helvetica', 'bold')
   doc.text(`SEÑOR(ES): ${c.name || '—'}`, margin, y, { maxWidth: 95 })
   doc.setFont('helvetica', 'normal')
   doc.text(`MONEDA: ${currency}`, pageW / 2 + 4, y)
-  y += 4
+  y += 4.2
   doc.text(`TEL/WHATSAPP: ${c.phone || '—'}`, margin, y)
   doc.text(`CIUDAD/AGENCIA: ${c.city || '—'}`, pageW / 2 + 4, y, {
     maxWidth: 90,
   })
-  y += 4
+  y += 4.2
   doc.text('FORMA PAGO: POR CONFIRMAR', margin, y)
   doc.text('DOC.: COTIZACIÓN (NO ES COMPROBANTE)', pageW / 2 + 4, y)
   y += 6
@@ -148,6 +211,7 @@ export async function buildQuotePdf(input: QuotePdfInput): Promise<{
   doc.setFillColor(243, 244, 246)
   doc.rect(margin, y, pageW - margin * 2, rowH, 'F')
   doc.setDrawColor(13, 13, 13)
+  doc.setLineWidth(0.35)
   doc.rect(margin, y, pageW - margin * 2, rowH)
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(7)
@@ -161,7 +225,7 @@ export async function buildQuotePdf(input: QuotePdfInput): Promise<{
 
   doc.setFont('helvetica', 'normal')
   lines.forEach((line, idx) => {
-    if (y > 250) {
+    if (y > 200) {
       doc.addPage()
       y = 16
     }
@@ -174,7 +238,7 @@ export async function buildQuotePdf(input: QuotePdfInput): Promise<{
     doc.rect(margin, y, pageW - margin * 2, h)
     doc.text(String(idx + 1), cols.it + 1, y + 4)
     doc.text(line.quantity.toFixed(2), cols.cant + 1, y + 4)
-    doc.text(line.unit.slice(0, 6), cols.und + 1, y + 4)
+    doc.text(line.unit.slice(0, 8), cols.und + 1, y + 4)
     doc.text(descLines, cols.desc + 1, y + 4)
     doc.text(
       line.unitPrice != null ? money(line.unitPrice) : 'Consultar',
@@ -216,9 +280,12 @@ export async function buildQuotePdf(input: QuotePdfInput): Promise<{
     const x = totX + i * cellW
     doc.rect(x, y, cellW, 8)
     doc.setFont('helvetica', i === 2 ? 'bold' : 'normal')
+    if (i === 2) doc.setTextColor(227, 6, 19)
+    else doc.setTextColor(13, 13, 13)
     doc.text(val, x + cellW / 2, y + 5.5, { align: 'center' })
   })
-  y += 14
+  doc.setTextColor(13, 13, 13)
+  y += 12
 
   doc.setFont('helvetica', 'normal')
   doc.setFontSize(7)
@@ -228,7 +295,7 @@ export async function buildQuotePdf(input: QuotePdfInput): Promise<{
     margin,
     y,
   )
-  y += 4
+  y += 3.5
   doc.text(
     'Precios sujetos a confirmación de stock y TC. Vigencia orientativa: 48 h hábiles.',
     margin,
@@ -236,24 +303,63 @@ export async function buildQuotePdf(input: QuotePdfInput): Promise<{
   )
   y += 8
 
-  try {
-    const qrDataUrl = await QRCode.toDataURL(co.web, {
-      margin: 1,
-      width: 120,
-      color: { dark: '#0D0D0D', light: '#FFFFFF' },
-    })
-    doc.addImage(qrDataUrl, 'PNG', pageW / 2 - 14, y, 28, 28)
-    y += 32
-  } catch {
-    y += 4
+  // ── Pie: visita web + QR personalizado ──
+  const footerTop = Math.max(y, pageH - 62)
+  const footerH = 48
+  doc.setFillColor(243, 244, 246)
+  doc.setDrawColor(227, 6, 19)
+  doc.setLineWidth(0.6)
+  doc.rect(margin, footerTop, pageW - margin * 2, footerH, 'FD')
+
+  const qrSize = 28
+  const qrX = margin + 4
+  const qrY = footerTop + (footerH - qrSize) / 2
+  if (qrDataUrl) {
+    doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrSize, qrSize)
   }
 
-  doc.setFontSize(6.5)
+  const footTextX = qrX + qrSize + 6
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(10)
+  doc.setTextColor(227, 6, 19)
+  doc.text('¡Visítanos en la web!', footTextX, footerTop + 10)
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(7.5)
+  doc.setTextColor(40, 40, 40)
+  doc.text(
+    'Catálogo, ofertas y más productos importados en un solo lugar.',
+    footTextX,
+    footerTop + 16,
+    { maxWidth: pageW - footTextX - margin - 4 },
+  )
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
   doc.setTextColor(13, 13, 13)
+  doc.text(co.web.replace(/^https?:\/\//, ''), footTextX, footerTop + 23)
+
+  doc.setFont('helvetica', 'normal')
+  doc.setFontSize(6.5)
+  doc.setTextColor(90, 90, 90)
+  doc.text(
+    `Escanea el QR para abrir tu cotización ${docNumber} en línea.`,
+    footTextX,
+    footerTop + 29,
+    { maxWidth: pageW - footTextX - margin - 4 },
+  )
+  doc.text(
+    'O escribe la referencia al contactarnos por WhatsApp / correo.',
+    footTextX,
+    footerTop + 34,
+    { maxWidth: pageW - footTextX - margin - 4 },
+  )
+
+  doc.setFontSize(5.5)
+  doc.setTextColor(110, 110, 110)
   doc.text(
     'NO SE ACEPTAN CAMBIOS NI DEVOLUCIONES CON DAÑOS FÍSICOS O ACCESORIOS FALTANTES, SOLO POR FALLAS DE FABRICACIÓN.',
     pageW / 2,
-    Math.min(y + 4, 285),
+    pageH - 6,
     { align: 'center', maxWidth: pageW - margin * 2 },
   )
 
