@@ -4,14 +4,35 @@ import { IconUser } from '@/shared/ui/icons'
 import { useEffect, useId, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
+/** Primer nombre legible (evita confundir con el rol «Cliente»). */
 export function shortDisplayName(user: AuthUser): string {
   const name = user.fullName?.trim()
-  if (name) return name.split(/\s+/)[0] ?? name
-  return user.email.split('@')[0] ?? 'Cuenta'
+  if (name) {
+    const parts = name.split(/\s+/).filter(Boolean)
+    const roleLike = new Set(
+      [
+        user.roleName,
+        user.roleCode,
+        'cliente',
+        'client',
+        'admin',
+        'administrador',
+        'usuario',
+      ]
+        .filter(Boolean)
+        .map((s) => String(s).toLowerCase()),
+    )
+    if (parts.length >= 2 && roleLike.has(parts[0]!.toLowerCase())) {
+      return parts[1]!
+    }
+    return parts[0]!
+  }
+  const local = user.email.split('@')[0] ?? 'Cuenta'
+  const token = local.split(/[._-]/)[0]
+  return token ? token.charAt(0).toUpperCase() + token.slice(1) : 'Cuenta'
 }
 
 type SessionAccountMenuProps = {
-  /** desktop | compact (móvil drawer) | footer */
   variant?: 'desktop' | 'compact' | 'footer'
   onNavigate?: () => void
   className?: string
@@ -127,33 +148,39 @@ export function SessionAccountMenu({
 
   if (variant === 'compact') {
     return (
-      <div className={cn('flex flex-col gap-1 py-2', className)}>
-        <Link
-          to="/cuenta"
-          onClick={onNavigate}
-          className="flex items-center gap-2 text-sm font-bold text-rosver-ink uppercase"
-        >
+      <div className={cn('flex flex-col gap-1 border-t border-rosver-line pt-2', className)}>
+        <div className="flex items-center gap-2 px-1 py-1">
           <img
             src={user.avatarUrl}
             alt=""
-            width={28}
-            height={28}
-            className="size-7 rounded-full object-cover ring-1 ring-rosver-line"
+            width={32}
+            height={32}
+            className="size-8 rounded-full object-cover ring-1 ring-rosver-line"
           />
-          {label}
+          <div className="min-w-0">
+            <p className="truncate text-sm font-bold text-rosver-ink">{label}</p>
+            <p className="truncate text-[11px] text-rosver-muted">{user.email}</p>
+          </div>
+        </div>
+        <Link
+          to="/cuenta"
+          onClick={onNavigate}
+          className="rounded-lg px-3 py-2 text-sm font-semibold text-rosver-ink hover:bg-rosver-soft"
+        >
+          Mi cuenta
         </Link>
         <Link
           to="/cuenta/perfil"
           onClick={onNavigate}
-          className="pl-9 text-xs font-semibold text-rosver-muted"
+          className="rounded-lg px-3 py-2 text-sm font-semibold text-rosver-ink hover:bg-rosver-soft"
         >
-          Ver perfil
+          Perfil
         </Link>
         {isAdmin ? (
           <Link
             to="/admin"
             onClick={onNavigate}
-            className="pl-9 text-xs font-semibold text-rosver-blue"
+            className="rounded-lg px-3 py-2 text-sm font-semibold text-rosver-blue hover:bg-rosver-soft"
           >
             Panel SystemRSV
           </Link>
@@ -161,7 +188,7 @@ export function SessionAccountMenu({
         <button
           type="button"
           onClick={() => void onLogout()}
-          className="pl-9 text-left text-xs font-semibold text-rosver-red"
+          className="mt-1 rounded-lg border border-rosver-line px-3 py-2.5 text-left text-sm font-bold text-rosver-red hover:border-rosver-red hover:bg-rosver-soft"
         >
           Cerrar sesión
         </button>
@@ -170,14 +197,14 @@ export function SessionAccountMenu({
   }
 
   return (
-    <div ref={rootRef} className={cn('relative hidden sm:block', className)}>
+    <div ref={rootRef} className={cn('relative z-50 hidden sm:block', className)}>
       <button
         type="button"
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={menuId}
         onClick={() => setOpen((v) => !v)}
-        className="flex max-w-[11rem] items-center gap-2 px-2 py-1.5 text-sm font-semibold text-rosver-ink transition hover:text-rosver-red"
+        className="flex max-w-[12rem] items-center gap-2 rounded-full px-1.5 py-1 text-sm font-semibold text-rosver-ink transition hover:bg-rosver-soft hover:text-rosver-red"
       >
         <img
           src={user.avatarUrl}
@@ -192,45 +219,50 @@ export function SessionAccountMenu({
         <div
           id={menuId}
           role="menu"
-          className="absolute top-full right-0 z-40 mt-1 min-w-[11rem] border border-rosver-line bg-white py-1 shadow-[0_12px_24px_rgba(17,17,17,0.12)]"
+          className="absolute top-[calc(100%+6px)] right-0 z-50 w-56 overflow-hidden rounded-xl border border-rosver-line bg-white shadow-[0_16px_40px_rgba(13,13,13,0.14)]"
         >
-          <p className="truncate border-b border-rosver-line px-3 py-2 text-xs text-rosver-muted">
-            {user.email}
-          </p>
-          <Link
-            role="menuitem"
-            to="/cuenta"
-            onClick={() => closeAnd()}
-            className="block px-3 py-2 text-sm font-semibold text-rosver-ink hover:bg-rosver-soft"
-          >
-            Mi cuenta
-          </Link>
-          <Link
-            role="menuitem"
-            to="/cuenta/perfil"
-            onClick={() => closeAnd()}
-            className="block px-3 py-2 text-sm font-semibold text-rosver-ink hover:bg-rosver-soft"
-          >
-            Perfil
-          </Link>
-          {isAdmin ? (
+          <div className="border-b border-rosver-line bg-rosver-soft/70 px-3 py-2.5">
+            <p className="truncate text-sm font-bold text-rosver-ink">{label}</p>
+            <p className="truncate text-[11px] text-rosver-muted">{user.email}</p>
+          </div>
+          <div className="py-1">
             <Link
               role="menuitem"
-              to="/admin"
+              to="/cuenta"
               onClick={() => closeAnd()}
-              className="block px-3 py-2 text-sm font-semibold text-rosver-blue hover:bg-rosver-soft"
+              className="block px-3 py-2.5 text-sm font-semibold text-rosver-ink hover:bg-rosver-soft"
             >
-              SystemRSV
+              Mi cuenta
             </Link>
-          ) : null}
-          <button
-            type="button"
-            role="menuitem"
-            onClick={() => void onLogout()}
-            className="block w-full px-3 py-2 text-left text-sm font-semibold text-rosver-red hover:bg-rosver-soft"
-          >
-            Cerrar sesión
-          </button>
+            <Link
+              role="menuitem"
+              to="/cuenta/perfil"
+              onClick={() => closeAnd()}
+              className="block px-3 py-2.5 text-sm font-semibold text-rosver-ink hover:bg-rosver-soft"
+            >
+              Perfil
+            </Link>
+            {isAdmin ? (
+              <Link
+                role="menuitem"
+                to="/admin"
+                onClick={() => closeAnd()}
+                className="block px-3 py-2.5 text-sm font-semibold text-rosver-blue hover:bg-rosver-soft"
+              >
+                SystemRSV
+              </Link>
+            ) : null}
+          </div>
+          <div className="border-t border-rosver-line p-2">
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => void onLogout()}
+              className="block w-full rounded-lg px-3 py-2.5 text-left text-sm font-bold text-rosver-red hover:bg-rosver-soft"
+            >
+              Cerrar sesión
+            </button>
+          </div>
         </div>
       ) : null}
     </div>

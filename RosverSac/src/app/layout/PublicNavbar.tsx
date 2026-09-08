@@ -28,7 +28,7 @@ export function PublicNavbar() {
   return (
     <header
       className={cn(
-        'overflow-x-hidden bg-white',
+        'relative z-40 bg-white',
         // En Home la barra roja + hero deben leerse como un solo bloque (sin línea gris).
         // En el resto de rutas sí separamos el header del contenido blanco.
         !isHome && 'border-b border-rosver-line',

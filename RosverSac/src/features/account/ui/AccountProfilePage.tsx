@@ -95,11 +95,12 @@ export function AccountProfilePage() {
         />
         <div>
           <h2 className="font-display text-lg font-bold text-rosver-ink">
-            Perfil ecommerce
+            {user.fullName?.trim() || 'Tu perfil'}
           </h2>
           <p className="text-sm text-rosver-muted">{user.email}</p>
           <p className="text-xs text-rosver-muted">
-            Rol: {user.roleName} · Teléfono obligatorio para contacto comercial
+            Cuenta {user.roleName.toLowerCase()} · Teléfono obligatorio para
+            contacto comercial
           </p>
         </div>
       </div>

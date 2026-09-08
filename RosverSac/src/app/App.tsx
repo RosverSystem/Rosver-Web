@@ -39,10 +39,13 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 
 function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-dvh max-w-[100vw] overflow-x-hidden bg-white">
+    <div className="min-h-dvh max-w-[100vw] bg-white">
+      {/* overflow fuera del header: si el wrapper clippea, el menú de sesión se corta */}
       <PublicNavbar />
-      <PageTransition>{children}</PageTransition>
-      <Footer />
+      <div className="max-w-[100vw] overflow-x-hidden">
+        <PageTransition>{children}</PageTransition>
+        <Footer />
+      </div>
       <WhatsAppFloatingButton />
     </div>
   )

@@ -14,7 +14,7 @@
 | Estado | UI |
 | --- | --- |
 | Visitante | Icono genérico → `/login` |
-| Logueado | Avatar + nombre corto → `/cuenta`; menú: Perfil, Cerrar sesión (+ Admin si rol admin) |
+| Logueado | Avatar + **primer nombre** → menú: Mi cuenta, Perfil, Cerrar sesión (+ Admin si admin). Logout **solo** en el menú. |
 
 ## Datos obligatorios perfil ecommerce
 

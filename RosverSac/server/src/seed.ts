@@ -158,7 +158,7 @@ async function seed() {
     email: config.seed.clientEmail,
     password: config.seed.clientPassword,
     roleId: clientRoleId,
-    fullName: 'Cliente Prueba',
+    fullName: 'Andrés Acosta',
     phone: '+51988888888',
     avatarUrl: '/avatars/default-1.svg',
   })
