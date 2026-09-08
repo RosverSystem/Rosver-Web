@@ -1,13 +1,11 @@
 [build]
 builder = "NIXPACKS"
-# Nixpacks ya corre `npm ci`; un segundo `npm ci` choca con el cache mount
-# (`EBUSY` en node_modules/.cache) y falla el build.
 buildCommand = "npm run build"
 
 [deploy]
-# SPA: -s hace fallback a index.html (React Router)
-startCommand = "npx --yes serve@14 -s dist -l tcp://0.0.0.0:$PORT"
-healthcheckPath = "/"
-healthcheckTimeout = 30
+# Web SPA (dist) + API Hono (misma origen). migrate+seed upsert en boot.
+startCommand = "npx tsx server/src/migrate.ts && npx tsx server/src/seed.ts && npx tsx server/src/index.ts"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 90
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3

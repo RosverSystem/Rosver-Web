@@ -1,4 +1,7 @@
+import { useAuth } from '@/features/auth'
+import { OtpVerifyPanel } from '@/features/auth/ui/OtpVerifyPanel'
 import { isValidEmail, isValidPhone, cnField } from '@/shared/lib'
+import { ApiError } from '@/shared/lib/api'
 import { prefersReducedMotion } from '@/shared/lib/gsap'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { cn } from '@/shared/lib/cn'
@@ -95,9 +98,12 @@ export function RegisterPage() {
   const navigate = useNavigate()
   const reduce = prefersReducedMotion()
   const formId = useId()
+  const { register, googleStartUrl } = useAuth()
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
+  const [pendingVerifyEmail, setPendingVerifyEmail] = useState<string | null>(null)
+  const [registerBusy, setRegisterBusy] = useState(false)
   const [phone, setPhone] = useState('')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
@@ -230,9 +236,25 @@ export function RegisterPage() {
     })
   }
 
-  function handleConfirmPhone() {
+  async function handleConfirmPhone() {
     setPhoneModalOpen(false)
-    navigate('/cuenta')
+    setRegisterBusy(true)
+    try {
+      const result = await register({
+        fullName: name.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        password,
+      })
+      setPendingVerifyEmail(result.email)
+      clear()
+    } catch (err) {
+      const msg =
+        err instanceof ApiError ? err.message : 'No se pudo crear la cuenta.'
+      showErrors({ email: msg }, ['email'])
+    } finally {
+      setRegisterBusy(false)
+    }
   }
 
   function handleEditPhone() {
@@ -293,12 +315,27 @@ export function RegisterPage() {
           </p>
 
           <h1 className="font-display text-4xl font-bold tracking-tight text-rosver-ink sm:text-5xl">
-            Crear cuenta
+            {pendingVerifyEmail ? 'Verifica tu correo' : 'Crear cuenta'}
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-rosver-muted sm:text-base">
-            Regístrate en minutos y gestiona pedidos, cotizaciones y perfil.
+            {pendingVerifyEmail
+              ? 'Ingresa el código OTP para activar tu cuenta.'
+              : 'Regístrate en minutos y gestiona pedidos, cotizaciones y perfil.'}
           </p>
 
+          {pendingVerifyEmail ? (
+            <div className="mt-8">
+              <OtpVerifyPanel
+                email={pendingVerifyEmail}
+                onVerified={(u) =>
+                  navigate(u?.roleCode === 'admin' ? '/admin' : '/cuenta', {
+                    replace: true,
+                  })
+                }
+              />
+            </div>
+          ) : (
+            <>
           <ul className="mt-5 space-y-2">
             {[
               'Historial de pedidos y cotizaciones',
@@ -536,9 +573,10 @@ export function RegisterPage() {
 
             <button
               type="submit"
-              className="mt-2 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-rosver-red px-6 text-sm font-bold text-white transition hover:bg-rosver-red-dark"
+              disabled={registerBusy}
+              className="mt-2 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-rosver-red px-6 text-sm font-bold text-white transition hover:bg-rosver-red-dark disabled:opacity-60"
             >
-              Crear cuenta
+              {registerBusy ? 'Creando…' : 'Crear cuenta'}
             </button>
           </form>
 
@@ -546,9 +584,14 @@ export function RegisterPage() {
             <SocialButton label="Facebook (próximamente)">
               <IconFacebook className="size-4 text-[#1877F2]" />
             </SocialButton>
-            <SocialButton label="Google (próximamente)">
+            <a
+              href={googleStartUrl}
+              aria-label="Continuar con Google"
+              title="Continuar con Google"
+              className="inline-flex size-11 items-center justify-center rounded-full border border-rosver-line bg-white transition hover:border-rosver-red/30 hover:bg-rosver-soft"
+            >
               <GoogleMark />
-            </SocialButton>
+            </a>
           </div>
 
           <p className="mt-8 text-center text-sm text-rosver-muted">
@@ -570,6 +613,8 @@ export function RegisterPage() {
               Cotiza sin cuenta
             </Link>
           </p>
+            </>
+          )}
         </motion.div>
       </section>
 

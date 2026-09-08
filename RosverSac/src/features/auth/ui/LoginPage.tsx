@@ -1,15 +1,18 @@
+import { useAuth } from '@/features/auth'
+import { OtpVerifyPanel } from '@/features/auth/ui/OtpVerifyPanel'
 import { isValidEmail } from '@/shared/lib'
 import { prefersReducedMotion } from '@/shared/lib/gsap'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { cn } from '@/shared/lib/cn'
 import { cnField } from '@/shared/lib'
+import { ApiError } from '@/shared/lib/api'
 import { FloatingToasts } from '@/shared/ui/floating-toasts'
 import { IconFacebook } from '@/shared/ui/icons'
 import { motion } from 'motion/react'
 import { type FormEvent, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
-type FieldKey = 'email' | 'password'
+type FieldKey = 'email' | 'password' | 'totp'
 type FieldErrors = Partial<Record<FieldKey, string>>
 
 /**
@@ -18,14 +21,23 @@ type FieldErrors = Partial<Record<FieldKey, string>>
 export function LoginPage() {
   const navigate = useNavigate()
   const reduce = prefersReducedMotion()
+  const { login, loginTotp, googleStartUrl } = useAuth()
   const { toasts, showErrors, dismiss, clear } = useFormToasts()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [errors, setErrors] = useState<FieldErrors>({})
+  const [busy, setBusy] = useState(false)
+  const [pendingEmailVerify, setPendingEmailVerify] = useState<string | null>(null)
+  const [totpChallenge, setTotpChallenge] = useState<string | null>(null)
+  const [totpCode, setTotpCode] = useState('')
 
   const emailRef = useRef<HTMLInputElement>(null)
   const passwordRef = useRef<HTMLInputElement>(null)
+
+  function goAfterLogin(admin: boolean) {
+    navigate(admin ? '/admin' : '/cuenta', { replace: true })
+  }
 
   function validate(): FieldErrors {
     const next: FieldErrors = {}
@@ -35,7 +47,7 @@ export function LoginPage() {
     return next
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     const next = validate()
     setErrors(next)
@@ -46,7 +58,48 @@ export function LoginPage() {
       return
     }
     clear()
-    navigate('/cuenta')
+    setBusy(true)
+    try {
+      const result = await login(email.trim(), password)
+      if (result.ok) {
+        goAfterLogin(result.user.roleCode === 'admin')
+        return
+      }
+      if (result.requiresEmailVerification && result.email) {
+        setPendingEmailVerify(result.email)
+        return
+      }
+      if (result.requiresTotp && result.challengeToken) {
+        setTotpChallenge(result.challengeToken)
+        return
+      }
+      showErrors({ email: result.message || 'No se pudo iniciar sesión.' }, ['email'])
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Error al iniciar sesión.'
+      showErrors({ password: msg }, ['password'])
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleTotp(event: FormEvent) {
+    event.preventDefault()
+    if (!totpChallenge || !totpCode.trim()) {
+      showErrors({ totp: 'Ingresa el código del autenticador.' }, ['totp'])
+      return
+    }
+    setBusy(true)
+    try {
+      const user = await loginTotp(totpChallenge, totpCode.trim())
+      goAfterLogin(user.roleCode === 'admin')
+    } catch (err) {
+      showErrors(
+        { totp: err instanceof Error ? err.message : 'Código inválido' },
+        ['totp'],
+      )
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -108,6 +161,34 @@ export function LoginPage() {
             Entra a tu cuenta para ver pedidos, cotizaciones y perfil.
           </p>
 
+          {pendingEmailVerify ? (
+            <div className="mt-9">
+              <OtpVerifyPanel
+                email={pendingEmailVerify}
+                onVerified={(u) => goAfterLogin(u?.roleCode === 'admin')}
+              />
+            </div>
+          ) : totpChallenge ? (
+            <form noValidate onSubmit={handleTotp} className="mt-9 flex flex-col gap-3">
+              <p className="text-sm text-rosver-muted">
+                Abre tu app autenticadora e ingresa el código de 6 dígitos.
+              </p>
+              <input
+                value={totpCode}
+                onChange={(e) => setTotpCode(e.target.value)}
+                inputMode="numeric"
+                placeholder="Código 2FA"
+                className={cnField(pillInputClass, Boolean(errors.totp))}
+              />
+              <button
+                type="submit"
+                disabled={busy}
+                className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-rosver-red px-6 text-sm font-bold text-white hover:bg-rosver-red-dark disabled:opacity-60"
+              >
+                {busy ? 'Validando…' : 'Confirmar 2FA'}
+              </button>
+            </form>
+          ) : (
           <form
             noValidate
             onSubmit={handleSubmit}
@@ -188,20 +269,29 @@ export function LoginPage() {
 
             <button
               type="submit"
-              className="mt-2 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-rosver-red px-6 text-sm font-bold text-white transition hover:bg-rosver-red-dark"
+              disabled={busy}
+              className="mt-2 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-rosver-red px-6 text-sm font-bold text-white transition hover:bg-rosver-red-dark disabled:opacity-60"
             >
-              Empezar
+              {busy ? 'Entrando…' : 'Empezar'}
             </button>
           </form>
+          )}
 
+          {!pendingEmailVerify && !totpChallenge ? (
           <div className="mt-7 flex items-center justify-center gap-3">
             <SocialButton label="Facebook (próximamente)">
               <IconFacebook className="size-4 text-[#1877F2]" />
             </SocialButton>
-            <SocialButton label="Google (próximamente)">
+            <a
+              href={googleStartUrl}
+              aria-label="Continuar con Google"
+              title="Continuar con Google"
+              className="inline-flex size-11 items-center justify-center rounded-full border border-rosver-line bg-white transition hover:border-rosver-red/30 hover:bg-rosver-soft"
+            >
               <GoogleMark />
-            </SocialButton>
+            </a>
           </div>
+          ) : null}
 
           <p className="mt-8 text-center text-sm text-rosver-muted">
             ¿No tienes cuenta?{' '}

@@ -19,6 +19,12 @@ App: `RosverSac/` · Alias: `@` → `RosverSac/src`
 | Rutas | `react-router-dom` v7 | BrowserRouter, Link, Routes |
 | Class names | `clsx` + `tailwind-merge` | Helper `cn()` en `@/shared/lib` |
 | Validación UI | `FloatingToasts` + `useFormToasts` (shared) | Sin bubbles nativos; regla `10-form-toasts` |
+| API auth | Hono (`RosverSac/server`) | Sesiones cookie, RBAC, OTP, TOTP, Google OAuth |
+| DB | `pg` + Postgres Railway | Migraciones SQL en `server/sql/` |
+| Password | `argon2` | argon2id |
+| Mail | `nodemailer` | SMTP Hostinger |
+| 2FA | `otplib` + `qrcode` | TOTP autenticador |
+| Validación API | `zod` | Schemas en server |
 | Iconos (UI general) | **`cssvg-icons`** | Obligatorio para iconos UI nuevos — [icon.cssvg.com](https://icon.cssvg.com) |
 | Iconos (legado / marca) | `shared/ui/icons.tsx`, `lucide-react` (solo código ya existente) | No usar Lucide en código nuevo |
 

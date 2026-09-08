@@ -1,2 +1,5 @@
 export { LoginPage } from './ui/LoginPage'
 export { RegisterPage } from './ui/RegisterPage'
+export { AuthProvider, useAuth } from './model/auth-context'
+export { RequireAuth, RequireAdmin } from './ui/RequireAuth'
+export { OtpVerifyPanel } from './ui/OtpVerifyPanel'

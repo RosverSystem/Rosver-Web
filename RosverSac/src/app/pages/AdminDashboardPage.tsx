@@ -1,36 +1,21 @@
-import { WireBlock } from '@/shared/ui/wireframe'
-import { Link } from 'react-router-dom'
+import { useAuth } from '@/features/auth'
 
-const STATS = [
-  { label: 'Leads sin atender', value: 4, link: '/admin/leads' },
-  { label: 'Cotizaciones en revisión', value: 2, link: '/admin/cotizaciones' },
-  { label: 'Pedidos en proceso', value: 3, link: '/admin/pedidos' },
-  { label: 'Productos publicados', value: 6, link: '/admin/productos' },
-]
-
+/** ERP SystemRSV — panel inicial en blanco (placeholder). */
 export function AdminDashboardPage() {
-  return (
-    <div className="flex flex-col gap-4">
-      <h1 className="font-display text-xl font-bold text-rosver-ink uppercase">
-        Dashboard
-      </h1>
+  const { user } = useAuth()
 
-      <WireBlock label="Resumen — accesos rápidos a lo pendiente">
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {STATS.map((stat) => (
-            <Link
-              key={stat.label}
-              to={stat.link}
-              className="rounded-xl border border-rosver-line bg-white px-4 py-4 transition hover:border-rosver-red"
-            >
-              <p className="font-display text-2xl font-bold text-rosver-ink">
-                {stat.value}
-              </p>
-              <p className="text-xs text-rosver-muted">{stat.label}</p>
-            </Link>
-          ))}
-        </div>
-      </WireBlock>
+  return (
+    <div className="flex min-h-[70vh] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-rosver-line bg-white px-6 py-16 text-center">
+      <p className="text-[11px] font-bold tracking-[0.2em] text-rosver-muted uppercase">
+        SystemRSV
+      </p>
+      <h1 className="font-display text-2xl font-bold text-rosver-ink sm:text-3xl">
+        Panel administrativo
+      </h1>
+      <p className="max-w-md text-sm text-rosver-muted">
+        Vista en blanco lista para el ERP. Sesión:{' '}
+        <span className="font-semibold text-rosver-ink">{user?.email}</span>
+      </p>
     </div>
   )
 }

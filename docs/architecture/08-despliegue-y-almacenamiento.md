@@ -8,9 +8,9 @@ Infra de la web **Rosver SAC** y del ERP **SystemRSV**. Actualizar este archivo 
 
 | Entorno | Host | App | Notas |
 | --- | --- | --- | --- |
-| Local | `localhost:5173` | Vite dev | `cd RosverSac && npm run dev` |
-| Producción (web) | Railway | SPA estática (`RosverSac` build) | Pestaña: Rosver SAC / SystemRSV según ruta |
-| Base de datos | Railway Postgres | Online | Template oficial; `DATABASE_URL` en `.env` |
+| Local | `localhost:5173` + API `:8787` | Vite + `npm run dev:api` | Proxy `/api` en Vite |
+| Producción (web+api) | Railway | SPA `dist` + Hono `/api` mismo servicio | https://rosver-web-production.up.railway.app |
+| Base de datos | Railway Postgres | Online | Template oficial; migrate/seed en boot |
 | Objetos (media) | Cloudflare R2 | Buckets S3-compatibles | Imágenes, PDFs, adjuntos |
 
 ---
@@ -21,32 +21,30 @@ Infra de la web **Rosver SAC** y del ERP **SystemRSV**. Actualizar este archivo 
 | --- | --- |
 | Proyecto | `rosver-web` (`325c8738-10e7-4be6-bdd4-41d19848fb1f`) |
 | Entorno | `production` |
-| Servicio web (GitHub) | `Rosver-Web` (`0bb3658a-7121-4bc4-b492-0ee2d0938228`) |
+| Servicio web+api (GitHub) | `Rosver-Web` (`0bb3658a-7121-4bc4-b492-0ee2d0938228`) |
 | Repo | `RosverSystem/Rosver-Web` · root `RosverSac` |
-| URL pública (SPA) | https://rosver-web-production.up.railway.app |
-| Postgres | `Postgres` (`d07bb6a5-395a-4fe8-a092-e9ef6d906006`) · template oficial · **Online** |
-| TCP proxy Postgres | `altaria.proxy.rlwy.net:17586` → `:5432` (solo para admin/local; no exponer en front) |
+| URL pública | https://rosver-web-production.up.railway.app |
+| Health API | https://rosver-web-production.up.railway.app/api/health |
+| Postgres | `Postgres` (`d07bb6a5-395a-4fe8-a092-e9ef6d906006`) · **Online** |
+| TCP proxy Postgres | `altaria.proxy.rlwy.net:17586` → `:5432` (solo admin/local) |
 
 - **Root directory:** `RosverSac`
-- **Node:** `22` (`nixpacks.toml` + `NIXPACKS_NODE_VERSION`) — Vite 8 no corre en Node 18
-- **Build:** `npm run build` (Nixpacks ya hace `npm ci`; no repetirlo → evita `EBUSY` en `node_modules/.cache`)
-- **Start:** `npx --yes serve@14 -s dist -l tcp://0.0.0.0:$PORT`
-- **Config en repo:** `RosverSac/railway.toml`, `RosverSac/nixpacks.toml`
-- **Token:** workspace token en `.env` → `RAILWAY_TOKEN` (GraphQL API; CLI `whoami` puede seguir Unauthorized)
-- **Script deploy:** `scripts/railway-deploy.ps1` / `.sh` (si el CLI acepta el token)
+- **Node:** `22`
+- **Build:** `npm run build`
+- **Start:** `npx tsx server/src/boot.ts` (migrate → seed upsert → Hono sirve `dist` + `/api`)
+- **Config:** `RosverSac/railway.toml`, `nixpacks.toml`
+- **Auth seed:** admin `admin@multiserviciosmta.site` · cliente `acosta.wp076@gmail.com` (passwords en variables Railway / `.env` local)
 
-### Variables en el servicio web
+### Variables en el servicio web (`Rosver-Web`)
 
 - `NIXPACKS_NODE_VERSION=22`
 - `NODE_ENV=production`
-- `DATABASE_URL` = referencia `${{Postgres.DATABASE_URL}}` (solo backend futuro; **no** en `VITE_*`)
-- Fase visual: **no** poner R2 ni `DATABASE_URL` en el browser.
-- Local: `.env` → `DATABASE_URL` (interno Railway) + `DATABASE_PUBLIC_URL` (TCP proxy).
-
-### Postgres — prueba temporal
-
-- Tabla `rosver_test_ping` creada para verificar conexión (**se eliminará** cuando el usuario defina el esquema real).
-- Credenciales: solo en Railway dashboard / `.env` local (gitignored).
+- `DATABASE_URL` = `${{Postgres.DATABASE_URL}}` (sin `DATABASE_PUBLIC_URL` en prod)
+- `APP_URL` / `CORS_ORIGIN` = `https://rosver-web-production.up.railway.app`
+- `SMTP_HOST` `SMTP_PORT` `SMTP_USER` `SMTP_PASS` `SMTP_FROM`
+- `SEED_ADMIN_PASSWORD` / `SEED_CLIENT_PASSWORD`
+- Google (opcional): `GOOGLE_CLIENT_ID` `GOOGLE_CLIENT_SECRET` `GOOGLE_REDIRECT_URI`
+- **No** poner secretos en `VITE_*` (misma origen: front usa `/api` relativo)
 ---
 
 ## 3. Cloudflare R2 — estado configurado
