@@ -6,11 +6,7 @@ import {
 } from '@/features/account/model/local-orders'
 import { useCatalog, type Product } from '@/features/catalog'
 import { useCart } from '@/features/cart'
-import {
-  buildQuotePdf,
-  downloadBlob,
-  type QuotePdfLine,
-} from '@/features/cart/lib/quote-pdf'
+import type { QuotePdfLine } from '@/features/cart/lib/quote-pdf'
 import { unitPriceOfLine } from '@/features/cart/model/cart-line'
 import { cn, cnField, isValidPhone, WHATSAPP_NUMBER } from '@/shared/lib'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
@@ -151,6 +147,7 @@ export function ContinueOrderModal({ open, onClose }: Props) {
   }
 
   async function makePdf() {
+    const { buildQuotePdf } = await import('@/features/cart/lib/quote-pdf')
     return buildQuotePdf({
       customer: {
         name: name.trim(),
@@ -168,6 +165,7 @@ export function ContinueOrderModal({ open, onClose }: Props) {
     setBusy(true)
     try {
       const pdf = await makePdf()
+      const { downloadBlob } = await import('@/features/cart/lib/quote-pdf')
       downloadBlob(pdf.blob, pdf.fileName)
       const orderId = persistLocalOrderIfLoggedIn(pdf.docNumber)
       showMessages(
@@ -191,6 +189,7 @@ export function ContinueOrderModal({ open, onClose }: Props) {
     setBusy(true)
     try {
       const pdf = await makePdf()
+      const { downloadBlob } = await import('@/features/cart/lib/quote-pdf')
       downloadBlob(pdf.blob, pdf.fileName)
       const orderId = persistLocalOrderIfLoggedIn(pdf.docNumber)
 

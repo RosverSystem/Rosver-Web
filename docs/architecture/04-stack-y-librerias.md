@@ -116,6 +116,7 @@ Implementación: `RosverSac/src/shared/lib/cn.ts`.
 | `tailwindcss` + `@tailwindcss/vite` | Utilidades CSS; plugin en `vite.config.ts` |
 | `oxlint` | Lint rápido (`npm run lint`) |
 | `@types/react`, `@types/react-dom`, `@types/node` | Tipos |
+| `@playwright/test` | E2E de humo (`npm run test:e2e`) — tests en `e2e/`, levanta `dev`+`dev:api` solo (Chromium instalado vía `npx playwright install chromium`) |
 
 ---
 

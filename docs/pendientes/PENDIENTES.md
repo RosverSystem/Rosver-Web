@@ -1,6 +1,6 @@
 # Pendientes — Rosver Web
 
-Última actualización: 2026-09-08 (auditoría E2E + seguridad)
+Última actualización: 2026-09-08 (pasada de recomendaciones post-auditoría, 0126–0132)
 
 | ID | Ítem | Origen | Estado | Notas / bloqueo |
 | --- | --- | --- | --- | --- |
@@ -49,12 +49,16 @@
 | P49 | Cuenta sin verificar tras fallo de OTP queda bloqueada (409 para siempre) | Auditoría QA | hecho | `/register` retoma cuentas no verificadas (0125) |
 | P50 | Google OAuth callback sin validar `state` (CSRF) | Auditoría seguridad | hecho | Compara cookie vs query param (0125) |
 | P51 | `server/src` sin typecheck (no está en ningún `tsconfig`) | Auditoría calidad | hecho | `server/tsconfig.json` + `npm run typecheck:server` (0125) |
-| P52 | Admin: gestión de usuarios (listar/cambiar rol/estado) | Auditoría seguridad (refina P04) | hecho | API `admin-users` + UI `/admin/usuarios` (0125) |
+| P52 | Admin: gestión de usuarios (listar/cambiar rol/estado) | Auditoría seguridad (refina P04) | hecho | API `admin-users.ts` (listar, cambiar rol, activar/desactivar con revocación de sesiones) + UI `/admin/usuarios` (0126) |
 | P53 | Pedidos / Leads / Cotizaciones / Contenido: permisos RBAC existen, sin rutas API ni tablas | Auditoría (refina P03) | pendiente | `admin.orders`, `admin.leads`, `admin.quotes`, `admin.content` sin backend; páginas admin son mocks locales; formulario de contacto no persiste lead |
+| P54 | Orden destacado/tendencia a mano + tipo precio confuso | Pedido UX precios | hecho | v0.1.35 orden auto + combobox unidad + solo oferta extra (0133) |
 
 ## Hechos recientes
 
-- Auditoría E2E + seguridad: carrito, OTP, reset password, rate limit, 404, admin users (v0.1.33 / 0125)
+- Precios ERP: orden auto, unidad escribir/elegir, oferta sin “tipo de precio” (v0.1.35 / 0133)
+- Recomendaciones post-auditoría: E2E Playwright (0132), historial de precios (0131), sesión deslizante (0130), code-split bundle (0129), audit log de logins (0128), rate limiter en Redis (0127)
+- Admin: gestión de usuarios real (listar/rol/activar-desactivar) (0126)
+- Auditoría E2E + seguridad: carrito, OTP, reset password, rate limit, 404 (v0.1.33 / 0125)
 - Badge carrito solo catálogo + Continuar pedido con sesión/prefill + pedidos locales (v0.1.32)
 - Continuar pedido: modal PDF estilo factura + WhatsApp (v0.1.31)
 - Lógica carrito: localStorage, sync catálogo, sin seed fantasma (v0.1.30)

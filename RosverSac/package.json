@@ -1,7 +1,7 @@
 {
   "name": "rosver-sac",
   "private": true,
-  "version": "0.1.33",
+  "version": "0.1.35",
   "type": "module",
   "engines": {
     "node": ">=20.19.0"
@@ -16,7 +16,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "typecheck:server": "tsc -p server/tsconfig.json",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1127.0",
@@ -45,6 +46,7 @@
     "zod": "^4.5.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/vite": "^4.3.3",
     "@types/ioredis": "^5.0.0",
     "@types/node": "^24.13.3",

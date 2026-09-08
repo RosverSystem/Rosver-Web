@@ -102,6 +102,12 @@ export async function createSession(c: Context, userId: string) {
   return { expiresAt }
 }
 
+/** Ventana de expiración "deslizante": si a una sesión activa le queda menos
+ * de la mitad de su vida útil, se extiende (DB + cookie) en vez de forzar
+ * un nuevo login. Evita que un usuario activo sea deslogueado a mitad de
+ * uso solo porque pasaron `sessionDays` desde el login original. */
+type SessionRow = UserRow & { session_id: string; expires_at: Date }
+
 export async function resolveSessionUser(
   c: Context,
 ): Promise<AuthUser | null> {
@@ -109,11 +115,12 @@ export async function resolveSessionUser(
   if (!token) return null
   const tokenHash = sha256(token)
 
-  const { rows } = await pool.query<UserRow>(
+  const { rows } = await pool.query<SessionRow>(
     `SELECT u.id, u.email, u.full_name, u.phone, u.company_name,
             u.document_type, u.document_number, u.avatar_url,
             u.email_verified_at, u.totp_enabled, u.status,
-            r.code AS role_code, r.name AS role_name
+            r.code AS role_code, r.name AS role_name,
+            s.id AS session_id, s.expires_at
      FROM sessions s
      JOIN users u ON u.id = s.user_id
      JOIN roles r ON r.id = u.role_id
@@ -125,6 +132,24 @@ export async function resolveSessionUser(
 
   const row = rows[0]
   if (!row || row.status !== 'active') return null
+
+  const sessionMs = config.sessionDays * 24 * 60 * 60 * 1000
+  const remainingMs = row.expires_at.getTime() - Date.now()
+  if (remainingMs < sessionMs / 2) {
+    const newExpiresAt = new Date(Date.now() + sessionMs)
+    await pool.query(
+      `UPDATE sessions SET expires_at = $1, last_seen_at = now() WHERE id = $2`,
+      [newExpiresAt, row.session_id],
+    )
+    setCookie(c, config.sessionCookie, token, {
+      httpOnly: true,
+      secure: config.isProd,
+      sameSite: 'Lax',
+      path: '/',
+      expires: newExpiresAt,
+    })
+  }
+
   return mapUser(row, await getUserPermissions(row.id))
 }
 

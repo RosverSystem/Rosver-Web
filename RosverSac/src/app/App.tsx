@@ -1,5 +1,4 @@
 import { AuthLayout } from '@/app/layout/AuthLayout'
-import { AdminDashboardPage } from '@/app/pages/AdminDashboardPage'
 import { NotFoundPage } from '@/app/pages/NotFoundPage'
 import { AdminShell } from '@/app/layout/AdminShell'
 import { Footer } from '@/app/layout/Footer'
@@ -14,15 +13,6 @@ import {
   AccountOverviewPage,
   AccountProfilePage,
 } from '@/features/account'
-import {
-  AdminBrandsPage,
-  AdminCategoriesPage,
-  AdminOffersPage,
-  AdminPriceListPage,
-  AdminProductsPage,
-} from '@/features/admin-catalog'
-import { AdminStoragePage } from '@/features/admin-media'
-import { AdminUsersPage } from '@/features/admin-users'
 import {
   AuthProvider,
   LoginPage,
@@ -43,7 +33,34 @@ import { ContactPage } from '@/features/contact'
 import { ClientQuotesPage, QuoteRequestPage } from '@/features/quotes'
 import { PageTransition } from '@/shared/ui/page-transition'
 import { WhatsAppFloatingButton } from '@/shared/ui/whatsapp-floating-button'
+import { lazy } from 'react'
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
+
+// ERP admin: se carga solo al entrar a /admin, no en el bundle inicial de la tienda.
+const AdminDashboardPage = lazy(() =>
+  import('@/app/pages/AdminDashboardPage').then((m) => ({ default: m.AdminDashboardPage })),
+)
+const AdminBrandsPage = lazy(() =>
+  import('@/features/admin-catalog').then((m) => ({ default: m.AdminBrandsPage })),
+)
+const AdminCategoriesPage = lazy(() =>
+  import('@/features/admin-catalog').then((m) => ({ default: m.AdminCategoriesPage })),
+)
+const AdminOffersPage = lazy(() =>
+  import('@/features/admin-catalog').then((m) => ({ default: m.AdminOffersPage })),
+)
+const AdminPriceListPage = lazy(() =>
+  import('@/features/admin-catalog').then((m) => ({ default: m.AdminPriceListPage })),
+)
+const AdminProductsPage = lazy(() =>
+  import('@/features/admin-catalog').then((m) => ({ default: m.AdminProductsPage })),
+)
+const AdminStoragePage = lazy(() =>
+  import('@/features/admin-media').then((m) => ({ default: m.AdminStoragePage })),
+)
+const AdminUsersPage = lazy(() =>
+  import('@/features/admin-users').then((m) => ({ default: m.AdminUsersPage })),
+)
 
 function PublicLayout() {
   return (

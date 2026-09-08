@@ -69,6 +69,41 @@ export function AdminInput({ className, invalid, ...props }: AdminInputProps) {
   )
 }
 
+type AdminComboboxProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'list'> & {
+  invalid?: boolean
+  /** Opciones sugeridas (seleccionar o escribir otra). */
+  options: { value: string; label: string }[]
+  listId: string
+}
+
+/**
+ * Select + escribir: input con sugerencias (datalist).
+ * El valor libre se resuelve al guardar (crear si no existe).
+ */
+export function AdminCombobox({
+  className,
+  invalid,
+  options,
+  listId,
+  ...props
+}: AdminComboboxProps) {
+  return (
+    <>
+      <input
+        {...props}
+        list={listId}
+        autoComplete="off"
+        className={cn(adminControlClass, invalid && adminControlInvalidClass, className)}
+      />
+      <datalist id={listId}>
+        {options.map((o) => (
+          <option key={o.value} value={o.label} />
+        ))}
+      </datalist>
+    </>
+  )
+}
+
 type PageHeaderProps = {
   title: string
   actions?: ReactNode

@@ -26,6 +26,7 @@ import {
 } from '../lib/validation.js'
 import { requireAuth, type AuthVariables } from '../middleware/auth.js'
 import { loginLimiter, requestIp } from '../lib/rate-limit.js'
+import { recordLoginAttempt } from '../lib/login-audit.js'
 import { deleteCookie, getCookie } from 'hono/cookie'
 import { z } from 'zod'
 
@@ -136,7 +137,7 @@ authRoutes.post('/login', async (c) => {
   }
 
   const ip = requestIp(c.req.raw.headers)
-  const lock = loginLimiter.check(parsed.data.email, ip)
+  const lock = await loginLimiter.check(parsed.data.email, ip)
   if (lock.locked) {
     return c.json(
       {
@@ -162,16 +163,31 @@ authRoutes.post('/login', async (c) => {
 
   const row = rows[0]
   if (!row?.password_hash) {
-    loginLimiter.recordFailure(parsed.data.email, ip)
+    await loginLimiter.recordFailure(parsed.data.email, ip)
+    await recordLoginAttempt({ email: parsed.data.email, ip, success: false, reason: 'bad_credentials' })
     return c.json({ error: 'Correo o contraseña incorrectos.' }, 401)
   }
   const ok = await verifyPassword(row.password_hash, parsed.data.password)
   if (!ok) {
-    loginLimiter.recordFailure(parsed.data.email, ip)
+    await loginLimiter.recordFailure(parsed.data.email, ip)
+    await recordLoginAttempt({
+      userId: row.id,
+      email: parsed.data.email,
+      ip,
+      success: false,
+      reason: 'bad_credentials',
+    })
     return c.json({ error: 'Correo o contraseña incorrectos.' }, 401)
   }
-  loginLimiter.recordSuccess(parsed.data.email, ip)
+  await loginLimiter.recordSuccess(parsed.data.email, ip)
   if (row.status !== 'active') {
+    await recordLoginAttempt({
+      userId: row.id,
+      email: parsed.data.email,
+      ip,
+      success: false,
+      reason: 'disabled',
+    })
     return c.json({ error: 'Cuenta deshabilitada.' }, 403)
   }
 
@@ -200,6 +216,7 @@ authRoutes.post('/login', async (c) => {
   }
 
   await createSession(c, row.id)
+  await recordLoginAttempt({ userId: row.id, email: parsed.data.email, ip, success: true })
   const user = await loadUserById(row.id)
   return c.json({ ok: true, user })
 })
@@ -216,19 +233,23 @@ authRoutes.post('/login/totp', async (c) => {
   const userId = await consumeLoginChallenge(body.data.challengeToken, 'totp')
   if (!userId) return c.json({ error: 'Desafío expirado. Vuelve a iniciar sesión.' }, 401)
 
-  const { rows } = await pool.query<{ totp_secret: string | null; totp_enabled: boolean }>(
-    `SELECT totp_secret, totp_enabled FROM users WHERE id = $1`,
-    [userId],
-  )
+  const ip = requestIp(c.req.raw.headers)
+  const { rows } = await pool.query<{
+    email: string
+    totp_secret: string | null
+    totp_enabled: boolean
+  }>(`SELECT email, totp_secret, totp_enabled FROM users WHERE id = $1`, [userId])
   const u = rows[0]
   if (!u?.totp_enabled || !u.totp_secret) {
     return c.json({ error: '2FA no está activo.' }, 400)
   }
   if (!verifyTotpCode(u.totp_secret, body.data.code)) {
+    await recordLoginAttempt({ userId, email: u.email, ip, success: false, reason: 'bad_totp' })
     return c.json({ error: 'Código del autenticador incorrecto.' }, 401)
   }
 
   await createSession(c, userId)
+  await recordLoginAttempt({ userId, email: u.email, ip, success: true })
   const user = await loadUserById(userId)
   return c.json({ ok: true, user })
 })

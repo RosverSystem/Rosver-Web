@@ -1,7 +1,15 @@
-import { useCallback, useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect, useState } from 'react'
 import { Outlet } from 'react-router-dom'
 import { AdminSidebar } from './AdminSidebar'
 import { AdminTopBar } from './AdminTopBar'
+
+function AdminPageFallback() {
+  return (
+    <div className="flex h-full items-center justify-center py-16 text-sm text-rosver-muted">
+      Cargando…
+    </div>
+  )
+}
 
 const COLLAPSE_KEY = 'systemrsv.sidebar.collapsed'
 
@@ -49,7 +57,9 @@ export function AdminShell() {
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <AdminTopBar onOpenMobileNav={openMobile} />
         <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 sm:px-6 lg:px-8 lg:py-6">
-          <Outlet />
+          <Suspense fallback={<AdminPageFallback />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </div>

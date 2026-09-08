@@ -3,15 +3,16 @@ import { cn } from '@/shared/lib'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { FloatingToasts } from '@/shared/ui/floating-toasts'
 import {
+  AdminCombobox,
   AdminEmptyState,
   AdminField,
   AdminInput,
   AdminPageHeader,
-  AdminSelect,
 } from '@/shared/ui/admin-field'
 import { AdminModal } from '@/shared/ui/admin-modal'
 import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
+import { PriceHistoryPanel } from './PriceHistoryPanel'
 
 type ProductRow = {
   id: string
@@ -79,7 +80,7 @@ export function AdminPriceListPage() {
   const [query, setQuery] = useState('')
   const [modal, setModal] = useState<ModalKind>(null)
 
-  const [unitTypeId, setUnitTypeId] = useState('')
+  const [unitTypeText, setUnitTypeText] = useState('')
   const [contentQty, setContentQty] = useState('1')
   const [packLabel, setPackLabel] = useState('')
   const [newUnitName, setNewUnitName] = useState('')
@@ -89,11 +90,10 @@ export function AdminPriceListPage() {
   const [packagingId, setPackagingId] = useState('')
   const [editPackQty, setEditPackQty] = useState('1')
   const [editPackLabel, setEditPackLabel] = useState('')
-  const [editPackUnitId, setEditPackUnitId] = useState('')
-  const [priceKind, setPriceKind] = useState<'list' | 'wholesale' | 'offer'>('list')
+  const [editPackUnitText, setEditPackUnitText] = useState('')
+  const [priceKind, setPriceKind] = useState<'list' | 'wholesale' | 'offer'>('offer')
   const [amount, setAmount] = useState('')
   const [compareAt, setCompareAt] = useState('')
-  const [minQty, setMinQty] = useState('1')
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null)
 
   const selected = products.find((p) => p.id === selectedId) ?? null
@@ -105,11 +105,10 @@ export function AdminPriceListPage() {
   async function loadUnitTypes() {
     const units = await api<{ unitTypes: UnitType[] }>('/api/admin/unit-types')
     setUnitTypes(units.unitTypes)
-    setUnitTypeId((prev) =>
-      units.unitTypes.some((u) => u.id === prev)
-        ? prev
-        : (units.unitTypes[0]?.id ?? ''),
-    )
+    setUnitTypeText((prev) => {
+      if (prev.trim()) return prev
+      return units.unitTypes[0]?.name ?? ''
+    })
     return units.unitTypes
   }
 
@@ -152,13 +151,12 @@ export function AdminPriceListPage() {
       if (pack) {
         setEditPackQty(String(pack.contentQty))
         setEditPackLabel(pack.label ?? '')
-        setEditPackUnitId(pack.unitTypeId)
+        setEditPackUnitText(pack.unitName)
       }
       setEditingPriceId(null)
       setAmount('')
       setCompareAt('')
-      setMinQty('1')
-      setPriceKind('list')
+      setPriceKind('offer')
     } catch (e) {
       showMessages([
         e instanceof ApiError ? e.message : 'No se pudo abrir el producto',
@@ -179,8 +177,7 @@ export function AdminPriceListPage() {
     setWholesaleAmount('')
     setAmount('')
     setCompareAt('')
-    setMinQty('1')
-    setPriceKind('list')
+    setPriceKind('offer')
     setNewUnitName('')
     await loadDetail(id)
   }
@@ -206,8 +203,7 @@ export function AdminPriceListPage() {
     setEditingPriceId(null)
     setAmount('')
     setCompareAt('')
-    setMinQty('1')
-    setPriceKind('list')
+    setPriceKind('offer')
   }
 
   function openCreatePack() {
@@ -215,7 +211,9 @@ export function AdminPriceListPage() {
     setContentQty('1')
     setListAmount('')
     setWholesaleAmount('')
-    if (!unitTypeId && unitTypes[0]) setUnitTypeId(unitTypes[0].id)
+    if (!unitTypeText.trim() && unitTypes[0]) {
+      setUnitTypeText(unitTypes[0].name)
+    }
     setModal('pack-create')
   }
 
@@ -223,7 +221,7 @@ export function AdminPriceListPage() {
     if (!activePack) return
     setEditPackQty(String(activePack.contentQty))
     setEditPackLabel(activePack.label ?? '')
-    setEditPackUnitId(activePack.unitTypeId)
+    setEditPackUnitText(activePack.unitName)
     setModal('pack-edit')
   }
 
@@ -231,8 +229,7 @@ export function AdminPriceListPage() {
     setEditingPriceId(null)
     setAmount('')
     setCompareAt('')
-    setMinQty('1')
-    setPriceKind('list')
+    setPriceKind('offer')
     setModal('price')
   }
 
@@ -258,10 +255,13 @@ export function AdminPriceListPage() {
       setNewUnitName('')
       const list = await loadUnitTypes()
       const id = created.unitType?.id
-      if (id) setUnitTypeId(id)
-      else {
+      if (created.unitType?.name) setUnitTypeText(created.unitType.name)
+      else if (id) {
+        const match = list.find((u) => u.id === id)
+        if (match) setUnitTypeText(match.name)
+      } else {
         const match = list.find((u) => u.name.toLowerCase() === name.toLowerCase())
-        if (match) setUnitTypeId(match.id)
+        if (match) setUnitTypeText(match.name)
       }
       setModal(null)
       showMessages(['Tipo creado'])
@@ -315,12 +315,29 @@ export function AdminPriceListPage() {
     }
   }
 
+  async function resolveUnitTypeId(text: string): Promise<string | null> {
+    const name = text.trim()
+    if (!name) return null
+    const existing = unitTypes.find(
+      (u) =>
+        u.name.toLowerCase() === name.toLowerCase() ||
+        u.code.toLowerCase() === name.toLowerCase(),
+    )
+    if (existing) return existing.id
+    const created = await api<{ unitType: UnitType }>('/api/admin/unit-types', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    })
+    await loadUnitTypes()
+    return created.unitType.id
+  }
+
   async function addPresentation(e: React.FormEvent) {
     e.preventDefault()
     clear()
     if (!selectedId) return
-    if (!unitTypeId) {
-      showMessages(['Selecciona o crea un tipo de unidad'])
+    if (!unitTypeText.trim()) {
+      showMessages(['Selecciona o escribe un tipo de unidad'])
       return
     }
     const qty = Number(contentQty)
@@ -341,6 +358,11 @@ export function AdminPriceListPage() {
     }
     setBusy(true)
     try {
+      const unitTypeId = await resolveUnitTypeId(unitTypeText)
+      if (!unitTypeId) {
+        showMessages(['Selecciona o escribe un tipo de unidad'])
+        return
+      }
       const res = await api<{ packaging: { id: string } }>(
         `/api/admin/products/${selectedId}/packagings`,
         {
@@ -396,12 +418,11 @@ export function AdminPriceListPage() {
     setPackagingId(pk.id)
     setEditPackQty(String(pk.contentQty))
     setEditPackLabel(pk.label ?? '')
-    setEditPackUnitId(pk.unitTypeId)
+    setEditPackUnitText(pk.unitName)
     setEditingPriceId(null)
     setAmount('')
     setCompareAt('')
-    setMinQty('1')
-    setPriceKind('list')
+    setPriceKind('offer')
   }
 
   async function updatePresentation(e: React.FormEvent) {
@@ -413,16 +434,21 @@ export function AdminPriceListPage() {
       showMessages(['Indica cuántas unidades lleva'])
       return
     }
-    if (!editPackUnitId) {
-      showMessages(['Elige el tipo de unidad'])
+    if (!editPackUnitText.trim()) {
+      showMessages(['Elige o escribe el tipo de unidad'])
       return
     }
     setBusy(true)
     try {
+      const unitTypeId = await resolveUnitTypeId(editPackUnitText)
+      if (!unitTypeId) {
+        showMessages(['Elige o escribe el tipo de unidad'])
+        return
+      }
       await api(`/api/admin/products/${selectedId}/packagings/${packagingId}`, {
         method: 'PATCH',
         body: JSON.stringify({
-          unitTypeId: editPackUnitId,
+          unitTypeId,
           contentQty: qty,
           label: editPackLabel.trim() || null,
         }),
@@ -502,11 +528,6 @@ export function AdminPriceListPage() {
       showMessages(['Escribe un precio válido'])
       return
     }
-    const min = Number(minQty)
-    if (!Number.isFinite(min) || min <= 0) {
-      showMessages(['La cantidad mínima debe ser mayor a 0'])
-      return
-    }
     const compare = compareAt.trim() === '' ? null : Number(compareAt)
     if (compare != null && (!Number.isFinite(compare) || compare < 0)) {
       showMessages(['El precio tachado no es válido'])
@@ -514,13 +535,14 @@ export function AdminPriceListPage() {
     }
     setBusy(true)
     try {
+      const kind = editingPriceId ? priceKind : 'offer'
       await api(`/api/admin/products/${selectedId}/prices`, {
         method: 'POST',
         body: JSON.stringify({
           id: editingPriceId ?? undefined,
           packagingId,
-          priceKind,
-          minQty: min,
+          priceKind: kind,
+          minQty: 1,
           amount: amt,
           compareAtAmount: compare,
           saveAsNew: false,
@@ -529,10 +551,10 @@ export function AdminPriceListPage() {
       await loadDetail(selectedId, packagingId)
       setAmount('')
       setCompareAt('')
-      setMinQty('1')
       setEditingPriceId(null)
+      setPriceKind('offer')
       setModal(null)
-      showMessages([editingPriceId ? 'Precio actualizado' : 'Precio agregado'])
+      showMessages([editingPriceId ? 'Precio actualizado' : 'Oferta agregada'])
     } catch (err) {
       showMessages([
         err instanceof ApiError ? err.message : 'No se pudo guardar el precio',
@@ -546,7 +568,6 @@ export function AdminPriceListPage() {
     setEditingPriceId(pr.id)
     setPriceKind(pr.priceKind as 'list' | 'wholesale' | 'offer')
     setAmount(String(pr.amount))
-    setMinQty(String(pr.minQty))
     setCompareAt(
       pr.compareAtAmount != null ? String(pr.compareAtAmount) : '',
     )
@@ -817,6 +838,8 @@ export function AdminPriceListPage() {
           ) : null}
         </section>
 
+        <PriceHistoryPanel productId={selected.id} />
+
         <AdminModal
           open={modal === 'unit-create'}
           onClose={closeModal}
@@ -871,7 +894,7 @@ export function AdminPriceListPage() {
               <button
                 type="submit"
                 form="pl-pack-create-form"
-                disabled={busy || !unitTypeId}
+                disabled={busy || !unitTypeText.trim()}
                 className="h-10 rounded-xl bg-rosver-red px-5 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
               >
                 {busy ? 'Guardando…' : 'Crear con precio'}
@@ -886,21 +909,17 @@ export function AdminPriceListPage() {
             className="grid gap-3 sm:grid-cols-2"
           >
             <AdminField label="Tipo de unidad" htmlFor="pl-unit">
-              <AdminSelect
+              <AdminCombobox
                 id="pl-unit"
-                value={unitTypeId}
-                onChange={(e) => setUnitTypeId(e.target.value)}
-              >
-                {unitTypes.length === 0 ? (
-                  <option value="">Crea un tipo primero</option>
-                ) : (
-                  unitTypes.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.name}
-                    </option>
-                  ))
-                )}
-              </AdminSelect>
+                listId="pl-unit-list"
+                value={unitTypeText}
+                onChange={(e) => setUnitTypeText(e.target.value)}
+                placeholder="Elegir o escribir…"
+                options={unitTypes.map((u) => ({
+                  value: u.id,
+                  label: u.name,
+                }))}
+              />
             </AdminField>
             <AdminField label="Unidades por presentación" htmlFor="pl-qty">
               <AdminInput
@@ -928,13 +947,13 @@ export function AdminPriceListPage() {
                 placeholder="200.00"
               />
             </AdminField>
-            <AdminField label="Precio mayorista (S/)" htmlFor="pl-wh" className="sm:col-span-2">
+            <AdminField label="Mayorista (opcional)" htmlFor="pl-wh" className="sm:col-span-2">
               <AdminInput
                 id="pl-wh"
                 inputMode="decimal"
                 value={wholesaleAmount}
                 onChange={(e) => setWholesaleAmount(e.target.value)}
-                placeholder="Opcional"
+                placeholder="S/ …"
               />
             </AdminField>
           </form>
@@ -972,17 +991,17 @@ export function AdminPriceListPage() {
             className="grid gap-3 sm:grid-cols-2"
           >
             <AdminField label="Tipo de unidad" htmlFor="pl-edit-unit">
-              <AdminSelect
+              <AdminCombobox
                 id="pl-edit-unit"
-                value={editPackUnitId}
-                onChange={(e) => setEditPackUnitId(e.target.value)}
-              >
-                {unitTypes.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
-                ))}
-              </AdminSelect>
+                listId="pl-edit-unit-list"
+                value={editPackUnitText}
+                onChange={(e) => setEditPackUnitText(e.target.value)}
+                placeholder="Elegir o escribir…"
+                options={unitTypes.map((u) => ({
+                  value: u.id,
+                  label: u.name,
+                }))}
+              />
             </AdminField>
             <AdminField label="Unidades por presentación" htmlFor="pl-edit-qty">
               <AdminInput
@@ -1004,7 +1023,7 @@ export function AdminPriceListPage() {
         <AdminModal
           open={modal === 'price'}
           onClose={closeModal}
-          title={editingPriceId ? 'Editar precio' : 'Agregar precio'}
+          title={editingPriceId ? 'Editar precio' : 'Agregar oferta'}
           size="lg"
           footer={
             <>
@@ -1025,7 +1044,7 @@ export function AdminPriceListPage() {
                   ? 'Guardando…'
                   : editingPriceId
                     ? 'Guardar cambios'
-                    : 'Agregar precio'}
+                    : 'Agregar oferta'}
               </button>
             </>
           }
@@ -1036,20 +1055,23 @@ export function AdminPriceListPage() {
             onSubmit={savePrice}
             className="grid gap-3 sm:grid-cols-2"
           >
-            <AdminField label="Tipo de precio" htmlFor="pl-kind">
-              <AdminSelect
-                id="pl-kind"
-                value={priceKind}
-                onChange={(e) =>
-                  setPriceKind(e.target.value as 'list' | 'wholesale' | 'offer')
-                }
-              >
-                <option value="list">Venta</option>
-                <option value="wholesale">Mayorista</option>
-                <option value="offer">Oferta</option>
-              </AdminSelect>
-            </AdminField>
-            <AdminField label="Precio (S/)" htmlFor="pl-amt">
+            {editingPriceId ? (
+              <p className="sm:col-span-2 text-sm text-rosver-muted">
+                Tipo:{' '}
+                <span className="font-semibold text-rosver-ink">
+                  {KIND_LABEL[priceKind] ?? priceKind}
+                </span>
+              </p>
+            ) : (
+              <p className="sm:col-span-2 text-xs text-rosver-muted">
+                Venta y mayorista se cargan al crear la presentación. Aquí solo
+                agregas una oferta.
+              </p>
+            )}
+            <AdminField
+              label={editingPriceId ? 'Precio (S/)' : 'Precio de oferta (S/)'}
+              htmlFor="pl-amt"
+            >
               <AdminInput
                 id="pl-amt"
                 inputMode="decimal"
@@ -1065,14 +1087,6 @@ export function AdminPriceListPage() {
                 value={compareAt}
                 onChange={(e) => setCompareAt(e.target.value)}
                 placeholder="Opcional"
-              />
-            </AdminField>
-            <AdminField label="Desde (unidades)" htmlFor="pl-min">
-              <AdminInput
-                id="pl-min"
-                inputMode="decimal"
-                value={minQty}
-                onChange={(e) => setMinQty(e.target.value)}
               />
             </AdminField>
           </form>

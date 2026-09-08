@@ -5,6 +5,7 @@ import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { FloatingToasts } from '@/shared/ui/floating-toasts'
 import { AdminEmptyState, AdminPageHeader, AdminSelect } from '@/shared/ui/admin-field'
 import { useEffect, useMemo, useState } from 'react'
+import { LoginAuditPanel } from './LoginAuditPanel'
 
 type AdminUser = {
   id: string
@@ -235,6 +236,8 @@ export function AdminUsersPage() {
           </div>
         )}
       </div>
+
+      <LoginAuditPanel />
     </div>
   )
 }

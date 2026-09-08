@@ -120,3 +120,35 @@ adminUsersRoutes.patch('/users/:id', async (c) => {
 
   return c.json({ ok: true })
 })
+
+type LoginAuditRow = {
+  id: string
+  user_id: string | null
+  email: string
+  ip: string | null
+  success: boolean
+  reason: string | null
+  created_at: string
+}
+
+adminUsersRoutes.get('/login-audit', async (c) => {
+  const limit = Math.min(Math.max(Number(c.req.query('limit')) || 100, 1), 500)
+  const { rows } = await pool.query<LoginAuditRow>(
+    `SELECT id, user_id, email, ip, success, reason, created_at
+     FROM login_audit
+     ORDER BY created_at DESC
+     LIMIT $1`,
+    [limit],
+  )
+  return c.json({
+    entries: rows.map((row) => ({
+      id: row.id,
+      userId: row.user_id,
+      email: row.email,
+      ip: row.ip,
+      success: row.success,
+      reason: row.reason,
+      createdAt: row.created_at,
+    })),
+  })
+})

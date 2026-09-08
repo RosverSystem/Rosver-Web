@@ -4,6 +4,7 @@ import { pool } from '../db.js'
 import { queryOfferProducts } from '../lib/catalog-products.js'
 import { invalidateCatalogHomeCaches } from '../lib/redis.js'
 import { recalculateProductRating } from '../lib/product-ratings.js'
+import { recordPriceChange } from '../lib/price-audit.js'
 import { isUploadFolder, uploadPublicImage } from '../lib/upload-image.js'
 import {
   requireAuth,
@@ -1192,11 +1193,16 @@ adminCatalogRoutes.post('/products/:id/prices', async (c) => {
     return c.json({ error: body.error.issues[0]?.message ?? 'Datos inválidos' }, 400)
   }
   const d = body.data
+  const actor = c.get('user')
   const client = await pool.connect()
   try {
     await client.query('BEGIN')
 
     if (d.id && !d.saveAsNew) {
+      const before = await client.query<{ amount: string }>(
+        `SELECT amount FROM product_prices WHERE id = $1 AND product_id = $2`,
+        [d.id, productId],
+      )
       const { rows } = await client.query(
         `UPDATE product_prices SET
            packaging_id = $2,
@@ -1229,6 +1235,16 @@ adminCatalogRoutes.post('/products/:id/prices', async (c) => {
       }
       await client.query('COMMIT')
       await invalidateCatalogHomeCaches()
+      await recordPriceChange({
+        productId,
+        priceId: d.id,
+        packagingId: d.packagingId,
+        action: 'updated',
+        oldAmount: before.rows[0] ? Number(before.rows[0].amount) : null,
+        newAmount: d.amount,
+        actorId: actor.id,
+        actorEmail: actor.email,
+      })
       return c.json({ price: mapPrice(rows[0]), mode: 'updated' })
     }
 
@@ -1261,6 +1277,16 @@ adminCatalogRoutes.post('/products/:id/prices', async (c) => {
     )
     await client.query('COMMIT')
     await invalidateCatalogHomeCaches()
+    await recordPriceChange({
+      productId,
+      priceId: rows[0].id,
+      packagingId: d.packagingId,
+      action: 'created',
+      oldAmount: null,
+      newAmount: d.amount,
+      actorId: actor.id,
+      actorEmail: actor.email,
+    })
     return c.json({ price: mapPrice(rows[0]), mode: 'created' }, 201)
   } catch (e) {
     await client.query('ROLLBACK')
@@ -1290,16 +1316,52 @@ function mapPrice(r: Record<string, unknown>) {
 adminCatalogRoutes.delete('/products/:id/prices/:priceId', async (c) => {
   const productId = c.req.param('id')
   const priceId = c.req.param('priceId')
-  const { rows } = await pool.query(
+  const actor = c.get('user')
+  const { rows } = await pool.query<{ id: string; packaging_id: string; amount: string }>(
     `UPDATE product_prices
      SET is_active = false, updated_at = now()
      WHERE id = $1 AND product_id = $2
-     RETURNING id`,
+     RETURNING id, packaging_id, amount`,
     [priceId, productId],
   )
   if (!rows[0]) return c.json({ error: 'Precio no encontrado' }, 404)
   await invalidateCatalogHomeCaches()
+  await recordPriceChange({
+    productId,
+    priceId: rows[0].id,
+    packagingId: rows[0].packaging_id,
+    action: 'deactivated',
+    oldAmount: Number(rows[0].amount),
+    newAmount: null,
+    actorId: actor.id,
+    actorEmail: actor.email,
+  })
   return c.json({ ok: true, softDeleted: true })
+})
+
+adminCatalogRoutes.get('/products/:id/price-history', async (c) => {
+  const productId = c.req.param('id')
+  const { rows } = await pool.query(
+    `SELECT id, price_id, packaging_id, action, old_amount, new_amount,
+            changed_by_email, created_at
+     FROM price_audit
+     WHERE product_id = $1
+     ORDER BY created_at DESC
+     LIMIT 100`,
+    [productId],
+  )
+  return c.json({
+    entries: rows.map((r) => ({
+      id: r.id,
+      priceId: r.price_id,
+      packagingId: r.packaging_id,
+      action: r.action,
+      oldAmount: r.old_amount != null ? Number(r.old_amount) : null,
+      newAmount: r.new_amount != null ? Number(r.new_amount) : null,
+      changedByEmail: r.changed_by_email,
+      createdAt: r.created_at,
+    })),
+  })
 })
 
 /* ——— Reseñas / calificaciones ——— */

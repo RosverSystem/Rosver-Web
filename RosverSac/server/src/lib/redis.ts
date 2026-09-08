@@ -6,6 +6,11 @@ const FEATURED_TTL_SEC = 90
 
 let client: Redis | null | undefined
 
+/** Cliente ioredis crudo, para módulos que necesitan comandos que no son cache JSON (ej. rate-limit). */
+export function getRedisClient(): Redis | null {
+  return getClient()
+}
+
 function getClient(): Redis | null {
   if (client !== undefined) return client
   const url = config.redisUrl

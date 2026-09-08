@@ -3,6 +3,7 @@ import { cn } from '@/shared/lib'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { FloatingToasts } from '@/shared/ui/floating-toasts'
 import {
+  AdminCombobox,
   AdminEmptyState,
   AdminField,
   AdminInput,
@@ -87,6 +88,24 @@ const PRICE_KIND_LABEL: Record<string, string> = {
   custom: 'Otro',
 }
 
+/** Siguiente orden automático (menor = primero en carrusel). */
+function nextAutoSort(
+  rows: { id: string; featured?: boolean; featuredSort?: number; trending?: boolean; trendingSort?: number }[],
+  kind: 'featured' | 'trending',
+  excludeId?: string | null,
+) {
+  const vals = rows
+    .filter((p) => {
+      if (p.id === excludeId) return false
+      return kind === 'featured' ? Boolean(p.featured) : Boolean(p.trending)
+    })
+    .map((p) =>
+      kind === 'featured' ? Number(p.featuredSort ?? 0) : Number(p.trendingSort ?? 0),
+    )
+  if (vals.length === 0) return 0
+  return Math.max(...vals) + 1
+}
+
 /**
  * Alta/edición de productos por fases (estilo Odoo).
  * Specs: el usuario define tipo + valor. Calificaciones: solo lectura (clientes).
@@ -115,19 +134,16 @@ export function AdminProductsPage() {
   const [moq, setMoq] = useState('1')
   const [availability, setAvailability] = useState('in_stock')
   const [featured, setFeatured] = useState(false)
-  const [featuredSort, setFeaturedSort] = useState('0')
   const [trending, setTrending] = useState(false)
-  const [trendingSort, setTrendingSort] = useState('0')
 
   const [packagings, setPackagings] = useState<Packaging[]>([])
   const [prices, setPrices] = useState<Price[]>([])
-  const [unitTypeId, setUnitTypeId] = useState('')
+  const [unitTypeText, setUnitTypeText] = useState('')
   const [contentQty, setContentQty] = useState('1')
   const [packagingId, setPackagingId] = useState('')
   const [listAmount, setListAmount] = useState('')
   const [wholesaleAmount, setWholesaleAmount] = useState('')
-  const [priceKind, setPriceKind] = useState<'list' | 'wholesale' | 'offer'>('list')
-  const [minQty, setMinQty] = useState('1')
+  const [priceKind, setPriceKind] = useState<'list' | 'wholesale' | 'offer'>('offer')
   const [amount, setAmount] = useState('')
   const [compareAt, setCompareAt] = useState('')
   const [editingPriceId, setEditingPriceId] = useState<string | null>(null)
@@ -162,7 +178,7 @@ export function AdminProductsPage() {
       setCategories(c.categories)
       setUnitTypes(u.unitTypes)
       setSpecAttrs(a.attributes)
-      if (!unitTypeId && u.unitTypes[0]) setUnitTypeId(u.unitTypes[0].id)
+      if (!unitTypeText && u.unitTypes[0]) setUnitTypeText(u.unitTypes[0].name)
     } catch (e) {
       showMessages([
         e instanceof ApiError ? e.message : 'No se pudo cargar el listado',
@@ -204,9 +220,7 @@ export function AdminProductsPage() {
         setMoq(String(p.moq ?? 1))
         setAvailability(p.availability || 'in_stock')
         setFeatured(Boolean(p.featured))
-        setFeaturedSort(String(p.featuredSort ?? 0))
         setTrending(Boolean(p.trending))
-        setTrendingSort(String(p.trendingSort ?? 0))
         setRating(Number(p.rating ?? 0))
         setReviewCount(Number(p.reviewCount ?? 0))
       }
@@ -250,9 +264,7 @@ export function AdminProductsPage() {
     setMoq('1')
     setAvailability('in_stock')
     setFeatured(false)
-    setFeaturedSort('0')
     setTrending(false)
-    setTrendingSort('0')
     setPackagings([])
     setPrices([])
     setSpecRows([])
@@ -260,6 +272,8 @@ export function AdminProductsPage() {
     setReviewCount(0)
     setAmount('')
     setCompareAt('')
+    setPriceKind('offer')
+    setEditingPriceId(null)
   }
 
   function startCreate() {
@@ -306,7 +320,9 @@ export function AdminProductsPage() {
             description,
             imageUrl: imageUrl.trim() || undefined,
             featured,
-            featuredSort: featured ? Number(featuredSort) || 0 : 0,
+            featuredSort: featured
+              ? nextAutoSort(products, 'featured', null)
+              : 0,
           }),
         })
         setSelectedId(res.product.id)
@@ -332,6 +348,17 @@ export function AdminProductsPage() {
     setBusy(true)
     clear()
     try {
+      const current = products.find((p) => p.id === selectedId)
+      const featuredSort = !featured
+        ? 0
+        : current?.featured
+          ? Number(current.featuredSort ?? 0)
+          : nextAutoSort(products, 'featured', selectedId)
+      const trendingSort = !trending
+        ? 0
+        : current?.trending
+          ? Number(current.trendingSort ?? 0)
+          : nextAutoSort(products, 'trending', selectedId)
       await api(`/api/admin/products/${selectedId}`, {
         method: 'PATCH',
         body: JSON.stringify({
@@ -339,9 +366,9 @@ export function AdminProductsPage() {
           moq: Number(moq) || 1,
           availability,
           featured,
-          featuredSort: Number(featuredSort) || 0,
+          featuredSort,
           trending,
-          trendingSort: Number(trendingSort) || 0,
+          trendingSort,
         }),
       })
       await loadList()
@@ -452,11 +479,32 @@ export function AdminProductsPage() {
     }
   }
 
+  async function resolveUnitTypeId(text: string): Promise<string | null> {
+    const name = text.trim()
+    if (!name) return null
+    const existing = unitTypes.find(
+      (u) =>
+        u.name.toLowerCase() === name.toLowerCase() ||
+        u.code.toLowerCase() === name.toLowerCase(),
+    )
+    if (existing) return existing.id
+    const created = await api<{ unitType: UnitType }>('/api/admin/unit-types', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    })
+    setUnitTypes((prev) => [...prev, created.unitType])
+    return created.unitType.id
+  }
+
   async function addPackagingWithPrice(e: React.FormEvent) {
     e.preventDefault()
     clear()
-    if (!selectedId || !unitTypeId) {
-      showMessages(['Elige un tipo de unidad'])
+    if (!selectedId) {
+      showMessages(['Primero guarda el producto'])
+      return
+    }
+    if (!unitTypeText.trim()) {
+      showMessages(['Elige o escribe un tipo de unidad'])
       return
     }
     const qty = Number(contentQty)
@@ -477,6 +525,11 @@ export function AdminProductsPage() {
     }
     setBusy(true)
     try {
+      const unitTypeId = await resolveUnitTypeId(unitTypeText)
+      if (!unitTypeId) {
+        showMessages(['Elige o escribe un tipo de unidad'])
+        return
+      }
       const created = await api<{ packaging: { id: string } }>(
         `/api/admin/products/${selectedId}/packagings`,
         {
@@ -540,13 +593,14 @@ export function AdminProductsPage() {
     }
     setBusy(true)
     try {
+      const kind = editingPriceId ? priceKind : 'offer'
       await api(`/api/admin/products/${selectedId}/prices`, {
         method: 'POST',
         body: JSON.stringify({
           id: editingPriceId ?? undefined,
           packagingId,
-          priceKind,
-          minQty: Number(minQty) || 1,
+          priceKind: kind,
+          minQty: 1,
           amount: amt,
           compareAtAmount: compareAt ? Number(compareAt) : null,
           saveAsNew: false,
@@ -554,10 +608,10 @@ export function AdminProductsPage() {
       })
       setAmount('')
       setCompareAt('')
-      setMinQty('1')
+      setPriceKind('offer')
       setEditingPriceId(null)
       await loadDetail(selectedId)
-      showMessages([editingPriceId ? 'Precio actualizado' : 'Precio agregado'])
+      showMessages([editingPriceId ? 'Precio actualizado' : 'Oferta agregada'])
     } catch (err) {
       showMessages([
         err instanceof ApiError ? err.message : 'No se pudo guardar el precio',
@@ -572,7 +626,6 @@ export function AdminProductsPage() {
     setEditingPriceId(p.id)
     setPriceKind(p.priceKind as 'list' | 'wholesale' | 'offer')
     setAmount(String(p.amount))
-    setMinQty(String(p.minQty))
     setCompareAt(
       p.compareAtAmount != null ? String(p.compareAtAmount) : '',
     )
@@ -941,16 +994,6 @@ export function AdminProductsPage() {
                   />
                   Destacado en el inicio
                 </label>
-                {featured ? (
-                  <AdminField label="Orden en carrusel" htmlFor="w-fs">
-                    <AdminInput
-                      id="w-fs"
-                      value={featuredSort}
-                      onChange={(e) => setFeaturedSort(e.target.value)}
-                      className="w-28"
-                    />
-                  </AdminField>
-                ) : null}
                 <label className="flex items-center gap-2 text-sm text-rosver-ink">
                   <input
                     type="checkbox"
@@ -960,16 +1003,9 @@ export function AdminProductsPage() {
                   />
                   Producto en tendencia
                 </label>
-                {trending ? (
-                  <AdminField label="Orden tendencia" htmlFor="w-ts">
-                    <AdminInput
-                      id="w-ts"
-                      value={trendingSort}
-                      onChange={(e) => setTrendingSort(e.target.value)}
-                      className="w-28"
-                    />
-                  </AdminField>
-                ) : null}
+                <p className="text-[11px] text-rosver-muted">
+                  El orden en el carrusel se asigna solo al guardar.
+                </p>
               </div>
               <div className="rounded-xl border border-dashed border-rosver-line bg-rosver-soft/30 px-4 py-3 text-sm text-rosver-muted">
                 Calificación:{' '}
@@ -1000,21 +1036,17 @@ export function AdminProductsPage() {
                 className="grid gap-3 rounded-xl border border-rosver-line p-3 sm:grid-cols-2 lg:grid-cols-5"
               >
                 <AdminField label="Tipo de unidad" htmlFor="w-unit">
-                  <AdminSelect
+                  <AdminCombobox
                     id="w-unit"
-                    value={unitTypeId}
-                    onChange={(e) => setUnitTypeId(e.target.value)}
-                  >
-                    {unitTypes.length === 0 ? (
-                      <option value="">Sin tipos</option>
-                    ) : (
-                      unitTypes.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.name}
-                        </option>
-                      ))
-                    )}
-                  </AdminSelect>
+                    listId="w-unit-list"
+                    value={unitTypeText}
+                    onChange={(e) => setUnitTypeText(e.target.value)}
+                    placeholder="Elegir o escribir…"
+                    options={unitTypes.map((u) => ({
+                      value: u.id,
+                      label: u.name,
+                    }))}
+                  />
                 </AdminField>
                 <AdminField label="Unidades por presentación" htmlFor="w-qty">
                   <AdminInput
@@ -1033,19 +1065,19 @@ export function AdminProductsPage() {
                     placeholder="200.00"
                   />
                 </AdminField>
-                <AdminField label="Precio mayorista (S/)" htmlFor="w-wh">
+                <AdminField label="Mayorista (opcional)" htmlFor="w-wh">
                   <AdminInput
                     id="w-wh"
                     inputMode="decimal"
                     value={wholesaleAmount}
                     onChange={(e) => setWholesaleAmount(e.target.value)}
-                    placeholder="Opcional"
+                    placeholder="S/ …"
                   />
                 </AdminField>
                 <div className="flex items-end">
                   <button
                     type="submit"
-                    disabled={busy || !unitTypeId}
+                    disabled={busy || !unitTypeText.trim()}
                     className="h-11 w-full rounded-xl bg-rosver-red text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
                   >
                     Agregar
@@ -1149,40 +1181,27 @@ export function AdminProductsPage() {
                 <form
                   noValidate
                   onSubmit={saveExtraPrice}
-                  className="grid gap-3 rounded-xl border border-dashed border-rosver-line p-3 sm:grid-cols-4"
+                  className="grid gap-3 rounded-xl border border-dashed border-rosver-line p-3 sm:grid-cols-3"
                 >
-                  <p className="sm:col-span-4 text-xs font-semibold text-rosver-muted">
+                  <p className="sm:col-span-3 text-xs font-semibold text-rosver-muted">
                     {editingPriceId
-                      ? 'Editando precio'
-                      : 'Precio extra para la presentación seleccionada'}
+                      ? `Editando: ${PRICE_KIND_LABEL[priceKind] ?? priceKind}`
+                      : 'Oferta para esta presentación (venta y mayorista ya van arriba)'}
                   </p>
-                  <AdminField label="Tipo de precio" htmlFor="w-pk">
-                    <AdminSelect
-                      id="w-pk"
-                      value={priceKind}
-                      onChange={(e) =>
-                        setPriceKind(
-                          e.target.value as 'list' | 'wholesale' | 'offer',
-                        )
-                      }
-                    >
-                      <option value="list">Venta</option>
-                      <option value="wholesale">Mayorista</option>
-                      <option value="offer">Oferta</option>
-                    </AdminSelect>
-                  </AdminField>
-                  <AdminField label="Desde (unidades)" htmlFor="w-min">
-                    <AdminInput
-                      id="w-min"
-                      value={minQty}
-                      onChange={(e) => setMinQty(e.target.value)}
-                    />
-                  </AdminField>
-                  <AdminField label="Precio (S/)" htmlFor="w-amt">
+                  <AdminField
+                    label={
+                      editingPriceId
+                        ? 'Precio (S/)'
+                        : 'Precio de oferta (S/)'
+                    }
+                    htmlFor="w-amt"
+                    className="sm:col-span-2"
+                  >
                     <AdminInput
                       id="w-amt"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
+                      placeholder="0.00"
                     />
                   </AdminField>
                   <div className="flex flex-wrap items-end gap-2">
@@ -1191,7 +1210,7 @@ export function AdminProductsPage() {
                       disabled={busy}
                       className="h-11 flex-1 rounded-xl bg-rosver-ink text-sm font-semibold text-white hover:bg-rosver-red disabled:opacity-60"
                     >
-                      {editingPriceId ? 'Guardar' : 'Agregar precio'}
+                      {editingPriceId ? 'Guardar' : 'Agregar oferta'}
                     </button>
                     {editingPriceId ? (
                       <button
@@ -1200,7 +1219,7 @@ export function AdminProductsPage() {
                           setEditingPriceId(null)
                           setAmount('')
                           setCompareAt('')
-                          setMinQty('1')
+                          setPriceKind('offer')
                         }}
                         className="h-11 rounded-xl border border-rosver-line px-3 text-xs font-semibold text-rosver-muted"
                       >
