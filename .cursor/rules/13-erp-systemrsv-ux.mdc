@@ -1,15 +1,14 @@
 ---
-description: UX/UI ERP SystemRSV — SaaS soft (sidebar blanca + top bar); paleta Rosver
+description: UX/UI ERP SystemRSV — SaaS soft colapsable; perfil solo en sidebar
 globs: RosverSac/src/app/layout/admin/**/*,RosverSac/src/app/pages/Admin*.tsx,RosverSac/src/features/admin-*/**
 alwaysApply: false
 ---
 
 # ERP SystemRSV — UX SaaS soft
 
-Leer skill **`erp-systemrsv-saas-ux`** antes de tocar `/admin`.
+Skill **`erp-systemrsv-saas-ux`**.
 
-- Sidebar **blanca** con icono + label; activo = pill `rosver-red`.
-- Top bar: búsqueda de módulos + perfil (logout en menú).
-- Módulos nav: **Inicio**, **Productos** → Listado / Categorías / Ofertas.
-- Sin mezclar con tienda pública ni sidebar oscura anterior.
-- Detalle: `docs/architecture/09-erp-systemrsv-ux.md`
+- Sidebar blanca **colapsable** (labels ↔ solo iconos).
+- **Perfil una sola vez**: pie del sidebar (no en top bar).
+- Top bar: título + search + hora.
+- Activo: `rosver-red`. Nav: Inicio + Productos (Listado / Categorías / Ofertas).

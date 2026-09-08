@@ -8,7 +8,8 @@
 | P02 | Facebook login | UI login/registro | pendiente | Botón placeholder; no pedido aún como OAuth |
 | P03 | Pedidos / cotizaciones reales en `/cuenta` | Auth + cuenta | pendiente | Siguen mocks; falta API de pedidos/quotes |
 | P04 | UI admin roles/permisos | Auth RBAC | pendiente | API lista; falta pantalla en estilo ERP |
-| P10 | CRUD Productos ERP + API | Pedido ERP | pendiente | Listado/categorías/ofertas vacíos (shell SaaS soft) |
+| P10 | CRUD Productos ERP + API | Pedido ERP | pendiente | Listado/categorías/ofertas vacíos (shell colapsable v0.1.7) |
+| P13 | ERP perfil solo sidebar + top limpio | Pedido UX refs | hecho | Sidebar colapsable; sin duplicar perfil en top (v0.1.7) |
 | P11 | Migrar resto módulos admin al estilo SystemRSV | ERP UX | cancelado | Nav reducida a Inicio+Productos; otros fuera hasta pedido |
 | P05 | Recuperación de contraseña | Auth | pendiente | No implementado |
 | P06 | Subida foto perfil a R2 | Perfil | hecho | `POST /api/profile/avatar` + `/api/media` (v0.1.4) |
@@ -26,4 +27,6 @@
 - Shell ERP SystemRSV (sidebar + top bar) + Productos vacío (v0.1.3)
 - Cuenta: pedidos/cotizaciones con fotos + avatar R2 (v0.1.4)
 - ERP SaaS soft: Inicio + Productos (listado/categorías/ofertas) (v0.1.5)
+- Banner área cliente (v0.1.6)
+- ERP sidebar colapsable + perfil único (v0.1.7)
 

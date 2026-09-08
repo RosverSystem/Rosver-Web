@@ -93,3 +93,10 @@ export function searchAdminModules(query: string): AdminNavLeaf[] {
     return hay.includes(q)
   })
 }
+
+export function adminPageTitle(pathname: string): string {
+  if (pathname.startsWith('/admin/ofertas')) return 'Ofertas'
+  if (pathname.startsWith('/admin/categorias')) return 'Categorías'
+  if (pathname.startsWith('/admin/productos')) return 'Listado'
+  return 'Inicio'
+}

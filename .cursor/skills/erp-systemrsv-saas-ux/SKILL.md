@@ -1,56 +1,50 @@
 ---
 name: erp-systemrsv-saas-ux
-description: Estilo UX/UI del ERP SystemRSV tipo SaaS soft (sidebar blanca con labels, top bar search+perfil, cards). Usar al diseñar o tocar cualquier pantalla /admin.
+description: Estilo UX/UI del ERP SystemRSV tipo SaaS soft (sidebar blanca colapsable, top bar sin perfil duplicado). Usar al diseñar o tocar cualquier pantalla /admin.
 ---
 
 # ERP SystemRSV — estilo SaaS soft (paleta Rosver)
 
-Referencia de composición: dashboard SaaS claro (sidebar con texto, search ⌘K, perfil arriba a la derecha, workspace en cards). **Colores solo tokens Rosver** — no azul EduNova / no purple AI.
+Referencia: sidebar clara colapsable (iconos / iconos+labels) + top bar limpia. **Colores solo tokens Rosver**.
 
-## Layout obligatorio
+## Layout
 
 ```
-┌──────────┬─────────────────────────────────────┐
-│ Sidebar  │ Top bar: search módulos · perfil    │
-│ blanca   ├─────────────────────────────────────┤
-│ labels   │ Workspace bg-rosver-soft            │
-│ + iconos │ Cards blancas rounded-2xl / 3xl     │
-└──────────┴─────────────────────────────────────┘
+┌────────────┬──────────────────────────────────┐
+│ Sidebar    │ Top: título página · search · ⏰ │
+│ blanca     ├──────────────────────────────────┤
+│ (colaps.)  │ Workspace bg-rosver-soft         │
+│ perfil ↓   │ Cards blancas rounded-2xl        │
+└────────────┴──────────────────────────────────┘
 ```
 
-| Pieza | Tokens / reglas |
+| Pieza | Regla |
 | --- | --- |
-| Fondo app | `bg-rosver-soft` |
-| Sidebar | `bg-white`, borde `border-rosver-line`, ~240–280px |
-| Item activo | Pill `bg-rosver-red text-white` (no azul) |
-| Item idle | `text-rosver-muted` / hover `bg-rosver-soft` |
-| Top search | Pill blanca, placeholder módulos |
-| Perfil | Avatar + nombre + rol; **logout solo en menú** |
+| Fondo | `bg-rosver-soft` |
+| Sidebar expandida | `bg-white` ~260px, icono + label |
+| Sidebar colapsada | ~72px, solo iconos + tooltips |
+| Activo | Pill/borde `rosver-red` (nunca azul mock) |
+| **Perfil** | **Solo** al pie del sidebar (avatar · nombre · menú logout). **Prohibido** repetir avatar/saludo en el top bar |
+| Top bar | Título de módulo + búsqueda módulos (⌘K) + hora; sin bloque “Mi cuenta” |
 | Cards | `bg-white rounded-2xl shadow-sm border-rosver-line` |
-| CTA | `bg-rosver-red` · apoyo `rosver-blue` |
+| CTA | `bg-rosver-red` |
 
-## Módulos actuales (única nav)
+## Módulos nav
 
 1. **Inicio** → `/admin`
-2. **Productos** (grupo)
-   - Listado → `/admin/productos`
-   - Categorías → `/admin/categorias`
-   - Ofertas → `/admin/ofertas`
-
-No añadir otros ítems al sidebar sin actualizar esta skill + `admin-nav.ts` + docs.
+2. **Productos** → Listado `/admin/productos` · Categorías `/admin/categorias` · Ofertas `/admin/ofertas`
 
 ## Anti-patrones
 
-- Sidebar oscura solo-iconos (modelo anterior).
-- Nav roja de la tienda pública dentro de `/admin`.
-- Azul primario del mock EduNova; purple/cream genéricos.
-- Mezclar wireframe dashed con cards SaaS en la misma vista.
-- Logout suelto fuera del menú de perfil.
+- Perfil duplicado (sidebar + top bar).
+- Sidebar oscura permanente solo-iconos como único modo.
+- Azul EduNova / purple / cream.
+- Nav roja de la tienda pública en `/admin`.
 
-## Checklist pantalla nueva
+## Checklist
 
-- [ ] Hereda `AdminShell`
-- [ ] Vista puede empezar en blanco (card placeholder)
-- [ ] Responsive: drawer sidebar en móvil
-- [ ] Iconos `cssvg-icons`
-- [ ] Docs `09-erp-systemrsv-ux.md` + change si aplica
+- [ ] `AdminShell` + sidebar colapsable
+- [ ] Un solo perfil (footer sidebar)
+- [ ] Top bar sin avatar/nombre de sesión
+- [ ] Responsive drawer móvil
+- [ ] `cssvg-icons` + docs `09-erp-systemrsv-ux.md`
