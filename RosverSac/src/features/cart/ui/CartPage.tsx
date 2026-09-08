@@ -15,6 +15,7 @@ import { motion } from 'motion/react'
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useCart } from '../model/cart-store'
+import { addInputFromProduct, unitPriceOfLine } from '../model/cart-line'
 import { type CartLine } from '../model/mocks'
 
 /** TC referencial mock (fase visual). */
@@ -53,27 +54,23 @@ function resolveLine(line: CartLine, products: Product[]) {
 export function CartPage() {
   const reduce = prefersReducedMotion()
   const { products } = useCatalog()
-  const { lines, addItem, updateQuantity, removeLine, itemCount, lineKey } =
+  const { lines, addItem, updateQuantity, removeLine, clear, lineKey } =
     useCart()
 
   const items = lines
     .map((l) => resolveLine(l, products))
     .filter((l): l is NonNullable<typeof l> => l !== null)
+  const visibleCount = items.reduce((sum, item) => sum + item.quantity, 0)
   const total = items.reduce((sum, item) => {
-    const unit =
-      item.unitPrice !== undefined ? item.unitPrice : item.product.price
+    const unit = unitPriceOfLine(item, item.product)
     return sum + (unit ?? 0) * item.quantity
   }, 0)
-  const hasConsult = items.some((item) => {
-    const unit =
-      item.unitPrice !== undefined ? item.unitPrice : item.product.price
-    return unit === null
-  })
+  const hasConsult = items.some((item) => unitPriceOfLine(item, item.product) === null)
 
   return (
     <main className="mx-auto flex w-full min-w-0 max-w-4xl flex-col gap-6 overflow-x-hidden px-4 pb-28 lg:px-6">
       <div className="pt-4 sm:pt-6">
-        <CartBanner reduce={reduce} itemCount={itemCount} />
+        <CartBanner reduce={reduce} itemCount={visibleCount} />
       </div>
 
       <section className="rounded-2xl border border-rosver-line bg-white shadow-[0_12px_32px_-24px_rgba(17,17,17,0.4)]">
@@ -91,7 +88,7 @@ export function CartPage() {
           <div className="mt-3">
             <CartProductSearcher
               products={products}
-              onPick={(product) => addItem(product.slug, 1)}
+              onPick={(product) => addItem(addInputFromProduct(product, 1))}
             />
           </div>
         </div>
@@ -118,9 +115,10 @@ export function CartPage() {
         ) : (
           <ul className="flex flex-col divide-y divide-rosver-line px-4 sm:px-5">
             {items.map((item) => {
-              const { product, quantity, packagingLabel, unitPrice, key } = item
-              const unit =
-                unitPrice !== undefined ? unitPrice : product.price
+              const { product, quantity, packagingLabel, key } = item
+              const unit = unitPriceOfLine(item, product)
+              const lineTotal =
+                unit != null ? unit * quantity : null
               return (
                 <li
                   key={key}
@@ -146,9 +144,12 @@ export function CartPage() {
                       {packagingLabel ? ` · ${packagingLabel}` : ''}
                     </p>
                     <p className="mt-1 text-sm font-bold text-rosver-red">
-                      {unit !== null && unit !== undefined
-                        ? `S/ ${unit.toFixed(2)}`
-                        : 'Consultar'}
+                      {unit != null ? `S/ ${unit.toFixed(2)}` : 'Consultar'}
+                      {unit != null && quantity > 1 ? (
+                        <span className="ml-2 text-xs font-semibold text-rosver-muted">
+                          × {quantity} = S/ {(lineTotal ?? 0).toFixed(2)}
+                        </span>
+                      ) : null}
                     </p>
                   </div>
 
@@ -229,6 +230,15 @@ export function CartPage() {
           >
             Continuar pedido
           </Link>
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm('¿Vaciar todo el carrito?')) clear()
+            }}
+            className="inline-flex min-h-11 items-center justify-center gap-1 px-2 text-sm font-bold text-rosver-muted transition hover:text-rosver-red"
+          >
+            Vaciar carrito
+          </button>
           <Link
             to="/catalogo"
             className="inline-flex min-h-11 items-center justify-center gap-1 px-2 text-sm font-bold text-rosver-muted transition hover:text-rosver-ink"

@@ -5,7 +5,7 @@ import {
   offerSavings,
 } from '@/features/catalog/model/offers'
 import { ProductImage } from '@/features/catalog/ui/ProductImage'
-import { useCart } from '@/features/cart'
+import { useCart, addInputFromProduct } from '@/features/cart'
 import { WHATSAPP_NUMBER } from '@/shared/lib'
 import { IconWhatsApp } from '@/shared/ui/icons'
 import { Link } from 'react-router-dom'
@@ -30,17 +30,13 @@ export function OfferCard({ product }: { product: Product }) {
   const defaultPack = product.packagings?.find((p) => p.isDefault) ?? product.packagings?.[0]
 
   function onAdd() {
-    if (defaultPack) {
-      addItem({
-        productSlug: product.slug,
-        quantity: 1,
-        packagingId: defaultPack.id,
-        packagingLabel: defaultPack.label,
-        unitPrice: price,
-      })
-    } else {
-      addItem(product.slug, 1)
-    }
+    addItem(
+      addInputFromProduct(
+        product,
+        1,
+        defaultPack?.id,
+      ),
+    )
   }
 
   return (

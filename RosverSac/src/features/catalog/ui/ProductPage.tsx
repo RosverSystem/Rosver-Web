@@ -2,7 +2,7 @@ import { useCatalog } from '@/features/catalog/model/catalog-store'
 import { getWholesalePrice } from '@/features/catalog/model/mocks'
 import { ProductCard } from '@/features/catalog/ui/ProductCard'
 import { ProductImage } from '@/features/catalog/ui/ProductImage'
-import { useCart } from '@/features/cart'
+import { useCart, addInputFromProduct } from '@/features/cart'
 import { WHATSAPP_NUMBER } from '@/shared/lib'
 import { IconBag, IconWhatsApp } from '@/shared/ui/icons'
 import { ArrowRight } from 'cssvg-icons'
@@ -99,17 +99,9 @@ export function ProductPage() {
   const specs = [...baseSpecs, ...dynamicSpecs]
 
   function onAddToCart() {
-    if (selectedPack) {
-      addItem({
-        productSlug: product.slug,
-        quantity: 1,
-        packagingId: selectedPack.id,
-        packagingLabel: selectedPack.label,
-        unitPrice: displayPrice,
-      })
-    } else {
-      addItem(product.slug, 1)
-    }
+    addItem(
+      addInputFromProduct(product, 1, selectedPack?.id),
+    )
   }
 
   return (

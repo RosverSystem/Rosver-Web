@@ -2,7 +2,7 @@ import type { Product } from '@/features/catalog/model/mocks'
 import { getWholesalePrice } from '@/features/catalog/model/mocks'
 import { ProductImage } from '@/features/catalog/ui/ProductImage'
 import { ProductRatingStars } from '@/features/catalog/ui/ProductRatingStars'
-import { useCart } from '@/features/cart'
+import { useCart, addInputFromProduct } from '@/features/cart'
 import { IconBag } from '@/shared/ui/icons'
 import { Link } from 'react-router-dom'
 
@@ -143,7 +143,7 @@ export function ProductCard({
           type="button"
           disabled={preview}
           onClick={() => {
-            if (!preview) addItem(product.slug, 1)
+            if (!preview) addItem(addInputFromProduct(product, 1))
           }}
           className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-rosver-red px-3 text-sm font-bold text-white transition hover:bg-rosver-red-dark disabled:cursor-default disabled:opacity-90"
         >

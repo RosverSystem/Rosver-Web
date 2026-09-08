@@ -5,7 +5,7 @@
 | Feature | Descripción | Estado |
 | --- | --- | --- |
 | [catalog](./catalog.md) | Catálogo público, listados y ficha | activa (wireframe) |
-| [cart](./cart.md) | Carrito → cotizar / pedir | activa (diseño visual `/carrito`) |
+| [cart](./cart.md) | Carrito → cotizar / pedir | activa (lógica localStorage) |
 | [quotes](./quotes.md) | Cotizaciones (público + admin) | activa (cotizar + carrito) |
 | [contact](./contact.md) | Contacto / WhatsApp / leads | activa (wireframe) |
 | [auth](./auth.md) | Login, registro, roles | activa (diseño visual) |

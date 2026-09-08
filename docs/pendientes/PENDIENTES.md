@@ -38,9 +38,11 @@
 | P38 | Formularios ERP solo en AdminModal (regla 17) | Pedido UX ERP | hecho | v0.1.27 |
 | P39 | Vista previa tienda en producto/categoría ERP | Pedido UX | hecho | v0.1.28 |
 | P40 | Almacenamiento «Todos» vacío (Delimiter R2) | Bug ERP | hecho | v0.1.29 |
+| P41 | Lógica carrito (persistencia + sync catálogo) | Pedido lógica | hecho | v0.1.30 localStorage |
 
 ## Hechos recientes
 
+- Lógica carrito: localStorage, sync catálogo, sin seed fantasma (v0.1.30)
 - Fix listado R2 «Todos» sin Delimiter (v0.1.29)
 - Preview ProductCard / CategoryHomeCard en modales ERP (v0.1.28)
 - Regla 17 + Ofertas/Categorías/Productos/Precios/Unidades en `AdminModal` (v0.1.27)

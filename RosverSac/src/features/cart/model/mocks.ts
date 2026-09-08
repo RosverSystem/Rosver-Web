@@ -6,8 +6,3 @@ export type CartLine = {
   /** Precio unitario congelado al agregar */
   unitPrice?: number | null
 }
-
-export const INITIAL_CART: CartLine[] = [
-  { productSlug: 'taladro-percutor-20v', quantity: 2 },
-  { productSlug: 'set-llaves-combinadas-40pzs', quantity: 12 },
-]

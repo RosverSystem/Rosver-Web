@@ -28,7 +28,7 @@ import {
   RequireAdmin,
   RequireAuth,
 } from '@/features/auth'
-import { CartPage, CartProvider } from '@/features/cart'
+import { CartPage, CartProvider, CartCatalogSync } from '@/features/cart'
 import {
   CatalogPage,
   CatalogProvider,
@@ -45,6 +45,7 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom
 function PublicLayout() {
   return (
     <div className="min-h-dvh max-w-[100vw] bg-white">
+      <CartCatalogSync />
       <PublicNavbar />
       <div className="max-w-[100vw] overflow-x-hidden">
         <PageTransition>

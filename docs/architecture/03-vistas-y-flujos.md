@@ -85,7 +85,7 @@ Ficha → Añadir al carrito → /carrito → (A) Solicitar cotización
 - **(A)** reutiliza F3 con ítems del carrito.
 - **(B)** si no hay login → login/registro → confirmar pedido → `Order` pendiente.
 - **Visual:** carrito, botones A/B, pantallas de confirmación mock.
-- **Lógica:** persistir carrito (localStorage luego API); validar cantidades/MOQ; crear Order o QuoteRequest.
+- **Lógica:** carrito en `localStorage` + sync con catálogo vivo (`07-carrito.md`); pedido/API pendiente.
 
 ### F5 — Cliente autenticado
 

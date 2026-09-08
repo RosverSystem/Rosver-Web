@@ -1,39 +1,37 @@
 # Feature: Carrito
 
 **Slug:** `features/cart/`  
-**Estado:** activa (diseño visual alineado a cotizar)
+**Estado:** activa (lógica cliente + UI)
 
 ## Propósito
 
-Permitir armar un carrito de productos para pasar a **cotización** o **pedido**.
+Armar un carrito de productos para pasar a **cotización** o **pedido**.
 
 ## Alcance
 
-- Incluido: añadir/quitar/cambiar cantidad, `/carrito`, CTAs a cotizar o pedir.
-- Estado compartido: `CartProvider` / `useCart` (seed mock `INITIAL_CART`).
-- Buscador en la propia vista (vacío o para agregar más).
-- Beneficios 24 h / TC abajo.
-- Fuera: pagos, stock real, persistencia servidor (fase lógica).
+- Incluido: añadir/quitar/cantidad, presentación + precio congelado, `localStorage`, sync con catálogo vivo, `/carrito`, CTAs cotizar/pedir.
+- Fuera: pagos, stock real, API pedido (fase siguiente).
 
 ## API pública
 
 | Export | Tipo | Descripción |
 | --- | --- | --- |
 | `CartProvider` | provider | Montar en `App` |
-| `useCart` | hook | `lines`, `itemCount`, `addItem`, `replaceAll`, etc. |
-| `CartPage` | página | Vista del carrito (`/carrito`) |
-| `AddToCartButton` | UI | CTA usado en `ProductPage` de `catalog` |
-| `CartLine` | tipo | `{ productSlug, quantity }` |
+| `useCart` | hook | `lines`, `itemCount`, `addItem`, `syncWithCatalog`, … |
+| `addInputFromProduct` | helper | Empaque default + precio al agregar |
+| `CartCatalogSync` | UI | Montar bajo `CatalogProvider` (layout público) |
+| `CartPage` | página | `/carrito` |
+| `CartLine` | tipo | Línea persistida |
 
 ## Flujos
 
-`03-vistas-y-flujos.md` → F4. Cotizar (`quotes`) lee/escribe el carrito vía `useCart`.
+Ver `docs/logica-y-flujos/07-carrito.md` y `03-vistas-y-flujos.md` → F4.
 
 ## Verificación
 
-- [x] Carrito vacío con buscador + CTA catálogo
-- [x] Carrito con ítems: foto, qty, quitar, subtotal + TC
-- [x] Botones Cotizar y Pedir (camino dual A/B)
-- [x] Badge navbar con `itemCount`
-- [x] Diseño visual (banner Memphis + beneficios)
-- [ ] Persistencia localStorage / API (fase lógica)
+- [ ] Carrito vacío: banner sin “N unidades”; buscador agrega producto real
+- [ ] Agregar desde card/ficha/ofertas sube badge del navbar
+- [ ] Recargar página mantiene ítems (localStorage)
+- [ ] Productos borrados del catálogo desaparecen del carrito tras sync
+- [ ] Cantidad − hasta 0 quita la línea; Vaciar limpia todo
+- [ ] Cotizar precarga ítems del carrito

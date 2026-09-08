@@ -1,5 +1,7 @@
 export { CartPage } from './ui/CartPage'
 export { AddToCartButton } from './ui/AddToCartButton'
+export { CartCatalogSync } from './ui/CartCatalogSync'
 export { CartProvider, useCart } from './model/cart-store'
 export type { AddCartItemInput } from './model/cart-store'
 export type { CartLine } from './model/mocks'
+export { addInputFromProduct, unitPriceOfLine } from './model/cart-line'
