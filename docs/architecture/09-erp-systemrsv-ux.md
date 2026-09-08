@@ -1,43 +1,31 @@
 # ERP SystemRSV — guía UX/UI
 
-Nombre del panel: **SystemRSV** (gestión). Sitio público: **Rosver** (catálogo).
+Nombre del panel: **SystemRSV**. Sitio público: **Rosver**.
 
-## Objetivo visual
+## Modelo visual (actual)
 
-Composición tipo dashboard bento:
+SaaS soft (referencia tipo EduNova layout, **paleta Rosver**):
 
-1. **Sidebar** estrecha oscura (`rosver-ink`) solo con iconos (+ tooltips / labels en expand móvil).
-2. **Top bar** clara: saludo personalizado, reloj, búsqueda global de módulos, menú cuenta.
-3. **Workspace** gris suave (`rosver-soft`) con cards blancas muy redondeadas.
+- Sidebar blanca ancha con labels + iconos.
+- Item activo: pill rojo Rosver.
+- Top bar: search módulos (hint ⌘K) + perfil con menú (logout).
+- Workspace: `bg-rosver-soft` + cards blancas redondeadas.
 
-Paleta oficial: `docs/architecture/06-paleta-colores.md`. CTA = rojo Rosver (no azul pastel del mock genérico).
+Skill: `erp-systemrsv-saas-ux` (Cursor / Claude).
 
-## Módulos previstos (ecommerce importador)
+## Módulos en nav (únicos)
 
-| Módulo | Ruta | Rol |
+| Ítem | Ruta | Estado |
 | --- | --- | --- |
-| Dashboard | `/admin` | KPIs pedidos, cotizaciones, stock |
-| Productos | `/admin/productos` | CRUD catálogo + visibilidad web |
-| Categorías | `/admin/categorias` | Taxonomía |
-| Pedidos | `/admin/pedidos` | Flujo comercial |
-| Cotizaciones | `/admin/cotizaciones` | Inbox B2B |
-| Leads | `/admin/leads` | Contacto / captación |
-| Contenido web | `/admin/contenido` | Banners / home |
-| Usuarios | `/admin/usuarios` | RBAC |
-| (futuro) Inventario / precios | TBD | Stock mayorista |
+| Inicio | `/admin` | Placeholder vacío |
+| Productos → Listado | `/admin/productos` | Placeholder vacío |
+| Productos → Categorías | `/admin/categorias` | Placeholder vacío |
+| Productos → Ofertas | `/admin/ofertas` | Placeholder vacío |
 
-## Componentes de shell
+Otros módulos legacy (pedidos, leads, …) **fuera de nav** hasta nuevo pedido.
 
-- `AdminShell` + sidebar + top bar en `RosverSac/src/app/layout/admin/`.
-- No reutilizar `PublicNavbar` / `Footer` en admin.
+## Anti-patrones
 
-## Responsive
-
-- Desktop: sidebar fija + top bar.
-- Tablet/móvil: sidebar colapsable / rail inferior o drawer; top bar con search compacto.
-- Targets ≥ 44px.
-
-## Relación con reglas
-
-- `13-erp-systemrsv-ux` (Cursor/Claude)
-- `09-paleta-colores`, `03-responsive-ui`, `07-icons-cssvg`, `10-form-toasts`
+- Azul primario del mock de referencia.
+- Sidebar oscura solo-iconos.
+- Navbar ecommerce dentro del ERP.

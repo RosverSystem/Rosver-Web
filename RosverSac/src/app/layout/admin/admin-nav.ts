@@ -1,19 +1,9 @@
 import type { ComponentType } from 'react'
-import {
-  Compass,
-  Group,
-  Hardrive,
-  History,
-  Home,
-  Image,
-  Message,
-  Progress,
-  Settings,
-} from 'cssvg-icons'
+import { Award, Compass, Hardrive, Home } from 'cssvg-icons'
 
 type IconProps = { size?: number; color?: string; strokeWidth?: number }
 
-export type AdminNavItem = {
+export type AdminNavLeaf = {
   id: string
   name: string
   link: string
@@ -21,85 +11,84 @@ export type AdminNavItem = {
   Icon: ComponentType<IconProps>
 }
 
-/** Rail principal SystemRSV — módulos del ecommerce/importaciones. */
-export const ADMIN_NAV: AdminNavItem[] = [
+export type AdminNavGroup = {
+  id: string
+  name: string
+  Icon: ComponentType<IconProps>
+  children: AdminNavLeaf[]
+}
+
+export type AdminNavEntry =
+  | ({ type: 'link' } & AdminNavLeaf)
+  | ({ type: 'group' } & AdminNavGroup)
+
+/** Nav SystemRSV — solo Inicio + Productos (listado / categorías / ofertas). */
+export const ADMIN_NAV: AdminNavEntry[] = [
   {
-    id: 'dashboard',
-    name: 'Dashboard',
+    type: 'link',
+    id: 'inicio',
+    name: 'Inicio',
     link: '/admin',
-    keywords: ['inicio', 'resumen', 'kpi', 'home'],
+    keywords: ['dashboard', 'home', 'resumen'],
     Icon: Home,
   },
   {
+    type: 'group',
     id: 'productos',
     name: 'Productos',
-    link: '/admin/productos',
-    keywords: ['catalogo', 'sku', 'stock', 'precio'],
     Icon: Hardrive,
-  },
-  {
-    id: 'categorias',
-    name: 'Categorías',
-    link: '/admin/categorias',
-    keywords: ['taxonomia', 'rubro'],
-    Icon: Compass,
-  },
-  {
-    id: 'pedidos',
-    name: 'Pedidos',
-    link: '/admin/pedidos',
-    keywords: ['ordenes', 'ventas', 'despacho'],
-    Icon: Progress,
-  },
-  {
-    id: 'cotizaciones',
-    name: 'Cotizaciones',
-    link: '/admin/cotizaciones',
-    keywords: ['quotes', 'b2b', 'presupuesto'],
-    Icon: History,
-  },
-  {
-    id: 'leads',
-    name: 'Leads',
-    link: '/admin/leads',
-    keywords: ['contacto', 'captacion', 'whatsapp'],
-    Icon: Message,
-  },
-  {
-    id: 'contenido',
-    name: 'Contenido web',
-    link: '/admin/contenido',
-    keywords: ['banners', 'home', 'cms'],
-    Icon: Image,
-  },
-  {
-    id: 'usuarios',
-    name: 'Usuarios',
-    link: '/admin/usuarios',
-    keywords: ['roles', 'permisos', 'rbac', 'staff'],
-    Icon: Group,
+    children: [
+      {
+        id: 'listado',
+        name: 'Listado',
+        link: '/admin/productos',
+        keywords: ['catalogo', 'sku', 'stock', 'productos'],
+        Icon: Hardrive,
+      },
+      {
+        id: 'categorias',
+        name: 'Categorías',
+        link: '/admin/categorias',
+        keywords: ['taxonomia', 'rubro', 'categoria'],
+        Icon: Compass,
+      },
+      {
+        id: 'ofertas',
+        name: 'Ofertas',
+        link: '/admin/ofertas',
+        keywords: ['promo', 'descuento', 'oferta'],
+        Icon: Award,
+      },
+    ],
   },
 ]
 
-export const ADMIN_NAV_EXTRA: AdminNavItem[] = [
-  {
-    id: 'ajustes',
-    name: 'Ajustes',
-    link: '/admin',
-    keywords: ['config', 'settings'],
-    Icon: Settings,
-  },
-]
+export function flattenAdminNav(): AdminNavLeaf[] {
+  const out: AdminNavLeaf[] = []
+  for (const entry of ADMIN_NAV) {
+    if (entry.type === 'link') out.push(entry)
+    else out.push(...entry.children)
+  }
+  return out
+}
 
 export function isAdminNavActive(pathname: string, link: string) {
   if (link === '/admin') return pathname === '/admin'
   return pathname === link || pathname.startsWith(`${link}/`)
 }
 
-export function searchAdminModules(query: string): AdminNavItem[] {
+export function isProductosGroupOpen(pathname: string) {
+  return (
+    pathname.startsWith('/admin/productos') ||
+    pathname.startsWith('/admin/categorias') ||
+    pathname.startsWith('/admin/ofertas')
+  )
+}
+
+export function searchAdminModules(query: string): AdminNavLeaf[] {
   const q = query.trim().toLowerCase()
   if (!q) return []
-  return ADMIN_NAV.filter((item) => {
+  return flattenAdminNav().filter((item) => {
     const hay = [item.name, item.id, ...item.keywords].join(' ').toLowerCase()
     return hay.includes(q)
   })

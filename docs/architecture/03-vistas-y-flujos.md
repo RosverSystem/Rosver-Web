@@ -34,20 +34,14 @@ Fuente de verdad para el agente al implementar UI y, después, lógica.
 
 ### Gestión (`/admin`) — SystemRSV
 
-Shell propio (sidebar oscura + top bar). UX: `docs/architecture/09-erp-systemrsv-ux.md`.
+Shell SaaS soft (sidebar blanca + top bar). UX: `docs/architecture/09-erp-systemrsv-ux.md` · skill `erp-systemrsv-saas-ux`.
 
 | Ruta | Vista | Roles | Feature |
 | --- | --- | --- | --- |
-| `/admin` | Dashboard (placeholder bento) | admin, sales | shell admin |
-| `/admin/productos` | Productos — **vacío** (módulo listo) | admin | `admin-catalog` |
-| `/admin/productos/nuevo` | Alta producto | admin | `admin-catalog` |
-| `/admin/productos/:id` | Edición producto | admin | `admin-catalog` |
-| `/admin/categorias` | Categorías | admin | `admin-catalog` |
-| `/admin/contenido` | Home / banners / empresa | admin | `admin-content` |
-| `/admin/leads` | Contactos y solicitudes | admin, sales | `admin-leads` |
-| `/admin/cotizaciones` | Inbox cotizaciones | admin, sales | `quotes` |
-| `/admin/pedidos` | Pedidos | admin, sales | `admin-orders` |
-| `/admin/usuarios` | Usuarios y roles | admin | `admin-users` |
+| `/admin` | Inicio (vacío) | admin | shell |
+| `/admin/productos` | Listado productos (vacío) | admin | `admin-catalog` |
+| `/admin/categorias` | Categorías (vacío) | admin | `admin-catalog` |
+| `/admin/ofertas` | Ofertas (vacío) | admin | `admin-catalog` |
 
 ---
 

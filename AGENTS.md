@@ -42,7 +42,7 @@ npm run lint
 ## Flujo obligatorio
 
 1. **Feature nueva** → leer skill `create-feature` antes de codear.
-2. **Módulo ERP / API** → skill `fullstack-erp-structure`.
+2. **Módulo ERP / API** → skill `fullstack-erp-structure` + UX `erp-systemrsv-saas-ux`.
 3. **Al cerrar cualquier tarea** → skill `document-change` → `docs/changes/NNNN-slug.md`.
 4. Feature nueva → ficha en `docs/features/` + fila en índice.
 5. Docs en **español**, concretas.

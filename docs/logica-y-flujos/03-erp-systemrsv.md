@@ -3,21 +3,16 @@
 ## Acceso
 
 ```
-Login admin → RequireAdmin → /admin (shell SystemRSV)
+Login admin → RequireAdmin → /admin (shell SaaS soft)
 ```
 
-## Shell
+## Nav actual
 
-- Sidebar: navegación por módulos.
-- Top bar: saludo (primer nombre), hora Lima/local, búsqueda de módulos, menú Mi cuenta (logout).
-- Contenido: `<Outlet />` por ruta.
+| Ítem | Ruta |
+| --- | --- |
+| Inicio | `/admin` |
+| Productos → Listado | `/admin/productos` |
+| Productos → Categorías | `/admin/categorias` |
+| Productos → Ofertas | `/admin/ofertas` |
 
-## Productos (fase actual)
-
-- Ruta `/admin/productos` montada.
-- Vista **vacía** (placeholder) hasta CRUD real + API.
-- No listar mocks wireframe en el ERP nuevo estilo.
-
-## Datos futuros
-
-API bajo `/api/admin/*` + Postgres; media en R2. Ver skill `fullstack-erp-structure`.
+Vistas en blanco (placeholder). Skill UX: `erp-systemrsv-saas-ux`.

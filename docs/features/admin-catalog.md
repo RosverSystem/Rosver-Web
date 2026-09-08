@@ -1,28 +1,26 @@
 # Feature: Admin — catálogo
 
 **Slug:** `features/admin-catalog/`  
-**Estado:** activa (ERP SystemRSV — Productos vacío; form/categorías legacy)
+**Estado:** activa (ERP SystemRSV — vistas vacías)
 
 ## Propósito
 
-CRUD de productos y categorías que alimentan el catálogo público.
+Gestión de productos, categorías y ofertas del catálogo público.
 
-## Rutas
+## Rutas (nav ERP)
 
-`/admin/productos`, nuevo, edición, `/admin/categorias`.
+| Ruta | Módulo |
+| --- | --- |
+| `/admin/productos` | Listado |
+| `/admin/categorias` | Categorías |
+| `/admin/ofertas` | Ofertas |
 
 ## UX
 
-Hereda shell SystemRSV (`docs/architecture/09-erp-systemrsv-ux.md`).  
-`/admin/productos` = placeholder vacío hasta CRUD real.
-
-## Flujos
-
-`03-vistas-y-flujos.md` → F7 · `logica-y-flujos/03-erp-systemrsv.md`
+Skill `erp-systemrsv-saas-ux` · `docs/architecture/09-erp-systemrsv-ux.md`
 
 ## Verificación
 
-- [x] Ruta `/admin/productos` montada en shell ERP
-- [x] Vista Productos vacía (sin mocks wireframe)
-- [ ] CRUD productos + API + R2
-- [ ] Rediseñar categorías / formularios al estilo ERP
+- [x] Rutas montadas en shell SaaS soft
+- [x] Vistas placeholder vacías
+- [ ] CRUD real + API + R2

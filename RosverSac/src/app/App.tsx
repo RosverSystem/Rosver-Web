@@ -15,13 +15,9 @@ import {
 } from '@/features/account'
 import {
   AdminCategoriesPage,
-  AdminProductFormPage,
+  AdminOffersPage,
   AdminProductsPage,
 } from '@/features/admin-catalog'
-import { AdminContentPage } from '@/features/admin-content'
-import { AdminLeadsPage } from '@/features/admin-leads'
-import { AdminOrdersPage } from '@/features/admin-orders'
-import { AdminUsersPage } from '@/features/admin-users'
 import {
   AuthProvider,
   LoginPage,
@@ -32,7 +28,7 @@ import {
 import { CartPage, CartProvider } from '@/features/cart'
 import { CatalogPage, HomePage, OffersPage, ProductPage } from '@/features/catalog'
 import { ContactPage } from '@/features/contact'
-import { AdminQuotesPage, ClientQuotesPage, QuoteRequestPage } from '@/features/quotes'
+import { ClientQuotesPage, QuoteRequestPage } from '@/features/quotes'
 import { PageTransition } from '@/shared/ui/page-transition'
 import { WhatsAppFloatingButton } from '@/shared/ui/whatsapp-floating-button'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
@@ -98,14 +94,8 @@ export function App() {
             >
               <Route index element={<AdminDashboardPage />} />
               <Route path="productos" element={<AdminProductsPage />} />
-              <Route path="productos/nuevo" element={<AdminProductFormPage />} />
-              <Route path="productos/:id" element={<AdminProductFormPage />} />
               <Route path="categorias" element={<AdminCategoriesPage />} />
-              <Route path="contenido" element={<AdminContentPage />} />
-              <Route path="leads" element={<AdminLeadsPage />} />
-              <Route path="cotizaciones" element={<AdminQuotesPage />} />
-              <Route path="pedidos" element={<AdminOrdersPage />} />
-              <Route path="usuarios" element={<AdminUsersPage />} />
+              <Route path="ofertas" element={<AdminOffersPage />} />
             </Route>
           </Routes>
         </CartProvider>
