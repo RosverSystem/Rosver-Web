@@ -10,7 +10,7 @@ Infra de la web **Rosver SAC** y del ERP **SystemRSV**. Actualizar este archivo 
 | --- | --- | --- | --- |
 | Local | `localhost:5173` | Vite dev | `cd RosverSac && npm run dev` |
 | Producción (web) | Railway | SPA estática (`RosverSac` build) | Pestaña: Rosver SAC / SystemRSV según ruta |
-| Base de datos | Railway Postgres | — | Fase lógica (aún no cableada a la UI) |
+| Base de datos | Railway Postgres | Online | Template oficial; `DATABASE_URL` en `.env` |
 | Objetos (media) | Cloudflare R2 | Buckets S3-compatibles | Imágenes, PDFs, adjuntos |
 
 ---
@@ -23,9 +23,9 @@ Infra de la web **Rosver SAC** y del ERP **SystemRSV**. Actualizar este archivo 
 | Entorno | `production` |
 | Servicio web (GitHub) | `Rosver-Web` (`0bb3658a-7121-4bc4-b492-0ee2d0938228`) |
 | Repo | `RosverSystem/Rosver-Web` · root `RosverSac` |
-| URL pública (SPA) | https://rosver-web-production.up.railway.app (servicio `Rosver-Web`) |
-| Dominio (servicio vacío `web`) | `web-production-e1349.up.railway.app` — no usar; limpiar en dashboard |
-| Postgres | servicio `Postgres` (`058b448f-…`) — verificar volumen/health |
+| URL pública (SPA) | https://rosver-web-production.up.railway.app |
+| Postgres | `Postgres` (`d07bb6a5-395a-4fe8-a092-e9ef6d906006`) · template oficial · **Online** |
+| TCP proxy Postgres | `altaria.proxy.rlwy.net:17586` → `:5432` (solo para admin/local; no exponer en front) |
 
 - **Root directory:** `RosverSac`
 - **Node:** `22` (`nixpacks.toml` + `NIXPACKS_NODE_VERSION`) — Vite 8 no corre en Node 18
@@ -39,9 +39,14 @@ Infra de la web **Rosver SAC** y del ERP **SystemRSV**. Actualizar este archivo 
 
 - `NIXPACKS_NODE_VERSION=22`
 - `NODE_ENV=production`
-- Fase visual: **no** poner R2 ni `DATABASE_URL` en `VITE_*` / browser.
-- Ver `RosverSac/.env.railway.example`.
+- `DATABASE_URL` = referencia `${{Postgres.DATABASE_URL}}` (solo backend futuro; **no** en `VITE_*`)
+- Fase visual: **no** poner R2 ni `DATABASE_URL` en el browser.
+- Local: `.env` → `DATABASE_URL` (interno Railway) + `DATABASE_PUBLIC_URL` (TCP proxy).
 
+### Postgres — prueba temporal
+
+- Tabla `rosver_test_ping` creada para verificar conexión (**se eliminará** cuando el usuario defina el esquema real).
+- Credenciales: solo en Railway dashboard / `.env` local (gitignored).
 ---
 
 ## 3. Cloudflare R2 — estado configurado
