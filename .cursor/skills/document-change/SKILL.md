@@ -26,6 +26,7 @@ Toda tarea cerrada deja un archivo en `docs/changes/`.
    - Arquitectura → `docs/architecture/`.
    - Flujos de lógica → `docs/logica-y-flujos/`.
    - Deudas / ideas → `docs/pendientes/PENDIENTES.md` y `RECOMENDACIONES.md` (regla `12`).
+   - Esquema DB → `RosverSac/server/sql/NNN_*.sql` en el mismo cambio (regla `15`).
 
 ## Estilo
 
@@ -38,6 +39,7 @@ Toda tarea cerrada deja un archivo en `docs/changes/`.
 - [ ] Archivo en `docs/changes/NNNN-slug.md`
 - [ ] Features/architecture/logica-y-flujos actualizados si el cambio lo requiere
 - [ ] `docs/pendientes/` actualizado (qué quedó o qué se cerró)
+- [ ] Si hubo cambio de datos: migración SQL numerada aplicada/documentada (regla `15`)
 - [ ] Si hay UI: verificación móvil + tablet + desktop en el checklist
 - [ ] Contexto legible para Claude Code / Cursor sin depender del chat
 - [ ] Push `main` + deploy Railway (regla `11`)

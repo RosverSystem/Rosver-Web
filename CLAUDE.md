@@ -65,6 +65,7 @@ npm run lint
 - **Formularios / validación:** toasts flotantes (`FloatingToasts` + `useFormToasts`); nunca bubbles nativos ni errores inline que alarguen el form (`.claude/rules/10-form-toasts.md`).
 - **ERP selects / copy:** `AdminSelect` + lenguaje cotidiano; sin jerga ni textos de ayuda técnicos (`.claude/rules/14-erp-selects-copy.md`).
 - **Despliegues / versiones:** documentar en `08` + `docs/changes/`. **Todo cambio cerrado → push GitHub `main` + deploy Railway** (`.claude/rules/11-despliegues-versiones.md`). Infra: Railway (web + Postgres), Cloudflare R2 (media).
+- **Base de datos continua:** si el cambio requiere persistencia → migración `RosverSac/server/sql/NNN_*.sql` en el mismo trabajo (`.claude/rules/15-database-migraciones.md`).
 - **Pendientes / recomendaciones:** actualizar `docs/pendientes/` al cerrar o dejar trabajo a medias (`.claude/rules/12-pendientes-recomendaciones.md`).
 
 ## Paridad con Cursor

@@ -25,6 +25,7 @@
 | P09 | CLI railway login | Deploy | pendiente | Deploy GraphQL OK |
 | P14 | Force commitSha deploy | Deploy | parcial | |
 | P23 | UX ERP catálogo (cards + selects claros) | Pedido UX | hecho | v0.1.10; regla 14 |
+| P24 | Regla migraciones DB en cada cambio | Pedido reglas | hecho | Regla `15-database-migraciones` |
 
 ## Hechos recientes
 

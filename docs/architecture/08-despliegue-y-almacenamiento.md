@@ -46,6 +46,13 @@ Infra de la web **Rosver SAC** y del ERP **SystemRSV**. Actualizar este archivo 
 - Google (opcional): `GOOGLE_CLIENT_ID` `GOOGLE_CLIENT_SECRET` `GOOGLE_REDIRECT_URI`
 - R2: `R2_ENDPOINT` `R2_ACCESS_KEY_ID` `R2_SECRET_ACCESS_KEY` `R2_BUCKET_PUBLIC` (`R2_PUBLIC_BASE_URL` opcional)
 - **No** poner secretos en `VITE_*` (misma origen: front usa `/api` relativo)
+
+### Migraciones (continuo)
+
+- Archivos: `RosverSac/server/sql/NNN_slug.sql` (`001_auth_rbac`, `002_catalog_core`, …).
+- Boot (`server/src/boot.ts`) ejecuta `migrate.ts` → aplica **todos** los `NNN_*.sql` en orden.
+- Regla: **cada feature/API que necesite DB lleva su migración en el mismo cambio** (`.cursor/rules/15-database-migraciones.mdc`).
+- No reescribir migraciones ya desplegadas de forma incompatible: añadir `003_…` con `ALTER`.
 ---
 
 ## 3. Cloudflare R2 — estado configurado

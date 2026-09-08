@@ -42,7 +42,7 @@ UI (features/admin-*) → shared/lib/api → HTTP /api/* → server routes → P
 1. Feature en `src/features/admin-<nombre>/` (o ampliar existente) + `index.ts` público.
 2. Ruta en `App.tsx` bajo `/admin` + item en `admin-nav.ts`.
 3. Página con **shell heredado** (regla UX `13-erp-systemrsv-ux`); puede empezar vacía.
-4. Si hay datos reales: migración `server/sql/00N_*.sql`, route Hono, tipos Zod.
+4. Si hay datos reales: migración `server/sql/00N_*.sql` (siguiente N), route Hono, tipos Zod. **Misma tarea** — no dejar esquema para “después” (regla `15-database-migraciones`).
 5. Docs: `docs/features/`, `docs/logica-y-flujos/`, `docs/changes/`, `docs/pendientes/`.
 6. Deploy: push `main` + Railway (web+api unificado).
 
