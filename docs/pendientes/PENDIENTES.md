@@ -52,9 +52,11 @@
 | P52 | Admin: gestión de usuarios (listar/cambiar rol/estado) | Auditoría seguridad (refina P04) | hecho | API `admin-users.ts` (listar, cambiar rol, activar/desactivar con revocación de sesiones) + UI `/admin/usuarios` (0126) |
 | P53 | Pedidos / Leads / Cotizaciones / Contenido: permisos RBAC existen, sin rutas API ni tablas | Auditoría (refina P03) | pendiente | `admin.orders`, `admin.leads`, `admin.quotes`, `admin.content` sin backend; páginas admin son mocks locales; formulario de contacto no persiste lead |
 | P54 | Orden destacado/tendencia a mano + tipo precio confuso | Pedido UX precios | hecho | v0.1.35 orden auto + combobox unidad + solo oferta extra (0133) |
+| P55 | Quitar «Agregar otro producto a la lista» en /cotizar | Pedido UX | hecho | v0.1.36 / 0134 |
 
 ## Hechos recientes
 
+- Cotizar: sin botón «Agregar otro producto a la lista» (v0.1.36 / 0134)
 - Precios ERP: orden auto, unidad escribir/elegir, oferta sin “tipo de precio” (v0.1.35 / 0133)
 - Recomendaciones post-auditoría: E2E Playwright (0132), historial de precios (0131), sesión deslizante (0130), code-split bundle (0129), audit log de logins (0128), rate limiter en Redis (0127)
 - Admin: gestión de usuarios real (listar/rol/activar-desactivar) (0126)

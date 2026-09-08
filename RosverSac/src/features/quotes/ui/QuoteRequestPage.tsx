@@ -12,7 +12,6 @@ import {
   Clock,
   Message,
   Phone,
-  Plus,
   Search,
   Trash,
 } from 'cssvg-icons'
@@ -152,18 +151,6 @@ export function QuoteRequestPage() {
 
   function removeLine(id: string) {
     setQuoteLines((prev) => prev.filter((line) => line.id !== id))
-  }
-
-  function addEmptyLine() {
-    setQuoteLines((prev) => [
-      ...prev,
-      {
-        id: newLineId(),
-        productSlug: null,
-        presentation: 'und',
-        quantity: 1,
-      },
-    ])
   }
 
   function addProduct(product: Product) {
@@ -499,15 +486,6 @@ export function QuoteRequestPage() {
                   ))}
                 </ul>
               )}
-
-              <button
-                type="button"
-                onClick={addEmptyLine}
-                className="inline-flex min-h-11 items-center gap-1.5 self-start text-sm font-bold text-rosver-red transition hover:text-rosver-red-dark"
-              >
-                <Plus size={16} color="currentColor" strokeWidth={2.5} />
-                Agregar otro producto a la lista
-              </button>
             </div>
           ) : (
             <div className="flex flex-col gap-2">
