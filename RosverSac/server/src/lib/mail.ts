@@ -112,7 +112,7 @@ function siteBaseUrl() {
   return (config.appUrl || 'https://rosversac.com').replace(/\/$/, '')
 }
 
-/** Estilos compartidos + motion (Apple Mail / clientes WebKit). */
+/** Estilos compartidos (plantilla clara tipo Miro + acento Rosver). */
 function emailHead(title: string) {
   return `<meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -122,43 +122,10 @@ function emailHead(title: string) {
 <style type="text/css">
   @media only screen and (max-width: 620px) {
     .rv-card { width: 100% !important; }
-    .rv-pad { padding-left: 20px !important; padding-right: 20px !important; }
-    .rv-digit { width: 40px !important; height: 48px !important; font-size: 22px !important; }
-  }
-  @media (prefers-reduced-motion: no-preference) {
-    @keyframes rv-glow {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(227,6,19,0.35); }
-      50% { box-shadow: 0 0 0 10px rgba(227,6,19,0); }
-    }
-    @keyframes rv-rise {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes rv-shimmer {
-      0% { background-position: 0% 50%; }
-      100% { background-position: 100% 50%; }
-    }
-    .rv-animate-rise { animation: rv-rise 0.7s ease-out both; }
-    .rv-animate-glow { animation: rv-glow 2.4s ease-in-out infinite; }
-    .rv-header-shine {
-      background-size: 200% 200% !important;
-      animation: rv-shimmer 4s linear infinite;
-    }
+    .rv-pad { padding-left: 22px !important; padding-right: 22px !important; }
+    .rv-hide-sm { display: none !important; }
   }
 </style>`
-}
-
-function codeDigitCells(codeDigits: string) {
-  return codeDigits
-    .split('')
-    .map(
-      (d, i) => `
-      <td class="rv-digit rv-animate-rise" align="center" style="width:44px;height:52px;background:#FFFFFF;border:1.5px solid #E5E7EB;border-radius:12px;font-size:24px;font-weight:800;color:#0D0D0D;font-family:Consolas,'Courier New',monospace;animation-delay:${i * 0.08}s;">
-        ${d}
-      </td>
-      ${i < codeDigits.length - 1 ? '<td style="width:6px;font-size:0;">&nbsp;</td>' : ''}`,
-    )
-    .join('')
 }
 
 const PURPOSE_LABEL: Record<string, string> = {
@@ -168,102 +135,117 @@ const PURPOSE_LABEL: Record<string, string> = {
 }
 
 const PURPOSE_TITLE: Record<string, string> = {
-  email_verify: 'Verifica tu correo',
-  login: 'Tu código de acceso',
+  email_verify: 'Completa tu registro',
+  login: 'Confirma tu acceso',
   reset_password: 'Restablece tu contraseña',
+}
+
+const PURPOSE_CTA: Record<string, string> = {
+  email_verify: 'Confirmar correo',
+  login: 'Continuar en Rosver',
+  reset_password: 'Restablecer contraseña',
 }
 
 function buildOtpHtml(code: string, purpose: string) {
   const label = PURPOSE_LABEL[purpose] ?? 'continuar'
   const title = PURPOSE_TITLE[purpose] ?? 'Tu código Rosver'
-  const logoUrl = absoluteBrandUrl(BRAND_KEYS.logoSinfondo)
+  const cta = PURPOSE_CTA[purpose] ?? 'Ir a Rosver'
+  // Logo con fondo claro (mejor en correo blanco; sinfondo a veces se ve roto/invisible).
+  const logoUrl = absoluteBrandUrl(BRAND_KEYS.logoConfondo)
   const siteUrl = siteBaseUrl()
   const codeDigits = code.replace(/\D/g, '')
   const year = new Date().getFullYear()
+  const loginUrl = `${siteUrl}/login`
 
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
 ${emailHead(title)}
 </head>
-<body style="margin:0;padding:0;background:#0D0D0D;font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased;">
+<body style="margin:0;padding:0;background:#F3F4F6;font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased;">
   <div style="display:none;max-height:0;overflow:hidden;opacity:0;">
     Tu código Rosver ${codeDigits} · válido 5 minutos
   </div>
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:linear-gradient(180deg,#1a0507 0%,#0D0D0D 40%,#111827 100%);background-color:#0D0D0D;padding:40px 16px;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#F3F4F6;padding:36px 16px;">
     <tr>
       <td align="center">
-        <table role="presentation" class="rv-card" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;">
+        <!-- Card con borde rojo Rosver -->
+        <table role="presentation" class="rv-card" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;background:#FFFFFF;border:2px solid #E30613;border-radius:16px;overflow:hidden;">
 
+          <!-- Top bar: logo + Ir a Rosver -->
           <tr>
-            <td align="center" style="padding:0 0 28px;">
-              <a href="${siteUrl}" style="text-decoration:none;">
-                <img src="${logoUrl}" alt="Rosver SAC" width="140" height="56" style="display:block;margin:0 auto;height:56px;width:auto;max-width:168px;border:0;" />
-              </a>
-            </td>
-          </tr>
-
-          <tr>
-            <td class="rv-animate-glow" style="border-radius:24px;padding:2px;background:linear-gradient(135deg,#E30613,#F2B705,#E30613);">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#FFFFFF;border-radius:22px;overflow:hidden;">
+            <td class="rv-pad" style="padding:22px 28px 8px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
-                  <td class="rv-header-shine rv-pad" align="center" style="background:linear-gradient(135deg,#E30613 0%,#90040D 45%,#1E3A5F 100%);background-color:#E30613;padding:36px 28px 32px;">
-                    <p style="margin:0 0 10px;font-size:11px;letter-spacing:0.22em;font-weight:700;color:rgba(255,255,255,0.88);text-transform:uppercase;">
-                      Seguridad · Rosver SAC
-                    </p>
-                    <h1 class="rv-animate-rise" style="margin:0;font-size:28px;line-height:1.2;color:#FFFFFF;font-weight:800;">
-                      ${title}
-                    </h1>
-                    <p style="margin:14px 0 0;font-size:15px;line-height:1.5;color:rgba(255,255,255,0.9);">
-                      Usa este código para <strong style="color:#FFFFFF;">${label}</strong>
-                    </p>
+                  <td align="left" valign="middle">
+                    <a href="${siteUrl}" style="text-decoration:none;">
+                      <img src="${logoUrl}" alt="Rosver SAC" width="120" height="40" style="display:block;height:40px;width:auto;max-width:140px;border:0;" />
+                    </a>
                   </td>
-                </tr>
-
-                <tr>
-                  <td class="rv-pad" align="center" style="padding:36px 28px 12px;background:#F8F9FB;">
-                    <p style="margin:0 0 16px;font-size:11px;font-weight:800;letter-spacing:0.18em;color:#6B7280;text-transform:uppercase;">
-                      Tu código de un solo uso
-                    </p>
-                    <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto;">
-                      <tr>
-                        ${codeDigitCells(codeDigits)}
-                      </tr>
-                    </table>
-                    <p style="margin:20px 0 0;font-size:14px;line-height:1.55;color:#6B7280;max-width:360px;">
-                      Válido <strong style="color:#E30613;">5 minutos</strong>. No lo compartas con nadie.
-                    </p>
-                  </td>
-                </tr>
-
-                <tr>
-                  <td class="rv-pad" align="center" style="padding:24px 28px 36px;background:#F8F9FB;">
-                    <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto;">
-                      <tr>
-                        <td align="center" style="border-radius:999px;background:#E30613;box-shadow:0 10px 28px rgba(227,6,19,0.35);">
-                          <a href="${siteUrl}/login" style="display:inline-block;padding:16px 36px;font-size:15px;font-weight:800;color:#FFFFFF;text-decoration:none;border-radius:999px;letter-spacing:0.02em;">
-                            Continuar en Rosver →
-                          </a>
-                        </td>
-                      </tr>
-                    </table>
-                    <p style="margin:18px 0 0;font-size:12px;color:#9CA3AF;">
-                      Si no pediste este código, puedes ignorar este mensaje.
-                    </p>
+                  <td align="right" valign="middle">
+                    <a href="${loginUrl}" style="display:inline-block;padding:8px 14px;font-size:13px;font-weight:700;color:#E30613;text-decoration:none;border:1.5px solid #E30613;border-radius:8px;">
+                      Ir a Rosver
+                    </a>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
 
+          <!-- Título + instrucción -->
           <tr>
-            <td align="center" style="padding:28px 12px 8px;">
-              <p style="margin:0 0 8px;font-size:13px;color:#9CA3AF;text-align:center;">
-                Herramientas y soluciones para profesionales
+            <td class="rv-pad" style="padding:20px 28px 8px;">
+              <h1 style="margin:0 0 12px;font-size:26px;line-height:1.25;color:#0D0D0D;font-weight:800;">
+                ${title}
+              </h1>
+              <p style="margin:0;font-size:15px;line-height:1.55;color:#6B7280;">
+                Ingresa este código en la ventana donde empezaste a ${label}:
               </p>
-              <p style="margin:0;font-size:11px;line-height:1.6;color:#6B7280;text-align:center;">
-                © ${year} Rosver SAC<br />
-                <a href="${siteUrl}" style="color:#F2B705;text-decoration:none;">Abrir sitio web</a>
+            </td>
+          </tr>
+
+          <!-- Código en caja suave + borde rojo -->
+          <tr>
+            <td class="rv-pad" style="padding:20px 28px 8px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#F8F9FB;border:1.5px solid #E30613;border-radius:12px;">
+                <tr>
+                  <td align="center" style="padding:22px 16px;">
+                    <p style="margin:0;font-size:32px;letter-spacing:0.28em;font-weight:800;color:#0D0D0D;font-family:Consolas,'Courier New',monospace;">
+                      ${codeDigits}
+                    </p>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:14px 0 0;font-size:13px;line-height:1.5;color:#6B7280;">
+                Válido <strong style="color:#E30613;">5 minutos</strong>. No lo compartas con nadie.
+              </p>
+            </td>
+          </tr>
+
+          <!-- CTA rojo -->
+          <tr>
+            <td class="rv-pad" style="padding:22px 28px 28px;">
+              <table role="presentation" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td align="left" style="border-radius:10px;background:#E30613;">
+                    <a href="${loginUrl}" style="display:inline-block;padding:14px 22px;font-size:15px;font-weight:800;color:#FFFFFF;text-decoration:none;border-radius:10px;">
+                      ${cta}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Footer fuera de la card -->
+        <table role="presentation" class="rv-card" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;">
+          <tr>
+            <td align="center" style="padding:20px 12px 0;">
+              <p style="margin:0;font-size:12px;line-height:1.55;color:#9CA3AF;text-align:center;">
+                Si no pediste este código en Rosver SAC, ignora este mensaje.<br />
+                © ${year} Rosver SAC ·
+                <a href="${siteUrl}" style="color:#E30613;text-decoration:none;">Abrir sitio</a>
               </p>
             </td>
           </tr>
@@ -420,7 +402,7 @@ export type ContactConfirmPayload = {
 }
 
 function buildContactConfirmHtml(p: ContactConfirmPayload) {
-  const logoUrl = absoluteBrandUrl(BRAND_KEYS.logoSinfondo)
+  const logoUrl = absoluteBrandUrl(BRAND_KEYS.logoConfondo)
   const siteUrl = siteBaseUrl()
   const safeName = p.fullName.replace(/[<>&]/g, '')
   const preview = p.messagePreview
@@ -439,104 +421,90 @@ function buildContactConfirmHtml(p: ContactConfirmPayload) {
 <head>
 ${emailHead('Recibimos tu mensaje — Rosver')}
 </head>
-<body style="margin:0;padding:0;background:#0D0D0D;font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased;">
-  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:linear-gradient(180deg,#1a0507 0%,#0D0D0D 45%,#111827 100%);background-color:#0D0D0D;padding:40px 16px;">
+<body style="margin:0;padding:0;background:#F3F4F6;font-family:Arial,Helvetica,sans-serif;-webkit-font-smoothing:antialiased;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#F3F4F6;padding:36px 16px;">
     <tr>
       <td align="center">
-        <table role="presentation" class="rv-card" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;">
+        <table role="presentation" class="rv-card" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;background:#FFFFFF;border:2px solid #E30613;border-radius:16px;overflow:hidden;">
           <tr>
-            <td align="center" style="padding:0 0 28px;">
-              <a href="${siteUrl}" style="text-decoration:none;">
-                <img src="${logoUrl}" alt="Rosver SAC" width="140" height="56" style="display:block;margin:0 auto;height:56px;width:auto;max-width:168px;border:0;" />
-              </a>
-            </td>
-          </tr>
-          <tr>
-            <td class="rv-animate-glow" style="border-radius:24px;padding:2px;background:linear-gradient(135deg,#E30613,#F2B705,#1E3A5F);">
-              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#FFFFFF;border-radius:22px;overflow:hidden;">
+            <td class="rv-pad" style="padding:22px 28px 8px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                 <tr>
-                  <td class="rv-header-shine rv-pad" style="background:linear-gradient(135deg,#E30613 0%,#90040D 50%,#1E3A5F 100%);background-color:#E30613;padding:32px 28px;">
-                    <p style="margin:0 0 8px;font-size:11px;font-weight:800;letter-spacing:0.18em;color:rgba(255,255,255,0.85);text-transform:uppercase;">
-                      Confirmación de contacto
-                    </p>
-                    <h1 class="rv-animate-rise" style="margin:0;font-size:24px;line-height:1.25;color:#FFFFFF;font-weight:800;">
-                      Hola ${safeName}, ya estamos en ello
-                    </h1>
+                  <td align="left" valign="middle">
+                    <a href="${siteUrl}" style="text-decoration:none;">
+                      <img src="${logoUrl}" alt="Rosver SAC" width="120" height="40" style="display:block;height:40px;width:auto;max-width:140px;border:0;" />
+                    </a>
                   </td>
-                </tr>
-                <tr>
-                  <td class="rv-pad rv-animate-rise" style="padding:28px 28px 8px;">
-                    <p style="margin:0;font-size:15px;line-height:1.65;color:#4B5563;">
-                      Gracias por escribir a <strong style="color:#0D0D0D;">Rosver SAC</strong>.
-                      Nuestro equipo comercial revisará tu mensaje y te responderá a la brevedad
-                      (horario 9:00 a.&nbsp;m. – 8:00 p.&nbsp;m.).
-                    </p>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="rv-pad" style="padding:20px 28px 8px;">
-                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#F8F9FB;border:1px solid #E5E7EB;border-radius:16px;">
-                      <tr>
-                        <td style="padding:18px 20px;">
-                          <p style="margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:0.14em;color:#9CA3AF;text-transform:uppercase;">
-                            Nº de solicitud
-                          </p>
-                          <p style="margin:0;font-size:20px;font-weight:800;color:#E30613;font-family:Consolas,'Courier New',monospace;letter-spacing:0.08em;">
-                            ${p.code}
-                          </p>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding:0 20px 18px;">
-                          <p style="margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:0.14em;color:#9CA3AF;text-transform:uppercase;">
-                            Tu mensaje
-                          </p>
-                          <p style="margin:0;font-size:14px;line-height:1.55;color:#374151;">
-                            ${preview}${p.messagePreview.length > 280 ? '…' : ''}
-                          </p>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="rv-pad" style="padding:20px 28px 8px;">
-                    <p style="margin:0 0 14px;font-size:13px;line-height:1.55;color:#6B7280;">
-                      ¿Necesitas respuesta más rápida? Escríbenos por WhatsApp:
-                    </p>
-                    <table role="presentation" cellspacing="0" cellpadding="0">
-                      <tr>
-                        <td align="left" style="border-radius:14px;background:#25D366;box-shadow:0 8px 20px rgba(37,211,102,0.35);">
-                          <a href="${waUrl}" target="_blank" style="display:inline-block;padding:12px 20px;font-size:14px;font-weight:800;color:#FFFFFF;text-decoration:none;border-radius:14px;line-height:22px;">
-                            <img src="${waIconUrl}" alt="WhatsApp" width="22" height="22" style="display:inline-block;vertical-align:middle;border:0;margin:0 10px 0 0;" />
-                            <span style="display:inline-block;vertical-align:middle;color:#FFFFFF;">Abrir WhatsApp</span>
-                          </a>
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-                <tr>
-                  <td class="rv-pad" align="center" style="padding:26px 28px 36px;">
-                    <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto;">
-                      <tr>
-                        <td align="center" style="border-radius:999px;background:#E30613;box-shadow:0 10px 28px rgba(227,6,19,0.35);">
-                          <a href="${siteUrl}/catalogo" style="display:inline-block;padding:16px 36px;font-size:15px;font-weight:800;color:#FFFFFF;text-decoration:none;border-radius:999px;">
-                            Ver catálogo →
-                          </a>
-                        </td>
-                      </tr>
-                    </table>
+                  <td align="right" valign="middle">
+                    <a href="${siteUrl}/contacto" style="display:inline-block;padding:8px 14px;font-size:13px;font-weight:700;color:#E30613;text-decoration:none;border:1.5px solid #E30613;border-radius:8px;">
+                      Ir a Rosver
+                    </a>
                   </td>
                 </tr>
               </table>
             </td>
           </tr>
           <tr>
-            <td align="center" style="padding:26px 8px 0;">
-              <p style="margin:0;font-size:12px;line-height:1.6;color:#6B7280;text-align:center;">
-                © ${year} Rosver SAC · Importación y mayoreo<br />
-                <a href="${siteUrl}" style="color:#F2B705;text-decoration:none;">Abrir sitio web</a>
+            <td class="rv-pad" style="padding:20px 28px 8px;">
+              <h1 style="margin:0 0 12px;font-size:24px;line-height:1.25;color:#0D0D0D;font-weight:800;">
+                Hola ${safeName}, recibimos tu mensaje
+              </h1>
+              <p style="margin:0;font-size:15px;line-height:1.6;color:#6B7280;">
+                Gracias por escribir a Rosver SAC. Te responderemos a la brevedad (9:00 a.&nbsp;m. – 8:00 p.&nbsp;m.).
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td class="rv-pad" style="padding:18px 28px 8px;">
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#F8F9FB;border:1.5px solid #E30613;border-radius:12px;">
+                <tr>
+                  <td style="padding:16px 18px;">
+                    <p style="margin:0 0 4px;font-size:11px;font-weight:800;letter-spacing:0.12em;color:#9CA3AF;text-transform:uppercase;">Nº de solicitud</p>
+                    <p style="margin:0;font-size:18px;font-weight:800;color:#E30613;font-family:Consolas,'Courier New',monospace;">${p.code}</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:0 18px 16px;">
+                    <p style="margin:0 0 4px;font-size:11px;font-weight:800;letter-spacing:0.12em;color:#9CA3AF;text-transform:uppercase;">Tu mensaje</p>
+                    <p style="margin:0;font-size:14px;line-height:1.55;color:#374151;">${preview}${p.messagePreview.length > 280 ? '…' : ''}</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td class="rv-pad" style="padding:18px 28px 8px;">
+              <p style="margin:0 0 12px;font-size:13px;color:#6B7280;">¿Necesitas respuesta más rápida?</p>
+              <table role="presentation" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="border-radius:10px;background:#25D366;">
+                    <a href="${waUrl}" style="display:inline-block;padding:12px 18px;font-size:14px;font-weight:800;color:#FFFFFF;text-decoration:none;">
+                      <img src="${waIconUrl}" alt="" width="20" height="20" style="vertical-align:middle;border:0;margin:0 8px 0 0;" />
+                      <span style="vertical-align:middle;">WhatsApp</span>
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td class="rv-pad" style="padding:20px 28px 28px;">
+              <table role="presentation" cellspacing="0" cellpadding="0">
+                <tr>
+                  <td style="border-radius:10px;background:#E30613;">
+                    <a href="${siteUrl}/catalogo" style="display:inline-block;padding:14px 22px;font-size:15px;font-weight:800;color:#FFFFFF;text-decoration:none;">Ver catálogo</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;">
+          <tr>
+            <td align="center" style="padding:20px 12px 0;">
+              <p style="margin:0;font-size:12px;line-height:1.55;color:#9CA3AF;">
+                © ${year} Rosver SAC ·
+                <a href="${siteUrl}" style="color:#E30613;text-decoration:none;">Abrir sitio</a>
               </p>
             </td>
           </tr>
