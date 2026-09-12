@@ -73,6 +73,11 @@ export const config = {
     'RESEND_FROM',
     'Rosver SAC <onboarding@resend.dev>',
   ),
+  /**
+   * Buzón permitido por Resend Free sin dominio verificado.
+   * Si el OTP va a otro correo, se reenvía aquí (relay temporal).
+   */
+  resendTestTo: req('RESEND_TEST_TO', 'rosver1103@gmail.com'),
   google: {
     clientId: req('GOOGLE_CLIENT_ID'),
     clientSecret: req('GOOGLE_CLIENT_SECRET'),

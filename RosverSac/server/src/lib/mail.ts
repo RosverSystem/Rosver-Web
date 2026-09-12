@@ -43,7 +43,8 @@ async function sendViaResend(opts: {
   const key = config.resendApiKey
   if (!key) return false
   const from = config.resendFrom || 'Rosver SAC <onboarding@resend.dev>'
-  try {
+
+  async function postTo(to: string, subject: string, text: string, html: string) {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -52,19 +53,55 @@ async function sendViaResend(opts: {
       },
       body: JSON.stringify({
         from,
-        to: [opts.to],
-        subject: opts.subject,
-        text: opts.text,
-        html: opts.html,
+        to: [to],
+        subject,
+        text,
+        html,
       }),
     })
-    if (!res.ok) {
-      const body = await res.text().catch(() => '')
-      console.error('[mail] Resend HTTP', res.status, body.slice(0, 500))
-      return false
+    const body = await res.text().catch(() => '')
+    return { ok: res.ok, status: res.status, body }
+  }
+
+  try {
+    const first = await postTo(opts.to, opts.subject, opts.text, opts.html)
+    if (first.ok) {
+      console.info('[mail] enviado vía Resend HTTPS →', opts.to)
+      return true
     }
-    console.info('[mail] enviado vía Resend HTTPS →', opts.to)
-    return true
+    console.error('[mail] Resend HTTP', first.status, first.body.slice(0, 500))
+
+    // Free sin dominio: solo deja enviar al email de la cuenta Resend.
+    const testTo = (config.resendTestTo || '').toLowerCase().trim()
+    const restricted =
+      first.status === 403 &&
+      /only send testing emails to your own email/i.test(first.body)
+    if (restricted && testTo && testTo !== opts.to.toLowerCase()) {
+      const relaySubject = `[Rosver] ${opts.subject} · para ${opts.to}`
+      const relayText =
+        `Este código es para la cuenta ${opts.to}.\n\n` +
+        `(Resend Free aún no tiene dominio verificado; se entregó a ${testTo}.)\n\n` +
+        opts.text
+      const relayHtml =
+        `<div style="padding:12px 16px;margin:0 0 16px;background:#FEF3C7;border:1px solid #F2B705;border-radius:12px;font-family:Arial,sans-serif;font-size:13px;color:#0D0D0D;">` +
+        `<strong>Código para:</strong> ${opts.to}<br/>` +
+        `<span style="color:#6B7280;">Entrega temporal a ${testTo} (verifica el dominio en Resend para enviar directo).</span>` +
+        `</div>` +
+        opts.html
+      const second = await postTo(testTo, relaySubject, relayText, relayHtml)
+      if (second.ok) {
+        console.info(
+          `[mail] Resend relay OK → ${testTo} (destinatario original ${opts.to})`,
+        )
+        return true
+      }
+      console.error(
+        '[mail] Resend relay falló',
+        second.status,
+        second.body.slice(0, 400),
+      )
+    }
+    return false
   } catch (err) {
     console.error('[mail] Resend falló:', err)
     return false
