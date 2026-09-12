@@ -22,7 +22,8 @@ export function buildOtpauthUrl(params: {
 }
 
 export async function verifyTotpCode(secret: string, code: string) {
-  const result = await verify({ secret, token: code.trim() })
+  const token = code.replace(/[\s\-_.]/g, '').trim()
+  const result = await verify({ secret, token })
   return Boolean(result.valid)
 }
 

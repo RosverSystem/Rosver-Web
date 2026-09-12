@@ -1,11 +1,20 @@
 import { gsap, prefersReducedMotion } from '@/shared/lib/gsap'
 import { useGSAP } from '@gsap/react'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+
+/** Tope de seguridad: si el timeline se cuelga (pestaña en segundo plano,
+ * jank, etc.) la cortina igual se retira y no bloquea clics indefinidamente. */
+const MAX_DURATION_MS = 4000
 
 /**
  * Cortina de intro tipo transición de stream: dos paneles de marca barren
  * la pantalla, el logo aparece un instante y se abren revelando la página.
- * Corre una vez por carga real de la app (montada fuera de <Routes>).
+ *
+ * REGLA DE PRODUCTO — NO TOCAR:
+ * Debe correr en **cada carga real** de la app (incluido F5 / hard refresh).
+ * Prohibido sessionStorage, localStorage, “una vez por pestaña”, ni saltarla
+ * por HMR/import/debug. Solo se omite con `prefers-reduced-motion`.
+ * Montada fuera de `<Routes>` en `App.tsx`.
  */
 export function IntroTransition() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -13,6 +22,15 @@ export function IntroTransition() {
   const frontRef = useRef<HTMLDivElement>(null)
   const logoRef = useRef<HTMLDivElement>(null)
   const [done, setDone] = useState(prefersReducedMotion)
+
+  useEffect(() => {
+    if (done) return
+    const fallback = window.setTimeout(() => {
+      document.body.style.overflow = ''
+      setDone(true)
+    }, MAX_DURATION_MS)
+    return () => window.clearTimeout(fallback)
+  }, [done])
 
   useGSAP(
     () => {

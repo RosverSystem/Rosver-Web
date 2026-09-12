@@ -5,36 +5,40 @@
 
 ## Propósito
 
-Gestión ERP del catálogo: marcas, categorías/subcategorías, productos, empaques (unidad×contenido) y precios editables con “guardar como nuevo”.
+Gestión ERP del catálogo: marcas, categorías/subcategorías, productos (ficha CRM), presentaciones, **tipos de especificaciones técnicas**, empaques y precios.
 
 ## Alcance
 
-- Incluido: CRUD marcas/categorías (incl. campos home: tagline, puntos, imagen, show_on_home/nav); listado productos; empaques; upsert precios; API admin + `/api/catalog` (categorías/marcas live aunque no haya productos).
-- Fuera: import CSV, stock físico, UI specs completa, selector empaque en carrito tienda, módulo ofertas ERP, upload R2 de imagen de categoría.
+- Incluido: CRUD marcas/categorías; productos ficha CRM; presentaciones; **especificaciones** (`/admin/especificaciones`); empaques/precios; API admin + `/api/catalog`.
+- Fuera: import CSV, stock físico, sync ERP externo.
 
 ## API pública
 
 | Export | Descripción |
 | --- | --- |
-| `AdminProductsPage` | Listado + panel precios |
-| `AdminCategoriesPage` | CRUD + card inicio |
+| `AdminProductsPage` | Listado productos |
+| `AdminProductWorkspacePage` | Ficha CRM alta/edición |
+| `AdminPriceListPage` | Presentaciones |
+| `AdminSpecsPage` | Tipos de especificación técnica |
+| `AdminCategoriesPage` | CRUD categorías |
 | `AdminBrandsPage` | CRUD marcas |
-| `AdminOffersPage` | Placeholder ofertas |
+| `AdminOffersPage` | Ofertas |
 
 ## Pantallas
 
 | Ruta | Notas |
 | --- | --- |
-| `/admin/productos` | Precios / empaques |
-| `/admin/categorias` | Raíz + sub + campos Explora por categoría |
-| `/admin/marcas` | Crear / editar / eliminar |
-| `/admin/ofertas` | Vacío |
+| `/admin/productos` | Listado |
+| `/admin/productos/nuevo` · `/:id` | Ficha CRM |
+| `/admin/listado-precios` | Presentaciones |
+| `/admin/especificaciones` | Tipos de ficha técnica (defaults sistema protegidos) |
+| `/admin/categorias` | Categorías |
+| `/admin/marcas` | Marcas |
+| `/admin/ofertas` | Ofertas |
 
 ## Verificación
 
-- [ ] Migraciones `002` + `003` aplicadas
-- [ ] Crear marca → filtro tienda + marquee
-- [ ] Crear categoría principal con inicio → card en home + menú
-- [ ] Editar / eliminar categoría y marca
+- [ ] Migraciones hasta `032` aplicadas
+- [ ] Especificaciones: listar defaults + crear personalizada
 - [ ] Crear producto → empaque → precio lista
 - [ ] Con taxonomía en DB, `/api/catalog` trae `liveCategories` / `liveBrands`

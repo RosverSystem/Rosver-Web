@@ -1,3 +1,4 @@
+import { listUserReviews } from '../lib/product-ratings.js'
 import { randomUUID } from 'node:crypto'
 import { Hono } from 'hono'
 import { pool } from '../db.js'
@@ -12,6 +13,12 @@ profileRoutes.use('*', requireAuth)
 
 profileRoutes.get('/', async (c) => {
   return c.json({ user: c.get('user') })
+})
+
+profileRoutes.get('/reviews', async (c) => {
+  const user = c.get('user')
+  const reviews = await listUserReviews(user.id)
+  return c.json({ ok: true, reviews })
 })
 
 profileRoutes.patch('/', async (c) => {

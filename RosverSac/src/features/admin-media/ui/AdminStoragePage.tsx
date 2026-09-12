@@ -122,6 +122,16 @@ export function AdminStoragePage() {
     return objects.filter((o) => o.key.toLowerCase().includes(q))
   }, [objects, query])
 
+  const stats = useMemo(() => {
+    const images = objects.filter((o) => isImageKey(o.key)).length
+    const bytes = objects.reduce((sum, o) => sum + o.size, 0)
+    return {
+      total: objects.length,
+      images,
+      size: formatBytes(bytes),
+    }
+  }, [objects])
+
   async function onUpload(file: File | undefined) {
     if (!file) return
     clear()
@@ -195,9 +205,16 @@ export function AdminStoragePage() {
     <div className="space-y-5">
       <FloatingToasts toasts={toasts} onDismiss={dismiss} />
       <AdminPageHeader
+        eyebrow="Medios"
         title="Almacenamiento"
+        description="Biblioteca de imágenes en Cloudflare R2."
+        stats={[
+          { label: 'Archivos', value: stats.total },
+          { label: 'Imágenes', value: stats.images, tone: 'success' },
+          { label: 'Peso', value: stats.size },
+        ]}
         actions={
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-rosver-line bg-white px-3 py-1.5 text-[11px] font-semibold text-rosver-muted">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/10 px-3 py-2 text-[11px] font-bold text-white uppercase">
             <Hardrive size={14} color="currentColor" strokeWidth={2} />
             Cloudflare R2
           </span>

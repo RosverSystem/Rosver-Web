@@ -1,5 +1,6 @@
 import { api, ApiError } from '@/shared/lib/api'
 import { cn } from '@/shared/lib'
+import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { AdminField, AdminInput, AdminSelect } from '@/shared/ui/admin-field'
 import { AdminModal } from '@/shared/ui/admin-modal'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -41,6 +42,7 @@ export function AdminMediaPicker({
   onSelect,
   onError,
 }: Props) {
+  const { showSuccess, showErrors } = useFormToasts()
   const inputRef = useRef<HTMLInputElement>(null)
   const [scope, setScope] = useState<Folder>(folder)
   const [query, setQuery] = useState('')
@@ -76,9 +78,10 @@ export function AdminMediaPicker({
       )
       setObjects(data.objects.filter((o) => isImageKey(o.key)))
     } catch (e) {
-      onError?.(
-        e instanceof ApiError ? e.message : 'No se pudieron cargar las imágenes',
-      )
+      const msg =
+        e instanceof ApiError ? e.message : 'No se pudieron cargar las imágenes'
+      onError?.(msg)
+      showErrors({ media: msg }, ['media'])
       setObjects([])
     } finally {
       setLoading(false)
@@ -107,6 +110,7 @@ export function AdminMediaPicker({
     const name = uploadName.trim()
     if (!name) {
       onError?.('Ponle un nombre a la imagen')
+      showErrors({ media: 'Ponle un nombre a la imagen' }, ['media'])
       return
     }
     setBusy(true)
@@ -120,11 +124,13 @@ export function AdminMediaPicker({
         { method: 'POST', body: fd },
       )
       onSelect({ url: res.url, key: res.key })
+      showSuccess(['Imagen subida.'])
       onClose()
     } catch (e) {
-      onError?.(
-        e instanceof ApiError ? e.message : 'No se pudo subir la imagen',
-      )
+      const msg =
+        e instanceof ApiError ? e.message : 'No se pudo subir la imagen'
+      onError?.(msg)
+      showErrors({ media: msg }, ['media'])
     } finally {
       setBusy(false)
       setPendingFile(null)

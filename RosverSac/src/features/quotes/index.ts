@@ -1,3 +1,7 @@
 export { QuoteRequestPage } from './ui/QuoteRequestPage'
 export { ClientQuotesPage } from './ui/ClientQuotesPage'
 export { AdminQuotesPage } from './ui/AdminQuotesPage'
+export { AdminQuoteWorkspacePage } from './ui/AdminQuoteWorkspacePage'
+export { PublicQuotePage } from './ui/PublicQuotePage'
+export { QuoteShareModal } from './ui/QuoteShareModal'
+export { fetchMyQuotes } from './model/api-quotes'

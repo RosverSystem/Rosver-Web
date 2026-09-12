@@ -1,0 +1,10 @@
+{
+  "source": "open-admin-data/peru-administrative-divisions",
+  "updated": "2026-06-28",
+  "year": 2026,
+  "counts": {
+    "departments": 25,
+    "provinces": 196,
+    "districts": 1873
+  }
+}

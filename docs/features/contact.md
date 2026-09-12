@@ -1,7 +1,7 @@
 # Feature: Contacto / leads
 
 **Slug:** `features/contact/`  
-**Estado:** activa (diseño visual alineado a catálogo/ofertas)
+**Estado:** activa (API + email)
 
 ## Propósito
 
@@ -10,7 +10,8 @@ Canal de contacto (formulario + WhatsApp) que genera leads para comercial.
 ## Alcance
 
 - `/contacto`, CTAs globales.
-- Admin: bandeja en `admin-leads` (puede compartir modelo).
+- Persistencia: tabla `contact_messages`.
+- Confirmación por correo al cliente.
 
 ## Pantallas / rutas
 
@@ -18,13 +19,17 @@ Canal de contacto (formulario + WhatsApp) que genera leads para comercial.
 | --- | --- | --- |
 | `/contacto` | `ContactPage` | Hero + panel ink/form |
 
-## Flujos
+## API
 
-`03-vistas-y-flujos.md` → F2.
+| Método | Path | Notas |
+| --- | --- | --- |
+| `POST` | `/api/contact` | Público; guarda lead + email confirmación |
+
+WhatsApp del panel: número fijo `51980202591`, mensaje `CONTACT_WHATSAPP_MESSAGE`.
 
 ## Verificación
 
-- [x] Formulario y estado éxito UI (`idle` → `sent`)
-- [x] Botón WhatsApp con mensaje prearmado (`wa.me` con texto codificado)
-- [x] Diseño final visual (panel único canales + form)
-- [ ] Persistencia real de lead (fase lógica)
+- [x] Formulario → Postgres + toast
+- [x] Email de confirmación (SMTP)
+- [x] WhatsApp prearmado fijo 980
+- [ ] Bandeja admin de leads (ver pendientes)

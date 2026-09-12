@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
-import { ArrowRight, Menu, Settings } from 'cssvg-icons'
+import { ArrowRight, Settings } from 'cssvg-icons'
 import { shortDisplayName, useAuth } from '@/features/auth'
 import { cn } from '@/shared/lib'
 import {
@@ -8,40 +8,36 @@ import {
   isAdminNavActive,
   isProductosGroupOpen,
   type AdminNavGroup,
-  type AdminNavLeaf,
 } from './admin-nav'
 
 type Props = {
   mobileOpen: boolean
   onCloseMobile: () => void
-  collapsed: boolean
-  onToggleCollapsed: () => void
 }
 
-function leafClass(active: boolean, collapsed: boolean) {
+function leafClass(active: boolean) {
   return cn(
-    'flex items-center gap-3 rounded-xl text-sm font-medium transition-colors',
-    collapsed ? 'justify-center px-0 py-2.5' : 'px-3 py-2.5',
+    'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
     active
       ? 'bg-rosver-red/10 text-rosver-red ring-1 ring-rosver-red/25'
       : 'text-rosver-muted hover:bg-rosver-soft hover:text-rosver-ink',
   )
 }
 
-export function AdminSidebar({
-  mobileOpen,
-  onCloseMobile,
-  collapsed,
-  onToggleCollapsed,
-}: Props) {
+/** Scroll interno sin barra visible (sigue scrolleable con rueda). */
+const NAV_SCROLL =
+  'admin-sidebar-nav hide-scrollbar flex-1 space-y-1 overflow-y-auto overflow-x-hidden px-3 py-3'
+
+export function AdminSidebar({ mobileOpen, onCloseMobile }: Props) {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { user, logout, isAdmin } = useAuth()
-  const [productosOpen, setProductosOpen] = useState(() => isProductosGroupOpen(pathname))
+  const [productosOpen, setProductosOpen] = useState(() =>
+    isProductosGroupOpen(pathname),
+  )
   const [accountOpen, setAccountOpen] = useState(false)
   const accountRef = useRef<HTMLDivElement>(null)
 
-  const displayCollapsed = collapsed && !mobileOpen
   const firstName = user ? shortDisplayName(user) : 'Usuario'
   const roleLabel = user?.roleName || (isAdmin ? 'Administrador' : 'Staff')
   const initial = firstName.charAt(0).toUpperCase()
@@ -58,7 +54,10 @@ export function AdminSidebar({
   useEffect(() => {
     if (!accountOpen) return
     const onDoc = (e: MouseEvent) => {
-      if (accountRef.current && !accountRef.current.contains(e.target as Node)) {
+      if (
+        accountRef.current &&
+        !accountRef.current.contains(e.target as Node)
+      ) {
         setAccountOpen(false)
       }
     }
@@ -67,71 +66,47 @@ export function AdminSidebar({
   }, [accountOpen])
 
   const rail = (
-    <aside
-      className={cn(
-        'flex h-full flex-col border-r border-rosver-line bg-white transition-[width] duration-200',
-        displayCollapsed ? 'w-[4.5rem]' : 'w-[16.25rem]',
-      )}
-    >
-      <div
-        className={cn(
-          'relative flex h-14 shrink-0 items-center border-b border-rosver-line',
-          displayCollapsed ? 'justify-center px-2' : 'justify-between gap-2 px-3',
-        )}
-      >
+    <aside className="relative flex h-full w-[16.25rem] flex-col border-r border-rosver-line bg-white">
+      <div className="flex h-14 shrink-0 items-center gap-2.5 border-b border-rosver-line px-3">
         <Link
           to="/admin"
-          className={cn('flex min-w-0 items-center gap-2.5', displayCollapsed && 'justify-center')}
+          className="group flex min-w-0 items-center gap-2.5"
           onClick={onCloseMobile}
         >
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-rosver-red text-[11px] font-bold tracking-tight text-white">
-            SR
+          <img
+            src="/Logo_Vertical.png"
+            alt="Rosver"
+            width={120}
+            height={36}
+            className="h-9 w-auto max-w-[7.5rem] object-contain object-left"
+            decoding="async"
+          />
+          <span className="relative flex min-w-0 flex-col gap-0.5 border-l border-rosver-line pl-2.5">
+            <span className="flex items-center gap-1.5">
+              <span
+                aria-hidden
+                className="size-1.5 shrink-0 rounded-full bg-rosver-red shadow-[0_0_0_3px] shadow-rosver-red/15 transition group-hover:shadow-rosver-red/25"
+              />
+              <span className="truncate font-display text-[13px] font-semibold tracking-[0.14em] text-rosver-ink uppercase">
+                System
+              </span>
+            </span>
+            <span
+              aria-hidden
+              className="h-0.5 w-full max-w-[4.5rem] rounded-full bg-gradient-to-r from-rosver-red via-rosver-red/70 to-transparent"
+            />
           </span>
-          {!displayCollapsed ? (
-            <span className="truncate text-sm font-semibold tracking-tight text-rosver-ink">
-              SystemRSV
-            </span>
-          ) : null}
         </Link>
-        {!mobileOpen && !displayCollapsed ? (
-          <button
-            type="button"
-            onClick={onToggleCollapsed}
-            className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg text-rosver-muted transition hover:bg-rosver-soft hover:text-rosver-ink"
-            aria-label="Colapsar menú"
-            title="Colapsar"
-          >
-            <Menu size={18} color="currentColor" strokeWidth={2} />
-          </button>
-        ) : null}
-        {displayCollapsed ? (
-          <button
-            type="button"
-            onClick={onToggleCollapsed}
-            className="absolute top-1/2 right-0 z-10 hidden size-7 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full border border-rosver-line bg-white text-rosver-muted shadow-sm hover:text-rosver-ink lg:inline-flex"
-            aria-label="Expandir menú"
-            title="Expandir"
-          >
-            <span className="rotate-180">
-              <ArrowRight size={14} color="currentColor" strokeWidth={2} />
-            </span>
-          </button>
-        ) : null}
       </div>
 
-      <nav
-        className={cn('flex-1 space-y-1 overflow-y-auto py-3', displayCollapsed ? 'px-2' : 'px-3')}
-        aria-label="Módulos"
-      >
-        {!displayCollapsed ? (
-          <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-rosver-muted">
-            Menú
-          </p>
-        ) : null}
+      <nav className={NAV_SCROLL} aria-label="Módulos">
+        <p className="mb-2 px-3 text-[10px] font-semibold tracking-[0.14em] text-rosver-muted uppercase">
+          Menú
+        </p>
 
         {ADMIN_NAV.map((entry) => {
           if (entry.type === 'link') {
-            const leaf = entry as AdminNavLeaf & { type: 'link' }
+            const leaf = entry
             const active = isAdminNavActive(pathname, leaf.link)
             const Icon = leaf.Icon
             return (
@@ -140,13 +115,13 @@ export function AdminSidebar({
                 to={leaf.link}
                 end={leaf.link === '/admin'}
                 title={leaf.name}
-                className={() => leafClass(active, displayCollapsed)}
+                className={() => leafClass(active)}
                 onClick={onCloseMobile}
               >
-                <span className="shrink-0">
+                <span className="inline-flex size-5 shrink-0 items-center justify-center">
                   <Icon size={20} color="currentColor" strokeWidth={2} />
                 </span>
-                {!displayCollapsed ? <span className="truncate">{leaf.name}</span> : null}
+                <span className="truncate">{leaf.name}</span>
               </NavLink>
             )
           }
@@ -155,46 +130,6 @@ export function AdminSidebar({
           const open = productosOpen || isProductosGroupOpen(pathname)
           const childActive = isProductosGroupOpen(pathname)
           const GroupIcon = group.Icon
-
-          if (displayCollapsed) {
-            return (
-              <div key={group.id} className="space-y-1">
-                <button
-                  type="button"
-                  title={group.name}
-                  onClick={() => {
-                    setProductosOpen(true)
-                    navigate(group.children[0]?.link ?? '/admin/productos')
-                    onCloseMobile()
-                  }}
-                  className={leafClass(childActive, true)}
-                >
-                  <GroupIcon size={20} color="currentColor" strokeWidth={2} />
-                </button>
-                {group.children.map((child) => {
-                  const active = isAdminNavActive(pathname, child.link)
-                  return (
-                    <NavLink
-                      key={child.id}
-                      to={child.link}
-                      title={child.name}
-                      className={() =>
-                        cn(
-                          'mx-auto flex size-8 items-center justify-center rounded-lg text-[10px] font-bold',
-                          active
-                            ? 'bg-rosver-red text-white'
-                            : 'text-rosver-muted hover:bg-rosver-soft hover:text-rosver-ink',
-                        )
-                      }
-                      onClick={onCloseMobile}
-                    >
-                      {child.name.slice(0, 1)}
-                    </NavLink>
-                  )
-                })}
-              </div>
-            )
-          }
 
           return (
             <div key={group.id} className="space-y-0.5">
@@ -210,8 +145,15 @@ export function AdminSidebar({
                 aria-expanded={open}
               >
                 <GroupIcon size={20} color="currentColor" strokeWidth={2} />
-                <span className="min-w-0 flex-1 truncate text-left">{group.name}</span>
-                <span className={cn('shrink-0 transition-transform', open && 'rotate-90')}>
+                <span className="min-w-0 flex-1 truncate text-left">
+                  {group.name}
+                </span>
+                <span
+                  className={cn(
+                    'shrink-0 transition-transform',
+                    open && 'rotate-90',
+                  )}
+                >
                   <ArrowRight size={16} color="currentColor" strokeWidth={2} />
                 </span>
               </button>
@@ -219,13 +161,14 @@ export function AdminSidebar({
                 <div className="ml-4 space-y-0.5 border-l border-rosver-line pl-3">
                   {group.children.map((child) => {
                     const active = isAdminNavActive(pathname, child.link)
+                    const ChildIcon = child.Icon
                     return (
                       <NavLink
                         key={child.id}
                         to={child.link}
                         className={() =>
                           cn(
-                            'block rounded-lg px-3 py-2 text-sm transition-colors',
+                            'flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors',
                             active
                               ? 'font-semibold text-rosver-red'
                               : 'text-rosver-muted hover:bg-rosver-soft hover:text-rosver-ink',
@@ -233,7 +176,12 @@ export function AdminSidebar({
                         }
                         onClick={onCloseMobile}
                       >
-                        {child.name}
+                        <ChildIcon
+                          size={16}
+                          color="currentColor"
+                          strokeWidth={2}
+                        />
+                        <span className="truncate">{child.name}</span>
                       </NavLink>
                     )
                   })}
@@ -244,35 +192,22 @@ export function AdminSidebar({
         })}
       </nav>
 
-      <div className={cn('border-t border-rosver-line py-2', displayCollapsed ? 'px-2' : 'px-3')}>
+      <div className="border-t border-rosver-line px-3 py-2">
         <Link
           to="/"
           title="Ver tienda"
-          className={cn(
-            'flex items-center gap-3 rounded-xl text-sm text-rosver-muted transition hover:bg-rosver-soft hover:text-rosver-ink',
-            displayCollapsed ? 'justify-center px-0 py-2.5' : 'px-3 py-2.5',
-          )}
+          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-rosver-muted transition hover:bg-rosver-soft hover:text-rosver-ink"
         >
           <Settings size={18} color="currentColor" strokeWidth={2} />
-          {!displayCollapsed ? <span>Ver tienda</span> : null}
+          <span>Ver tienda</span>
         </Link>
       </div>
 
-      <div
-        ref={accountRef}
-        className={cn(
-          'relative border-t border-rosver-line',
-          displayCollapsed ? 'p-2' : 'p-3',
-          displayCollapsed && 'lg:relative',
-        )}
-      >
+      <div ref={accountRef} className="relative border-t border-rosver-line p-3">
         <button
           type="button"
           onClick={() => setAccountOpen((v) => !v)}
-          className={cn(
-            'flex w-full items-center gap-2.5 rounded-xl transition hover:bg-rosver-soft',
-            displayCollapsed ? 'justify-center p-1.5' : 'px-2 py-2',
-          )}
+          className="flex w-full items-center gap-2.5 rounded-xl px-2 py-2 transition hover:bg-rosver-soft"
           aria-expanded={accountOpen}
           aria-haspopup="menu"
           title={firstName}
@@ -290,30 +225,28 @@ export function AdminSidebar({
               {initial}
             </span>
           )}
-          {!displayCollapsed ? (
-            <>
-              <span className="min-w-0 flex-1 text-left">
-                <span className="block truncate text-sm font-semibold text-rosver-ink">
-                  {firstName}
-                </span>
-                <span className="block truncate text-xs text-rosver-muted">{roleLabel}</span>
-              </span>
-              <span className={cn('shrink-0 text-rosver-muted transition-transform', accountOpen && 'rotate-90')}>
-                <ArrowRight size={14} color="currentColor" strokeWidth={2} />
-              </span>
-            </>
-          ) : null}
+          <span className="min-w-0 flex-1 text-left">
+            <span className="block truncate text-sm font-semibold text-rosver-ink">
+              {firstName}
+            </span>
+            <span className="block truncate text-xs text-rosver-muted">
+              {roleLabel}
+            </span>
+          </span>
+          <span
+            className={cn(
+              'shrink-0 text-rosver-muted transition-transform',
+              accountOpen && 'rotate-90',
+            )}
+          >
+            <ArrowRight size={14} color="currentColor" strokeWidth={2} />
+          </span>
         </button>
 
         {accountOpen ? (
           <div
             role="menu"
-            className={cn(
-              'absolute z-50 overflow-hidden rounded-xl border border-rosver-line bg-white py-1 shadow-lg',
-              displayCollapsed
-                ? 'bottom-2 left-full ml-2 w-48'
-                : 'bottom-[calc(100%+0.35rem)] left-3 right-3',
-            )}
+            className="absolute right-3 bottom-[calc(100%+0.35rem)] left-3 z-50 overflow-hidden rounded-xl border border-rosver-line bg-white py-1 shadow-lg"
           >
             {user?.email ? (
               <p className="border-b border-rosver-line px-3 py-2 text-xs text-rosver-muted">
@@ -352,7 +285,9 @@ export function AdminSidebar({
             aria-label="Cerrar menú"
             onClick={onCloseMobile}
           />
-          <div className="absolute inset-y-0 left-0 w-[16.25rem] shadow-xl">{rail}</div>
+          <div className="absolute inset-y-0 left-0 w-[16.25rem] shadow-xl">
+            {rail}
+          </div>
         </div>
       ) : null}
     </>

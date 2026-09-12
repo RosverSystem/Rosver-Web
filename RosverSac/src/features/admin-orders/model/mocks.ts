@@ -1,11 +1,14 @@
-export type OrderStatus = 'pendiente' | 'en proceso' | 'enviado' | 'entregado'
+import type { OrderPipelineStatus } from '@/shared/lib/order-pipeline'
+
+export type OrderStatus = OrderPipelineStatus
 
 export const ORDER_STATUS_TONE: Record<
   OrderStatus,
   'neutral' | 'info' | 'success' | 'warning'
 > = {
-  pendiente: 'neutral',
-  'en proceso': 'warning',
+  confirmacion_pedido: 'neutral',
+  confirmacion_pago: 'warning',
+  realizando_envio: 'info',
   enviado: 'info',
   entregado: 'success',
 }
@@ -24,14 +27,14 @@ export const ORDERS: Order[] = [
     customerName: 'Julia Ramírez',
     date: '2026-08-15',
     total: 249,
-    status: 'en proceso',
+    status: 'realizando_envio',
   },
   {
     id: 'PED-2199',
     customerName: 'Ferretería El Sol',
     date: '2026-08-14',
     total: 1180,
-    status: 'pendiente',
+    status: 'confirmacion_pedido',
   },
   {
     id: 'PED-2188',

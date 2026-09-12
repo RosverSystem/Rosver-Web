@@ -1,13 +1,25 @@
 import { Hono } from 'hono'
+import { z } from 'zod'
 import { pool } from '../db.js'
 import { featuredCache, redisStatus, trendingCache } from '../lib/redis.js'
 import {
   queryFeaturedProducts,
   queryOfferProducts,
+  queryRankingProducts,
   queryStoreProducts,
   queryTrendingProducts,
   queryTrendingTabs,
 } from '../lib/catalog-products.js'
+import { queryOfferCombos, toPublicCombo } from '../lib/offer-combos.js'
+import { generateCatalogPdfBuffer } from '../lib/catalog-pdf-render.js'
+import {
+  findProductIdBySlug,
+  getMyProductRatingDetail,
+  submitProductRating,
+  updateProductRatingComment,
+} from '../lib/product-ratings.js'
+import { recordProductViewBySlug } from '../lib/product-analytics.js'
+import { resolveSessionUser } from '../lib/session.js'
 
 /**
  * Catálogo público.
@@ -123,19 +135,24 @@ catalogRoutes.get('/trending', async (c) => {
 
 catalogRoutes.get('/offers', async (c) => {
   try {
-    const products = await queryOfferProducts(200)
+    const [combos, products] = await Promise.all([
+      queryOfferCombos({ visibleOnly: true, limit: 200 }),
+      queryOfferProducts(200),
+    ])
     return c.json({
       ok: true,
       live: true,
       updatedAt: new Date().toISOString(),
+      combos: combos.map(toPublicCombo),
       products,
-      count: products.length,
+      count: combos.length + products.length,
     })
   } catch (err) {
     console.error('catalog offers', err)
     return c.json({
       ok: true,
       live: false,
+      combos: [],
       products: [],
       count: 0,
       updatedAt: new Date().toISOString(),
@@ -158,6 +175,7 @@ catalogRoutes.get('/', async (c) => {
 
     const mappedProducts = await queryStoreProducts(1000)
     const offerProducts = await queryOfferProducts(200)
+    const offerCombos = await queryOfferCombos({ visibleOnly: true, limit: 200 })
     const featuredBundle = await loadFeaturedCached()
     const trendingBundle = await loadTrendingCached(null)
 
@@ -190,6 +208,7 @@ catalogRoutes.get('/', async (c) => {
       categories: mappedCategories,
       products: mappedProducts,
       offers: offerProducts,
+      offerCombos: offerCombos.map(toPublicCombo),
       featured: featuredBundle.products,
       featuredMeta: {
         cache: featuredBundle.cache,
@@ -230,6 +249,184 @@ catalogRoutes.get('/', async (c) => {
   }
 })
 
+/** Catálogo PDF A4 (HTML + Puppeteer) + carátula general. */
+catalogRoutes.get('/pdf', async (c) => {
+  try {
+    const bytes = await generateCatalogPdfBuffer()
+    const year = new Date().getFullYear()
+    return new Response(Buffer.from(bytes), {
+      headers: {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `attachment; filename="Catalogo-Rosver-${year}.pdf"`,
+        'Cache-Control': 'no-store',
+      },
+    })
+  } catch (err) {
+    console.error('catalog PDF', err)
+    const message =
+      err instanceof Error ? err.message : 'No se pudo generar el catálogo PDF.'
+    return c.json({ error: message }, 500)
+  }
+})
+
+/** Ranking: productos mejor calificados. */
+catalogRoutes.get('/ranking', async (c) => {
+  const limit = Math.min(
+    60,
+    Math.max(1, Number(c.req.query('limit') || 24) || 24),
+  )
+  try {
+    const products = await queryRankingProducts(limit)
+    return c.json({
+      ok: true,
+      products,
+      count: products.length,
+      updatedAt: new Date().toISOString(),
+    })
+  } catch (err) {
+    console.error('catalog ranking', err)
+    return c.json({ ok: true, products: [], count: 0 })
+  }
+})
+
+/** Contabiliza una vista de ficha de producto. */
+catalogRoutes.post('/products/:slug/view', async (c) => {
+  const slug = c.req.param('slug')
+  try {
+    const user = await resolveSessionUser(c)
+    const result = await recordProductViewBySlug(slug, user?.id)
+    if (!result.ok) return c.json({ error: 'Producto no encontrado' }, 404)
+    return c.json({ ok: true, viewCount: result.viewCount })
+  } catch (err) {
+    console.error('catalog view', err)
+    return c.json({ error: 'No se pudo registrar la vista.' }, 500)
+  }
+})
+
+const rateSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+  guestKey: z.string().trim().min(8).max(80).optional().nullable(),
+  title: z.string().max(120).optional().nullable(),
+  body: z.string().max(2000).optional().nullable(),
+})
+
+const rateCommentSchema = z.object({
+  guestKey: z.string().trim().min(8).max(80).optional().nullable(),
+  title: z.string().max(120).optional().nullable(),
+  body: z.string().max(2000).optional().nullable(),
+})
+
+/** Mi calificación de un producto (sesión o guestKey). */
+catalogRoutes.get('/products/:slug/rating', async (c) => {
+  const slug = c.req.param('slug')
+  const guestKey = c.req.query('guestKey')?.trim() || null
+  const productId = await findProductIdBySlug(slug)
+  if (!productId) return c.json({ error: 'Producto no encontrado' }, 404)
+  const user = await resolveSessionUser(c)
+  const mine = await getMyProductRatingDetail({
+    productId,
+    userId: user?.id,
+    guestKey,
+  })
+  const { rows } = await pool.query<{
+    rating: string
+    review_count: number
+  }>(`SELECT rating::text, review_count FROM products WHERE id = $1`, [
+    productId,
+  ])
+  return c.json({
+    ok: true,
+    myRating: mine?.rating ?? null,
+    myTitle: mine?.title ?? '',
+    myBody: mine?.body ?? '',
+    rating: rows[0] ? Number(rows[0].rating) : 0,
+    reviewCount: rows[0] ? Number(rows[0].review_count) : 0,
+    canRate: mine == null,
+  })
+})
+
+/** Calificar producto (1 vez: logueado o invitado con guestKey). */
+catalogRoutes.post('/products/:slug/rating', async (c) => {
+  const slug = c.req.param('slug')
+  const body = rateSchema.safeParse(await c.req.json().catch(() => null))
+  if (!body.success) {
+    return c.json({ error: 'Elige de 1 a 5 estrellas.' }, 400)
+  }
+  const productId = await findProductIdBySlug(slug)
+  if (!productId) return c.json({ error: 'Producto no encontrado' }, 404)
+
+  const user = await resolveSessionUser(c)
+  const guestKey = body.data.guestKey?.trim() || null
+  if (!user?.id && !guestKey) {
+    return c.json(
+      { error: 'Falta identificador de invitado para calificar.' },
+      400,
+    )
+  }
+
+  const result = await submitProductRating({
+    productId,
+    rating: body.data.rating,
+    userId: user?.id,
+    guestKey,
+    title: body.data.title,
+    body: body.data.body,
+  })
+  if (!result.ok) {
+    if (result.code === 'already') {
+      return c.json(
+        { error: 'Ya calificaste este producto. Solo se permite una vez.' },
+        409,
+      )
+    }
+    return c.json({ error: 'Calificación inválida.' }, 400)
+  }
+
+  const { rows } = await pool.query<{
+    rating: string
+    review_count: number
+  }>(`SELECT rating::text, review_count FROM products WHERE id = $1`, [
+    productId,
+  ])
+  return c.json({
+    ok: true,
+    myRating: body.data.rating,
+    rating: rows[0] ? Number(rows[0].rating) : body.data.rating,
+    reviewCount: rows[0] ? Number(rows[0].review_count) : 1,
+    canRate: false,
+  })
+})
+
+/** Actualizar comentario de reseña propia (estrellas no cambian). */
+catalogRoutes.patch('/products/:slug/rating', async (c) => {
+  const slug = c.req.param('slug')
+  const body = rateCommentSchema.safeParse(await c.req.json().catch(() => null))
+  if (!body.success) {
+    return c.json({ error: 'Datos de comentario inválidos.' }, 400)
+  }
+  const productId = await findProductIdBySlug(slug)
+  if (!productId) return c.json({ error: 'Producto no encontrado' }, 404)
+  const user = await resolveSessionUser(c)
+  const guestKey = body.data.guestKey?.trim() || null
+  if (!user?.id && !guestKey) {
+    return c.json({ error: 'Debes iniciar sesión o enviar guestKey.' }, 401)
+  }
+  const result = await updateProductRatingComment({
+    productId,
+    userId: user?.id,
+    guestKey,
+    title: body.data.title,
+    body: body.data.body,
+  })
+  if (!result.ok) {
+    if (result.code === 'missing') {
+      return c.json({ error: 'Primero califica el producto con estrellas.' }, 404)
+    }
+    return c.json({ error: 'No se pudo guardar el comentario.' }, 400)
+  }
+  return c.json({ ok: true })
+})
+
 function mapBrand(r: Record<string, unknown>) {
   return {
     id: r.id,
@@ -243,3 +440,52 @@ function mapBrand(r: Record<string, unknown>) {
     sortOrder: r.sort_order,
   }
 }
+
+/**
+ * GET /api/catalog/promos
+ * Lista pública de promos BOGO activas (por product_id o slug de producto).
+ * El front puede usarla para mostrar badges "2x1" en el catálogo.
+ */
+catalogRoutes.get('/promos', async (c) => {
+  // Obtener todos los product_ids con promo vigente
+  const now = new Date().toISOString()
+  const { rows } = await pool.query<{
+    id: string
+    product_id: string
+    packaging_id: string | null
+    kind: string
+    buy_qty: number
+    pay_qty: number
+    valid_from: string | null
+    valid_to: string | null
+    product_slug: string
+    product_name: string
+  }>(
+    `SELECT pp.id, pp.product_id, pp.packaging_id, pp.kind,
+            pp.buy_qty, pp.pay_qty, pp.valid_from, pp.valid_to,
+            p.slug AS product_slug, p.name AS product_name
+     FROM product_promos pp
+     JOIN products p ON p.id = pp.product_id
+     WHERE pp.active = true
+       AND (pp.valid_from IS NULL OR pp.valid_from <= $1)
+       AND (pp.valid_to IS NULL OR pp.valid_to >= $1)
+       AND p.visible = true
+     ORDER BY pp.created_at DESC`,
+    [now],
+  )
+  return c.json({
+    items: rows.map((r) => ({
+      id: r.id,
+      productId: r.product_id,
+      productSlug: r.product_slug,
+      productName: r.product_name,
+      packagingId: r.packaging_id,
+      kind: r.kind,
+      buyQty: Number(r.buy_qty),
+      payQty: Number(r.pay_qty),
+      label: `${r.buy_qty}x${r.pay_qty}`,
+      validFrom: r.valid_from,
+      validTo: r.valid_to,
+    })),
+  })
+})

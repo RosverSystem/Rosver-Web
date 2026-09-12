@@ -7,11 +7,13 @@ type Props = {
   title: string
   children: ReactNode
   footer?: ReactNode
-  size?: 'md' | 'lg' | 'xl'
+  size?: 'md' | 'lg' | 'xl' | 'full'
   className?: string
   /** Capas anidadas (ej. picker encima de form). Default 80. */
   layer?: number
   closeOnEscape?: boolean
+  /** Si false, el clic en el fondo no cierra. Default true. */
+  closeOnBackdrop?: boolean
 }
 
 /**
@@ -27,6 +29,7 @@ export function AdminModal({
   className,
   layer = 80,
   closeOnEscape = true,
+  closeOnBackdrop = true,
 }: Props) {
   useEffect(() => {
     if (!open || !closeOnEscape) return
@@ -48,7 +51,13 @@ export function AdminModal({
   if (!open) return null
 
   const maxW =
-    size === 'md' ? 'max-w-lg' : size === 'xl' ? 'max-w-4xl' : 'max-w-2xl'
+    size === 'md'
+      ? 'max-w-lg'
+      : size === 'xl'
+        ? 'max-w-5xl'
+        : size === 'full'
+          ? 'max-w-6xl'
+          : 'max-w-2xl'
 
   return (
     <div
@@ -57,9 +66,11 @@ export function AdminModal({
     >
       <button
         type="button"
-        aria-label="Cerrar"
+        aria-label={closeOnBackdrop ? 'Cerrar' : undefined}
+        aria-hidden={!closeOnBackdrop}
+        tabIndex={closeOnBackdrop ? 0 : -1}
         className="absolute inset-0 bg-rosver-ink/45 backdrop-blur-[2px]"
-        onClick={onClose}
+        onClick={closeOnBackdrop ? onClose : undefined}
       />
       <div
         role="dialog"

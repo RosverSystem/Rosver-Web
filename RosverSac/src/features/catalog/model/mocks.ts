@@ -35,8 +35,10 @@ export type Category = {
 }
 
 export type Product = {
-  /** Código / id externo (ERP) */
+  /** UUID / id persistente */
   id: string
+  /** Código interno del sistema (serial) */
+  code?: number
   slug: string
   name: string
   sku: string
@@ -56,6 +58,12 @@ export type Product = {
   trendingSort?: number
   rating: number
   reviewCount: number
+  /** Vistas de ficha (analítica) */
+  viewCount?: number
+  /** Unidades pedidas */
+  orderCount?: number
+  /** Unidades cotizadas */
+  quoteCount?: number
   origin: string
   moq: number
   description: string
@@ -483,6 +491,7 @@ export const PRODUCTS: Product[] = [
   },
   {
     id: 'PRD-5402',
+    code: 5402,
     slug: 'lampara-escritorio-led',
     name: 'Lámpara de escritorio LED',
     sku: 'RS-5402',
@@ -498,6 +507,13 @@ export const PRODUCTS: Product[] = [
     imageUrl:
       'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&w=640&h=640&q=75',
     description: 'Lámpara LED brazo flexible, 3 temperaturas de color, USB.',
+    specs: [
+      { key: 'dimensions', name: 'Dimensiones', value: '420 x 180 x 120', unit: 'mm' },
+      { key: 'weight', name: 'Peso', value: '0.85', unit: 'kg' },
+      { key: 'power', name: 'Potencia', value: '8', unit: 'W' },
+      { key: 'material', name: 'Material', value: 'ABS + aluminio' },
+      { key: 'color_temp', name: 'Temperatura de color', value: '3000 / 4000 / 6500', unit: 'K' },
+    ],
   },
   {
     id: 'PRD-6201',

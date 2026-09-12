@@ -15,7 +15,7 @@ const inputClass =
 export function AdminProductFormPage() {
   const { id } = useParams()
   const product = id ? PRODUCTS.find((p) => p.slug === id) : undefined
-  const { toasts, showErrors, dismiss, clear } = useFormToasts()
+  const { toasts, showErrors, showSuccess, dismiss, clear } = useFormToasts()
 
   const [name, setName] = useState(product?.name ?? '')
   const [sku, setSku] = useState(product?.sku ?? '')
@@ -29,7 +29,6 @@ export function AdminProductFormPage() {
   const [moq, setMoq] = useState(product?.moq != null ? String(product.moq) : '')
   const [description, setDescription] = useState(product?.description ?? '')
   const [errors, setErrors] = useState<FieldErrors>({})
-  const [saved, setSaved] = useState(false)
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -43,11 +42,10 @@ export function AdminProductFormPage() {
     setErrors(next)
     if (Object.keys(next).length > 0) {
       showErrors(next, ['name', 'sku', 'price'])
-      setSaved(false)
       return
     }
     clear()
-    setSaved(true)
+    showSuccess(['Producto guardado.'])
   }
 
   return (
@@ -165,11 +163,6 @@ export function AdminProductFormPage() {
             >
               Guardar producto
             </button>
-            {saved ? (
-              <p className="text-sm font-medium text-rosver-success">
-                Producto guardado (mock).
-              </p>
-            ) : null}
           </form>
         </WireBlock>
       </div>

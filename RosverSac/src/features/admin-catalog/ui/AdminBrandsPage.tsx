@@ -7,10 +7,12 @@ import {
   AdminField,
   AdminInput,
   AdminPageHeader,
+  AdminSelect,
 } from '@/shared/ui/admin-field'
 import { AdminImageUpload } from '@/shared/ui/admin-image-upload'
 import { AdminModal } from '@/shared/ui/admin-modal'
-import { useEffect, useMemo, useState } from 'react'
+import { Pen, Search, Trash } from 'cssvg-icons'
+import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 
 type Brand = {
   id: string
@@ -24,6 +26,9 @@ type Brand = {
   sortOrder?: number
 }
 
+type HomeFilter = 'all' | 'home' | 'off'
+type VisibleFilter = 'all' | 'visible' | 'hidden'
+
 export function AdminBrandsPage() {
   const { toasts, showMessages, dismiss, clear } = useFormToasts()
   const [brands, setBrands] = useState<Brand[]>([])
@@ -36,17 +41,31 @@ export function AdminBrandsPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [query, setQuery] = useState('')
+  const deferredQuery = useDeferredValue(query)
+  const [homeFilter, setHomeFilter] = useState<HomeFilter>('all')
+  const [visibleFilter, setVisibleFilter] = useState<VisibleFilter>('all')
+
+  const stats = useMemo(() => {
+    const visible = brands.filter((b) => b.visible).length
+    const onHome = brands.filter((b) => b.showOnHome !== false).length
+    return { total: brands.length, visible, onHome, hidden: brands.length - visible }
+  }, [brands])
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return brands
-    return brands.filter(
-      (b) =>
+    const q = deferredQuery.trim().toLowerCase()
+    return brands.filter((b) => {
+      if (visibleFilter === 'visible' && !b.visible) return false
+      if (visibleFilter === 'hidden' && b.visible) return false
+      if (homeFilter === 'home' && b.showOnHome === false) return false
+      if (homeFilter === 'off' && b.showOnHome !== false) return false
+      if (!q) return true
+      return (
         b.name.toLowerCase().includes(q) ||
         b.sku.toLowerCase().includes(q) ||
-        String(b.code).includes(q),
-    )
-  }, [brands, query])
+        String(b.code).includes(q)
+      )
+    })
+  }, [brands, deferredQuery, homeFilter, visibleFilter])
 
   async function load() {
     setLoading(true)
@@ -116,11 +135,13 @@ export function AdminBrandsPage() {
           method: 'PATCH',
           body: JSON.stringify(payload),
         })
+        showMessages(['Marca actualizada'])
       } else {
         await api('/api/admin/brands', {
           method: 'POST',
           body: JSON.stringify(payload),
         })
+        showMessages(['Marca creada'])
       }
       closeModal()
       await load()
@@ -141,6 +162,11 @@ export function AdminBrandsPage() {
         body: JSON.stringify({ showOnHome: !b.showOnHome }),
       })
       await load()
+      showMessages([
+        b.showOnHome !== false
+          ? 'Marca quitada del inicio'
+          : 'Marca agregada al inicio',
+      ])
     } catch (err) {
       showMessages([
         err instanceof ApiError ? err.message : 'No se pudo actualizar',
@@ -155,6 +181,7 @@ export function AdminBrandsPage() {
       await api(`/api/admin/brands/${id}`, { method: 'DELETE' })
       if (editingId === id) closeModal()
       await load()
+      showMessages(['Marca eliminada'])
     } catch (err) {
       showMessages([
         err instanceof ApiError ? err.message : 'No se pudo eliminar',
@@ -163,32 +190,81 @@ export function AdminBrandsPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-4">
       <FloatingToasts toasts={toasts} onDismiss={dismiss} />
       <AdminPageHeader
+        eyebrow="Catálogo"
         title="Marcas"
+        description="Proveedores y logos que se muestran en la tienda."
+        stats={[
+          { label: 'Total', value: stats.total },
+          { label: 'Visibles', value: stats.visible, tone: 'success' },
+          { label: 'En inicio', value: stats.onHome, tone: 'warning' },
+          { label: 'Ocultas', value: stats.hidden, tone: 'danger' },
+        ]}
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-rosver-muted ring-1 ring-rosver-line">
-              {brands.length} marcas
-            </span>
-            <button
-              type="button"
-              onClick={openCreate}
-              className="h-9 rounded-xl bg-rosver-red px-4 text-xs font-semibold text-white hover:bg-rosver-red-dark"
-            >
-              Nueva marca
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={openCreate}
+            className="rounded-full bg-rosver-red px-4 py-2.5 text-xs font-bold text-white uppercase shadow-sm shadow-rosver-red/30 hover:bg-rosver-red-dark"
+          >
+            Nueva marca
+          </button>
         }
       />
 
-      <AdminInput
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Buscar marca…"
-        className="max-w-sm"
-      />
+      <div className="flex flex-col gap-3 rounded-2xl border border-rosver-line bg-gradient-to-br from-white via-white to-rosver-soft/60 p-4 shadow-sm sm:flex-row sm:items-end sm:gap-3">
+        <label className="block min-w-0 flex-1">
+          <span className="mb-1.5 block text-xs font-bold tracking-wide text-rosver-muted uppercase">
+            Buscar
+          </span>
+          <div className="relative">
+            <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-rosver-red">
+              <Search size={18} color="currentColor" strokeWidth={2} />
+            </span>
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Nombre, código o SKU…"
+              className="w-full rounded-xl border border-rosver-line bg-white py-2.5 pr-3 pl-10 text-sm text-rosver-ink outline-none placeholder:text-rosver-muted focus:border-rosver-red focus:ring-2 focus:ring-rosver-red/15"
+            />
+          </div>
+        </label>
+        <label className="block w-full sm:w-40">
+          <span className="mb-1.5 block text-xs font-bold tracking-wide text-rosver-muted uppercase">
+            Visibilidad
+          </span>
+          <AdminSelect
+            value={visibleFilter}
+            onChange={(e) => {
+              const v = e.target.value
+              if (v === 'all' || v === 'visible' || v === 'hidden') {
+                setVisibleFilter(v)
+              }
+            }}
+          >
+            <option value="all">Todas</option>
+            <option value="visible">Visibles</option>
+            <option value="hidden">Ocultas</option>
+          </AdminSelect>
+        </label>
+        <label className="block w-full sm:w-44">
+          <span className="mb-1.5 block text-xs font-bold tracking-wide text-rosver-muted uppercase">
+            Inicio
+          </span>
+          <AdminSelect
+            value={homeFilter}
+            onChange={(e) => {
+              const v = e.target.value
+              if (v === 'all' || v === 'home' || v === 'off') setHomeFilter(v)
+            }}
+          >
+            <option value="all">Todas</option>
+            <option value="home">En el inicio</option>
+            <option value="off">Fuera del inicio</option>
+          </AdminSelect>
+        </label>
+      </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {loading ? (
@@ -198,8 +274,16 @@ export function AdminBrandsPage() {
         ) : filtered.length === 0 ? (
           <div className="col-span-full rounded-2xl border border-rosver-line bg-white">
             <AdminEmptyState
-              title="Todavía no hay marcas"
-              detail="Usa «Nueva marca» para crear una."
+              title={
+                brands.length === 0
+                  ? 'Todavía no hay marcas'
+                  : 'Sin resultados'
+              }
+              detail={
+                brands.length === 0
+                  ? 'Usa «Nueva marca» para crear una.'
+                  : 'Prueba otro filtro o búsqueda.'
+              }
             />
           </div>
         ) : (
@@ -215,6 +299,8 @@ export function AdminBrandsPage() {
                   width={48}
                   height={48}
                   className="size-12 shrink-0 rounded-2xl object-contain"
+                  loading="lazy"
+                  decoding="async"
                 />
               ) : (
                 <span className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-rosver-soft text-base font-bold text-rosver-ink">
@@ -223,19 +309,21 @@ export function AdminBrandsPage() {
               )}
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="truncate font-semibold text-rosver-ink">{b.name}</h3>
+                  <h3 className="truncate font-semibold text-rosver-ink">
+                    {b.name}
+                  </h3>
                   <span
                     className={cn(
                       'rounded-full px-2 py-0.5 text-[10px] font-bold',
                       b.visible
-                        ? 'bg-rosver-success/15 text-rosver-success'
+                        ? 'bg-rosver-success text-white'
                         : 'bg-rosver-soft text-rosver-muted',
                     )}
                   >
                     {b.visible ? 'Visible' : 'Oculta'}
                   </span>
                   {b.showOnHome !== false ? (
-                    <span className="rounded-full bg-rosver-red/10 px-2 py-0.5 text-[10px] font-bold text-rosver-red">
+                    <span className="rounded-full bg-rosver-yellow px-2 py-0.5 text-[10px] font-bold text-rosver-ink">
                       Inicio
                     </span>
                   ) : null}
@@ -243,27 +331,33 @@ export function AdminBrandsPage() {
                 <p className="mt-0.5 text-xs text-rosver-muted">
                   Código #{b.code} · {b.sku}
                 </p>
-                <div className="mt-2 flex flex-wrap gap-2">
+                <div className="mt-2 flex flex-wrap items-center gap-1.5">
                   <button
                     type="button"
+                    title="Editar"
+                    aria-label="Editar"
                     onClick={() => startEdit(b)}
-                    className="text-xs font-semibold text-rosver-red hover:underline"
+                    className="inline-flex size-9 items-center justify-center rounded-xl bg-rosver-yellow text-rosver-ink shadow-sm shadow-rosver-yellow/30 hover:opacity-90"
                   >
-                    Editar
+                    <Pen size={16} color="currentColor" strokeWidth={2} />
                   </button>
                   <button
                     type="button"
                     onClick={() => void toggleHome(b)}
-                    className="text-xs font-semibold text-rosver-muted hover:text-rosver-red"
+                    className="rounded-lg border border-rosver-line px-2.5 py-1.5 text-[11px] font-bold text-rosver-muted hover:border-rosver-red/40 hover:text-rosver-red"
                   >
-                    {b.showOnHome !== false ? 'Quitar del inicio' : 'Poner en inicio'}
+                    {b.showOnHome !== false
+                      ? 'Quitar inicio'
+                      : 'Poner inicio'}
                   </button>
                   <button
                     type="button"
+                    title="Eliminar"
+                    aria-label="Eliminar"
                     onClick={() => void onDelete(b.id, b.name)}
-                    className="text-xs font-semibold text-rosver-muted hover:text-rosver-red"
+                    className="inline-flex size-9 items-center justify-center rounded-xl bg-rosver-red text-white shadow-sm shadow-rosver-red/25 hover:bg-rosver-red-dark"
                   >
-                    Eliminar
+                    <Trash size={16} color="currentColor" strokeWidth={2} />
                   </button>
                 </div>
               </div>
@@ -333,7 +427,7 @@ export function AdminBrandsPage() {
               onChange={(e) => setShowOnHome(e.target.checked)}
               className="size-4 rounded border-rosver-line text-rosver-red"
             />
-            Mostrar en «Marcas que importamos» (inicio)
+            Mostrar en el inicio
           </label>
         </form>
       </AdminModal>

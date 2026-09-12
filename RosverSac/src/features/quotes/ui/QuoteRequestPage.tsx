@@ -1,11 +1,20 @@
 import { useAuth } from '@/features/auth'
-import { useCart } from '@/features/cart'
-import { PRODUCTS, type Product } from '@/features/catalog'
-import { cnField, isValidPhone, WHATSAPP_NUMBER } from '@/shared/lib'
+import { useCart, isComboLine, type CartLine } from '@/features/cart'
+import { useCatalog, type Product } from '@/features/catalog'
+import { cnField, isValidPhone } from '@/shared/lib'
+import { api, ApiError } from '@/shared/lib/api'
+import { attachNestedScrollWheel } from '@/shared/lib/nested-scroll-wheel'
 import { prefersReducedMotion } from '@/shared/lib/gsap'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { FloatingToasts } from '@/shared/ui/floating-toasts'
+import { SelectCombobox } from '@/shared/ui/select-combobox'
+import {
+  emptyUbigeo,
+  type UbigeoValue,
+} from '@/shared/ui/peru-ubigeo-fields'
+import { PeruAddressSuggest } from '@/shared/ui/peru-address-suggest'
 import { IconWhatsApp } from '@/shared/ui/icons'
+import { QuoteShareModal } from './QuoteShareModal'
 import {
   ArrowRight,
   Check,
@@ -42,14 +51,32 @@ type QuoteLine = {
   productSlug: string | null
   presentation: PresentationId
   quantity: number
+  lineKind?: 'product' | 'combo'
+  comboId?: string
+  comboName?: string
+  comboSku?: string
+  comboImageUrl?: string
+  unitPrice?: number | null
+  comboSnapshot?: CartLine['comboSnapshot']
+  comboItems?: CartLine['comboItems']
 }
 
 type BusinessForm = {
   name: string
   document: string
   phone: string
-  city: string
+  shipAddress: string
+  ship: UbigeoValue
+  agencyName: string
 }
+
+type FieldKey =
+  | 'name'
+  | 'phone'
+  | 'items'
+  | 'shipAddress'
+  | 'shipUbigeo'
+  | 'agencyName'
 
 const BENEFITS = [
   {
@@ -73,16 +100,34 @@ function newLineId() {
   return `ql-${Math.random().toString(36).slice(2, 10)}`
 }
 
-function linesFromCart(
-  cartLines: { productSlug: string; quantity: number }[],
-): QuoteLine[] {
+function linesFromCart(cartLines: CartLine[]): QuoteLine[] {
   if (cartLines.length === 0) return []
-  return cartLines.map((line) => ({
-    id: newLineId(),
-    productSlug: line.productSlug,
-    presentation: 'und' as const,
-    quantity: line.quantity,
-  }))
+  return cartLines.map((line) => {
+    if (isComboLine(line)) {
+      return {
+        id: newLineId(),
+        productSlug: line.productSlug,
+        presentation: 'und' as const,
+        quantity: line.quantity,
+        lineKind: 'combo',
+        comboId: line.comboId,
+        comboName: line.comboName,
+        comboSku: line.comboSku,
+        comboImageUrl: line.comboImageUrl,
+        unitPrice: line.unitPrice,
+        comboSnapshot: line.comboSnapshot,
+        comboItems: line.comboItems,
+      }
+    }
+    return {
+      id: newLineId(),
+      productSlug: line.productSlug,
+      presentation: 'und' as const,
+      quantity: line.quantity,
+      lineKind: 'product',
+      unitPrice: line.unitPrice,
+    }
+  })
 }
 
 /**
@@ -95,55 +140,97 @@ export function QuoteRequestPage() {
   const quoteRef = searchParams.get('ref')?.trim() || null
   const { user } = useAuth()
   const { lines: cartLines, replaceAll, itemCount } = useCart()
+  const { products } = useCatalog()
 
   const [business, setBusiness] = useState<BusinessForm>({
     name: '',
     document: '',
     phone: '',
-    city: '',
+    shipAddress: '',
+    ship: emptyUbigeo(),
+    agencyName: '',
   })
-  const [fieldErrors, setFieldErrors] = useState<
-    Partial<Record<'name' | 'phone' | 'items', string>>
-  >({})
-  const [tab, setTab] = useState<'catalog' | 'free'>('catalog')
-  const { toasts, showErrors, dismiss, clear } = useFormToasts()
-  const [freeText, setFreeText] = useState('')
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<FieldKey, string>>>(
+    {},
+  )
+  const [submitBusy, setSubmitBusy] = useState(false)
+  const { toasts, showErrors, showSuccess, dismiss, clear } = useFormToasts()
   const [quoteLines, setQuoteLines] = useState<QuoteLine[]>(() =>
     linesFromCart(cartLines),
   )
   const [status, setStatus] = useState<'idle' | 'sent'>('idle')
+  const [shareOpen, setShareOpen] = useState(false)
+  const [sharePdfUrl, setSharePdfUrl] = useState<string | null>(null)
+  const [shareMeta, setShareMeta] = useState<{
+    code: string
+    shareUrl: string
+    businessName: string
+    fileName: string
+    linkDays: number
+    linkExpiresAt: string | null
+  } | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (sharePdfUrl) URL.revokeObjectURL(sharePdfUrl)
+    }
+  }, [sharePdfUrl])
 
   useEffect(() => {
     if (!user) return
     setBusiness((prev) => ({
-      name: prev.name || user.companyName || user.fullName || '',
+      ...prev,
+      name:
+        prev.name ||
+        user.companyName ||
+        user.fullName ||
+        '',
       document: prev.document || user.documentNumber || '',
       phone: prev.phone || user.phone || '',
-      city: prev.city,
     }))
   }, [user])
 
   const resolved = useMemo(
     () =>
       quoteLines.map((line) => {
+        if (line.lineKind === 'combo') {
+          return { ...line, product: null as Product | null }
+        }
         const product = line.productSlug
-          ? PRODUCTS.find((p) => p.slug === line.productSlug) ?? null
+          ? products.find((p) => p.slug === line.productSlug) ?? null
           : null
         return { ...line, product }
       }),
-    [quoteLines],
+    [quoteLines, products],
   )
 
   const total = useMemo(
     () =>
       resolved.reduce((sum, line) => {
-        if (!line.product?.price) return sum
-        return sum + line.product.price * line.quantity
+        if (line.lineKind === 'combo') {
+          const u = line.unitPrice
+          if (u == null) return sum
+          return sum + u * line.quantity
+        }
+        if (!line.product?.price && line.unitPrice == null) return sum
+        const u = line.unitPrice ?? line.product?.price ?? 0
+        return sum + u * line.quantity
       }, 0),
     [resolved],
   )
 
-  const catalogCount = quoteLines.filter((l) => l.productSlug).length
+  const catalogCount = quoteLines.filter(
+    (l) => l.lineKind === 'combo' || l.productSlug,
+  ).length
+
+  function clearField(key: FieldKey) {
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
+  }
 
   function updateLine(id: string, patch: Partial<QuoteLine>) {
     setQuoteLines((prev) =>
@@ -157,16 +244,25 @@ export function QuoteRequestPage() {
 
   function addProduct(product: Product) {
     setQuoteLines((prev) => {
-      const existing = prev.find((l) => l.productSlug === product.slug)
+      const existing = prev.find(
+        (l) =>
+          l.lineKind !== 'combo' && l.productSlug === product.slug,
+      )
       if (existing) {
         return prev.map((l) =>
           l.id === existing.id ? { ...l, quantity: l.quantity + 1 } : l,
         )
       }
-      const empty = prev.find((l) => !l.productSlug)
+      const empty = prev.find((l) => !l.productSlug && l.lineKind !== 'combo')
       if (empty) {
         return prev.map((l) =>
-          l.id === empty.id ? { ...l, productSlug: product.slug } : l,
+          l.id === empty.id
+            ? {
+                ...l,
+                productSlug: product.slug,
+                lineKind: 'product',
+              }
+            : l,
         )
       }
       return [
@@ -176,72 +272,44 @@ export function QuoteRequestPage() {
           productSlug: product.slug,
           presentation: 'und',
           quantity: 1,
+          lineKind: 'product',
         },
       ]
     })
-    setTab('catalog')
   }
 
   function pushToCart() {
-    const next = quoteLines
-      .filter((l) => l.productSlug)
-      .map((l) => ({
-        productSlug: l.productSlug as string,
+    const next: CartLine[] = []
+    for (const l of quoteLines) {
+      if (l.lineKind === 'combo' && l.comboId) {
+        next.push({
+          lineKind: 'combo',
+          productSlug: l.productSlug || l.comboId,
+          quantity: Math.max(1, l.quantity),
+          unitPrice: l.unitPrice,
+          comboId: l.comboId,
+          comboName: l.comboName,
+          comboSku: l.comboSku,
+          comboImageUrl: l.comboImageUrl,
+          comboItems: l.comboItems,
+          comboSnapshot: l.comboSnapshot,
+        })
+        continue
+      }
+      if (!l.productSlug) continue
+      next.push({
+        lineKind: 'product',
+        productSlug: l.productSlug,
         quantity: Math.max(1, l.quantity),
-      }))
-    // Fusionar cantidades por slug
-    const merged = new Map<string, number>()
-    for (const line of next) {
-      merged.set(
-        line.productSlug,
-        (merged.get(line.productSlug) ?? 0) + line.quantity,
-      )
+        unitPrice: l.unitPrice,
+      })
     }
-    replaceAll(
-      [...merged.entries()].map(([productSlug, quantity]) => ({
-        productSlug,
-        quantity,
-      })),
-    )
+    replaceAll(next)
     navigate('/carrito')
   }
 
-  function buildWhatsAppUrl() {
-    const itemLines =
-      tab === 'free' && freeText.trim()
-        ? freeText.trim()
-        : resolved
-            .filter((l) => l.product)
-            .map((l) => {
-              const pres =
-                PRESENTATIONS.find((p) => p.id === l.presentation)?.label ??
-                'UND'
-              return `• ${l.product!.name} — ${l.quantity} × ${pres}`
-            })
-            .join('\n')
-
-    const msg = [
-      'Hola Rosver, quiero cotizar:',
-      '',
-      `Empresa: ${business.name || '—'}`,
-      `RUC/DNI: ${business.document || '—'}`,
-      `Tel/WhatsApp: ${business.phone || '—'}`,
-      `Ciudad/agencia: ${business.city || '—'}`,
-      '',
-      'Productos:',
-      itemLines || '(sin ítems)',
-      '',
-      total > 0 ? `Total estimado: S/ ${total.toFixed(2)}` : null,
-      `TC ref.: ${TC_REFERENCIAL.toFixed(2)}`,
-    ]
-      .filter(Boolean)
-      .join('\n')
-
-    return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`
-  }
-
-  function handleSendWhatsApp() {
-    const next: Partial<Record<'name' | 'phone' | 'items', string>> = {}
+  function validate(): Partial<Record<FieldKey, string>> {
+    const next: Partial<Record<FieldKey, string>> = {}
     if (!business.name.trim()) {
       next.name = 'Indica el nombre o razón social.'
     }
@@ -250,22 +318,158 @@ export function QuoteRequestPage() {
     } else if (!isValidPhone(business.phone)) {
       next.phone = 'Ingresa un número válido (mínimo 9 dígitos).'
     }
-    const hasCatalog = catalogCount > 0
-    const hasFree = tab === 'free' && freeText.trim().length > 0
-    if (!hasCatalog && !hasFree) {
-      next.items =
-        tab === 'free'
-          ? 'Pega o escribe al menos un producto en la lista libre.'
-          : 'Agrega al menos un producto del catálogo (o usa lista libre).'
+    if (
+      !business.ship.departmentCode ||
+      !business.ship.provinceCode ||
+      !business.ship.districtCode
+    ) {
+      next.shipUbigeo = 'Elige departamento, provincia y distrito de entrega.'
     }
+    if (!business.shipAddress.trim() || business.shipAddress.trim().length < 5) {
+      next.shipAddress = 'Escribe la dirección completa (mín. 5 caracteres).'
+    }
+    if (!business.agencyName.trim()) {
+      next.agencyName = 'Indica el nombre de la agencia de transporte.'
+    }
+    if (catalogCount === 0) {
+      next.items = 'Agrega al menos un producto del catálogo.'
+    }
+    return next
+  }
+
+  async function handleSendWhatsApp() {
+    const next = validate()
     setFieldErrors(next)
     if (Object.keys(next).length > 0) {
-      showErrors(next, ['name', 'phone', 'items'])
+      showErrors(next, [
+        'name',
+        'phone',
+        'shipUbigeo',
+        'shipAddress',
+        'agencyName',
+        'items',
+      ])
       return
     }
     clear()
-    window.open(buildWhatsAppUrl(), '_blank', 'noopener,noreferrer')
-    setStatus('sent')
+    setSubmitBusy(true)
+    try {
+      const items = resolved
+        .filter((l) => l.lineKind === 'combo' || l.product)
+        .map((l) => {
+          if (l.lineKind === 'combo') {
+            return {
+              lineKind: 'combo' as const,
+              productSlug: l.productSlug || l.comboId || 'combo',
+              productName: l.comboName || 'Combo',
+              presentation: 'Combo',
+              quantity: l.quantity,
+              unitPrice: l.unitPrice ?? null,
+              comboId: l.comboId,
+              comboSnapshot: l.comboSnapshot,
+            }
+          }
+          return {
+            lineKind: 'product' as const,
+            productSlug: l.product!.slug,
+            productName: l.product!.name,
+            presentation:
+              PRESENTATIONS.find((p) => p.id === l.presentation)?.label ??
+              'UND',
+            quantity: l.quantity,
+            unitPrice: l.unitPrice ?? l.product!.price ?? null,
+          }
+        })
+
+      const data = await api<{
+        id: string
+        code: string
+        shareUrl: string
+        publicSlug: string
+        linkDays: number
+        linkExpiresAt: string
+      }>('/api/quotes', {
+        method: 'POST',
+        body: JSON.stringify({
+          businessName: business.name.trim(),
+          documentNumber: business.document.trim() || null,
+          phone: business.phone.trim(),
+          shipAddress: business.shipAddress.trim(),
+          ship: {
+            departmentCode: business.ship.departmentCode,
+            provinceCode: business.ship.provinceCode,
+            districtCode: business.ship.districtCode,
+          },
+          agencyName: business.agencyName.trim(),
+          items,
+          totalEstimated: total > 0 ? Number(total.toFixed(2)) : null,
+        }),
+      })
+
+      const { buildQuotePdf } = await import('@/features/cart/lib/quote-pdf')
+      const pdf = await buildQuotePdf({
+        customer: {
+          name: business.name.trim(),
+          document: business.document.trim(),
+          phone: business.phone.trim(),
+          city: [
+            business.ship.districtName,
+            business.ship.provinceName,
+            business.ship.departmentName,
+          ]
+            .filter(Boolean)
+            .join(', '),
+        },
+        lines: items.map((it) => ({
+          quantity: it.quantity,
+          unit: it.presentation,
+          description: it.productName,
+          sku: it.productSlug,
+          unitPrice: it.unitPrice ?? null,
+        })),
+        docNumber: data.code,
+        shareUrl: data.shareUrl,
+        kind: 'quote',
+      })
+
+      const buf = await pdf.blob.arrayBuffer()
+      const bytes = new Uint8Array(buf)
+      let binary = ''
+      for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]!)
+      const pdfBase64 = btoa(binary)
+
+      await api(`/api/quotes/${data.id}/pdf`, {
+        method: 'PUT',
+        body: JSON.stringify({ pdfBase64 }),
+      })
+
+      if (sharePdfUrl) URL.revokeObjectURL(sharePdfUrl)
+      const url = URL.createObjectURL(pdf.blob)
+      setSharePdfUrl(url)
+      setShareMeta({
+        code: data.code,
+        shareUrl: data.shareUrl,
+        businessName: business.name.trim(),
+        fileName: pdf.fileName,
+        linkDays: data.linkDays,
+        linkExpiresAt: data.linkExpiresAt,
+      })
+      setShareOpen(true)
+      setStatus('sent')
+      showSuccess([
+        `Cotización ${data.code} guardada.`,
+        `Link temporal ${data.linkDays} días listo.`,
+      ])
+    } catch (err) {
+      showErrors({
+        items:
+          err instanceof ApiError
+            ? err.message
+            : 'No se pudo guardar la cotización. Intenta de nuevo.',
+      })
+    } finally {
+      setSubmitBusy(false)
+    }
   }
 
   return (
@@ -328,10 +532,7 @@ export function QuoteRequestPage() {
               value={business.name}
               onChange={(e) => {
                 setBusiness((b) => ({ ...b, name: e.target.value }))
-                setFieldErrors((prev) => {
-                  const { name: _, ...rest } = prev
-                  return rest
-                })
+                clearField('name')
               }}
               placeholder="Tu empresa"
               className={cnField(inputClass, Boolean(fieldErrors.name))}
@@ -357,10 +558,7 @@ export function QuoteRequestPage() {
               value={business.phone}
               onChange={(e) => {
                 setBusiness((b) => ({ ...b, phone: e.target.value }))
-                setFieldErrors((prev) => {
-                  const { phone: _, ...rest } = prev
-                  return rest
-                })
+                clearField('phone')
               }}
               placeholder="+51 999 999 999"
               className={cnField(inputClass, Boolean(fieldErrors.phone))}
@@ -368,15 +566,41 @@ export function QuoteRequestPage() {
               aria-invalid={Boolean(fieldErrors.phone)}
             />
           </Field>
-          <Field label="Ciudad o agencia de transporte" htmlFor="q-city">
+        </div>
+
+        <div className="mt-6 border-t border-rosver-line pt-5">
+          <PeruAddressSuggest
+            id="q-ship-address"
+            address={business.shipAddress}
+            ubigeo={business.ship}
+            invalidAddress={Boolean(fieldErrors.shipAddress)}
+            invalidUbigeo={Boolean(fieldErrors.shipUbigeo)}
+            onAddressChange={(shipAddress) => {
+              setBusiness((b) => ({ ...b, shipAddress }))
+              clearField('shipAddress')
+            }}
+            onUbigeoChange={(ship) => {
+              setBusiness((b) => ({ ...b, ship }))
+              clearField('shipUbigeo')
+            }}
+          />
+        </div>
+
+        <div className="mt-6 border-t border-rosver-line pt-5">
+          <Field label="Agencia de transporte *" htmlFor="q-agency-name">
             <input
-              id="q-city"
-              value={business.city}
-              onChange={(e) =>
-                setBusiness((b) => ({ ...b, city: e.target.value }))
-              }
-              placeholder="Lima / agencia…"
-              className={inputClass}
+              id="q-agency-name"
+              value={business.agencyName}
+              onChange={(e) => {
+                setBusiness((b) => ({ ...b, agencyName: e.target.value }))
+                clearField('agencyName')
+              }}
+              placeholder="Ej. Shalom, Marvisur, Olva…"
+              className={cnField(
+                inputClass,
+                Boolean(fieldErrors.agencyName),
+              )}
+              aria-invalid={Boolean(fieldErrors.agencyName)}
             />
           </Field>
         </div>
@@ -384,140 +608,134 @@ export function QuoteRequestPage() {
 
       {/* Productos */}
       <section className="rounded-2xl border border-rosver-line bg-white shadow-[0_12px_32px_-24px_rgba(17,17,17,0.4)]">
-        <div
-          className="flex flex-col border-b border-rosver-line sm:flex-row"
-          role="tablist"
-          aria-label="Modo de productos"
-        >
-          <TabButton
-            active={tab === 'catalog'}
-            onClick={() => setTab('catalog')}
-          >
-            Seleccionar productos del catálogo
+        <div className="border-b border-rosver-line px-4 py-3.5 sm:px-5">
+          <h2 className="font-display text-sm font-bold tracking-wide text-rosver-ink uppercase sm:text-base">
+            Productos del catálogo
             {catalogCount > 0 ? ` (${catalogCount})` : ''}
-          </TabButton>
-          <TabButton active={tab === 'free'} onClick={() => setTab('free')}>
-            Pegar lista escrita / libre
-          </TabButton>
+          </h2>
         </div>
 
         <div className="p-4 sm:p-5">
-          {tab === 'catalog' ? (
-            <div className="flex flex-col gap-3">
-              {itemCount > 0 && catalogCount > 0 ? (
-                <p className="rounded-xl bg-rosver-soft/80 px-3 py-2 text-xs font-medium text-rosver-muted">
-                  Trajimos {catalogCount} ítem
-                  {catalogCount === 1 ? '' : 's'} de tu carrito. Puedes editar,
-                  quitar o agregar más.
+          <div className="flex flex-col gap-3">
+            {itemCount > 0 && catalogCount > 0 ? (
+              <p className="rounded-xl bg-rosver-soft/80 px-3 py-2 text-xs font-medium text-rosver-muted">
+                Trajimos {catalogCount} ítem
+                {catalogCount === 1 ? '' : 's'} de tu carrito. Puedes editar,
+                quitar o agregar más.
+              </p>
+            ) : null}
+
+            <ProductSearcher onPick={addProduct} />
+
+            {quoteLines.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-rosver-line px-4 py-8 text-center">
+                <p className="text-sm font-semibold text-rosver-ink">
+                  Carrito vacío
                 </p>
-              ) : null}
-
-              <ProductSearcher onPick={addProduct} />
-
-              {quoteLines.length === 0 ? (
-                <div className="rounded-xl border border-dashed border-rosver-line px-4 py-8 text-center">
-                  <p className="text-sm font-semibold text-rosver-ink">
-                    Carrito vacío
-                  </p>
-                  <p className="mt-1 text-sm text-rosver-muted">
-                    Busca arriba y agrega productos a tu cotización.
-                  </p>
-                </div>
-              ) : (
-                <ul className="flex flex-col gap-2">
-                  {resolved.map((line) => (
-                    <li
-                      key={line.id}
-                      className="flex flex-col gap-2 rounded-xl border border-rosver-line bg-rosver-soft/30 p-3 sm:flex-row sm:items-center"
-                    >
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-rosver-ink">
-                          {line.product
+                <p className="mt-1 text-sm text-rosver-muted">
+                  Busca arriba y agrega productos a tu cotización.
+                </p>
+              </div>
+            ) : (
+              <ul className="flex flex-col gap-2">
+                {resolved.map((line) => (
+                  <li
+                    key={line.id}
+                    className="flex flex-col gap-2 rounded-xl border border-rosver-line bg-rosver-soft/30 p-3 sm:flex-row sm:items-center"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-rosver-ink">
+                        {line.lineKind === 'combo'
+                          ? `Combo · ${line.comboName || 'Pack'}`
+                          : line.product
                             ? `[ROSVER] ${line.product.name}`
                             : 'Producto sin seleccionar'}
+                      </p>
+                      {line.lineKind === 'combo' ? (
+                        <p className="text-xs text-rosver-muted">
+                          {line.unitPrice != null
+                            ? `S/ ${line.unitPrice.toFixed(2)} c/u · pack`
+                            : 'Consultar'}
+                          {line.comboItems?.length
+                            ? ` · ${line.comboItems.map((n) => `${n.quantity}× ${n.productName}`).join(', ')}`
+                            : ''}
                         </p>
-                        {line.product?.price != null ? (
-                          <p className="text-xs text-rosver-muted">
-                            S/ {line.product.price.toFixed(2)} c/u
-                          </p>
-                        ) : line.product ? (
-                          <p className="text-xs text-rosver-muted">Consultar</p>
-                        ) : null}
-                      </div>
+                      ) : line.product?.price != null ||
+                        line.unitPrice != null ? (
+                        <p className="text-xs text-rosver-muted">
+                          S/{' '}
+                          {(
+                            line.unitPrice ??
+                            line.product?.price ??
+                            0
+                          ).toFixed(2)}{' '}
+                          c/u
+                        </p>
+                      ) : line.product ? (
+                        <p className="text-xs text-rosver-muted">Consultar</p>
+                      ) : null}
+                    </div>
 
-                      <label className="sr-only" htmlFor={`pres-${line.id}`}>
-                        Presentación
-                      </label>
-                      <select
-                        id={`pres-${line.id}`}
-                        value={line.presentation}
-                        onChange={(e) =>
-                          updateLine(line.id, {
-                            presentation: e.target.value as PresentationId,
-                          })
-                        }
-                        className="min-h-10 rounded-lg border border-rosver-line bg-white px-2 text-xs font-semibold text-rosver-ink sm:max-w-[9.5rem]"
-                      >
-                        {PRESENTATIONS.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.label}
-                          </option>
-                        ))}
-                      </select>
+                    {line.lineKind === 'combo' ? (
+                      <span className="rounded-lg bg-rosver-yellow px-2 py-1 text-[10px] font-black text-rosver-ink uppercase sm:min-w-[10.5rem] sm:text-center">
+                        Combo
+                      </span>
+                    ) : (
+                      <>
+                        <label className="sr-only" htmlFor={`pres-${line.id}`}>
+                          Presentación
+                        </label>
+                        <SelectCombobox
+                          id={`pres-${line.id}`}
+                          size="sm"
+                          className="sm:min-w-[10.5rem] sm:max-w-[12rem]"
+                          value={line.presentation}
+                          options={PRESENTATIONS.map((p) => ({
+                            value: p.id,
+                            label: p.label,
+                          }))}
+                          onValueChange={(v) =>
+                            updateLine(line.id, {
+                              presentation: v as PresentationId,
+                            })
+                          }
+                          aria-label="Presentación"
+                        />
+                      </>
+                    )}
 
-                      <label className="sr-only" htmlFor={`qty-${line.id}`}>
-                        Cantidad
-                      </label>
-                      <input
-                        id={`qty-${line.id}`}
-                        type="number"
-                        min={1}
-                        value={line.quantity}
-                        onChange={(e) =>
-                          updateLine(line.id, {
-                            quantity: Math.max(
-                              1,
-                              Number.parseInt(e.target.value, 10) || 1,
-                            ),
-                          })
-                        }
-                        className="min-h-10 w-20 rounded-lg border border-rosver-line bg-white px-2 text-center text-sm font-semibold text-rosver-ink"
-                      />
+                    <label className="sr-only" htmlFor={`qty-${line.id}`}>
+                      Cantidad
+                    </label>
+                    <input
+                      id={`qty-${line.id}`}
+                      type="number"
+                      min={1}
+                      value={line.quantity}
+                      onChange={(e) =>
+                        updateLine(line.id, {
+                          quantity: Math.max(
+                            1,
+                            Number.parseInt(e.target.value, 10) || 1,
+                          ),
+                        })
+                      }
+                      className="min-h-10 w-20 rounded-lg border border-rosver-line bg-white px-2 text-center text-sm font-semibold text-rosver-ink"
+                    />
 
-                      <button
-                        type="button"
-                        onClick={() => removeLine(line.id)}
-                        className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg text-rosver-muted transition hover:bg-white hover:text-rosver-red"
-                        aria-label="Quitar producto"
-                      >
-                        <Trash size={18} color="currentColor" strokeWidth={2} />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ) : (
-            <div className="flex flex-col gap-2">
-              <label htmlFor="q-free" className="text-sm font-bold text-rosver-ink">
-                Lista libre
-              </label>
-              <textarea
-                id="q-free"
-                rows={6}
-                value={freeText}
-                onChange={(e) => setFreeText(e.target.value)}
-                placeholder={
-                  'Ej.:\n10 taladros 20V\n5 cajas tornillos M8\nReflector LED 50W × 20'
-                }
-                className={`${inputClass} min-h-36 resize-y`}
-              />
-              <p className="text-xs text-rosver-muted">
-                Comercial interpretará cantidades y presentaciones. El total
-                estimado solo aplica a productos del catálogo.
-              </p>
-            </div>
-          )}
+                    <button
+                      type="button"
+                      onClick={() => removeLine(line.id)}
+                      className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg text-rosver-muted transition hover:bg-white hover:text-rosver-red"
+                      aria-label="Quitar producto"
+                    >
+                      <Trash size={18} color="currentColor" strokeWidth={2} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
 
         {/* Total */}
@@ -541,11 +759,12 @@ export function QuoteRequestPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <button
           type="button"
-          onClick={handleSendWhatsApp}
-          className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full bg-[#25D366] px-5 py-3 text-sm font-bold tracking-wide text-white uppercase transition hover:bg-[#20bd5a]"
+          onClick={() => void handleSendWhatsApp()}
+          disabled={submitBusy}
+          className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-full bg-[#25D366] px-5 py-3 text-sm font-bold tracking-wide text-white uppercase transition hover:bg-[#20bd5a] disabled:opacity-60"
         >
           <IconWhatsApp className="size-5" />
-          Enviar cotización a WhatsApp
+          {submitBusy ? 'Preparando PDF…' : 'Enviar cotización a WhatsApp'}
         </button>
         <button
           type="button"
@@ -596,6 +815,19 @@ export function QuoteRequestPage() {
           <ArrowRight size={14} color="#ffffff" strokeWidth={2} />
         </Link>
       </div>
+
+      <QuoteShareModal
+        open={shareOpen && Boolean(shareMeta)}
+        onClose={() => setShareOpen(false)}
+        pdfBlobUrl={sharePdfUrl}
+        fileName={shareMeta?.fileName ?? 'cotizacion.pdf'}
+        code={shareMeta?.code ?? ''}
+        shareUrl={shareMeta?.shareUrl ?? ''}
+        businessName={shareMeta?.businessName ?? ''}
+        linkDays={shareMeta?.linkDays ?? 15}
+        linkExpiresAt={shareMeta?.linkExpiresAt}
+        kind="quote"
+      />
     </main>
   )
 }
@@ -603,48 +835,26 @@ export function QuoteRequestPage() {
 const inputClass =
   'min-h-11 w-full rounded-xl border border-rosver-line bg-rosver-soft/40 px-3.5 py-2.5 text-sm text-rosver-ink outline-none transition focus:border-rosver-red/45 focus:bg-white'
 
-function TabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean
-  onClick: () => void
-  children: ReactNode
-}) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={active}
-      onClick={onClick}
-      className={`min-h-12 flex-1 px-4 py-3 text-left text-xs font-bold tracking-wide uppercase transition sm:text-center sm:text-[13px] ${
-        active
-          ? 'border-b-[3px] border-rosver-red text-rosver-red'
-          : 'border-b-[3px] border-transparent text-rosver-muted hover:text-rosver-ink'
-      }`}
-    >
-      {children}
-    </button>
-  )
-}
-
 function ProductSearcher({ onPick }: { onPick: (p: Product) => void }) {
   const listId = useId()
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<HTMLUListElement>(null)
+  const { products } = useCatalog()
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (q.length < 1) return PRODUCTS.slice(0, 6)
-    return PRODUCTS.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.sku.toLowerCase().includes(q) ||
-        p.vendor.toLowerCase().includes(q),
-    ).slice(0, 8)
-  }, [query])
+    if (q.length < 1) return products.slice(0, 6)
+    return products
+      .filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.sku.toLowerCase().includes(q) ||
+          (p.vendor?.toLowerCase().includes(q) ?? false),
+      )
+      .slice(0, 8)
+  }, [query, products])
 
   useEffect(() => {
     function onDoc(e: MouseEvent) {
@@ -653,6 +863,13 @@ function ProductSearcher({ onPick }: { onPick: (p: Product) => void }) {
     document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
   }, [])
+
+  useEffect(() => {
+    if (!open) return
+    const el = listRef.current
+    if (!el) return
+    return attachNestedScrollWheel(el)
+  }, [open, results.length])
 
   return (
     <div ref={wrapRef} className="relative">
@@ -678,7 +895,11 @@ function ProductSearcher({ onPick }: { onPick: (p: Product) => void }) {
         />
       </div>
       {open ? (
-        <ul className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-rosver-line bg-white py-1 shadow-[0_16px_40px_-20px_rgba(17,17,17,0.35)]">
+        <ul
+          ref={listRef}
+          data-lenis-prevent
+          className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto overscroll-contain rounded-xl border border-rosver-line bg-white py-1 shadow-[0_16px_40px_-20px_rgba(17,17,17,0.35)]"
+        >
           {results.length === 0 ? (
             <li className="px-3 py-3 text-sm text-rosver-muted">
               Sin coincidencias

@@ -1,8 +1,7 @@
 import { useAuth } from '@/features/auth'
-import { isValidEmail } from '@/shared/lib'
+import { isValidEmail, cnField, normalizeOtpCode } from '@/shared/lib'
 import { ApiError } from '@/shared/lib/api'
 import { cn } from '@/shared/lib/cn'
-import { cnField } from '@/shared/lib'
 import {
   PASSWORD_RULES,
   PASSWORD_STRENGTH_UI,
@@ -12,35 +11,52 @@ import {
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { FloatingToasts } from '@/shared/ui/floating-toasts'
 import { Check } from 'cssvg-icons'
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
-type Step = 'email' | 'reset'
-type FieldKey = 'email' | 'code' | 'password' | 'passwordConfirm'
+type Step = 'email' | 'totp' | 'reset'
+type FieldKey = 'email' | 'code' | 'totp' | 'password' | 'passwordConfirm'
 type FieldErrors = Partial<Record<FieldKey, string>>
 
 const pillInputClass =
   'min-h-12 w-full rounded-full border bg-rosver-soft px-5 text-sm text-rosver-ink outline-none transition placeholder:text-rosver-muted focus:bg-white border-transparent focus:ring-2 focus:ring-rosver-red/20'
 
 /**
- * Recuperación de contraseña: pide correo → envía OTP (purpose reset_password)
- * → confirma código + contraseña nueva. Al reponer, revoca sesiones viejas
- * en el servidor y deja al usuario logueado (mismo patrón que verify-email).
+ * Recuperación: si hay autenticador → TOTP primero → OTP correo → nueva clave.
+ * Sin autenticador → OTP correo directo. Errores vía toasts; reenvío 30s / máx 3.
  */
 export function ResetPasswordPage() {
   const navigate = useNavigate()
-  const { resendOtp, resetPassword } = useAuth()
-  const { toasts, showErrors, dismiss, clear } = useFormToasts()
+  const {
+    resendOtp,
+    resetPassword,
+    resetPasswordStart,
+    resetPasswordTotp,
+  } = useAuth()
+  const { toasts, showErrors, showSuccess, showWarning, dismiss, clear } =
+    useFormToasts()
 
   const [step, setStep] = useState<Step>('email')
   const [email, setEmail] = useState('')
+  const [challengeToken, setChallengeToken] = useState<string | null>(null)
+  const [totpCode, setTotpCode] = useState('')
   const [code, setCode] = useState('')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [errors, setErrors] = useState<FieldErrors>({})
   const [busy, setBusy] = useState(false)
+  const [cooldown, setCooldown] = useState(0)
+  const [resendBusy, setResendBusy] = useState(false)
 
   const passwordStrength = getPasswordStrength(password)
+
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const t = setInterval(() => {
+      setCooldown((s) => (s <= 1 ? 0 : s - 1))
+    }, 1000)
+    return () => clearInterval(t)
+  }, [cooldown])
 
   async function handleRequestCode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -51,11 +67,60 @@ export function ResetPasswordPage() {
     clear()
     setBusy(true)
     try {
-      await resendOtp(email.trim(), 'reset_password')
+      const res = await resetPasswordStart(email.trim())
+      setEmail(res.email || email.trim())
+      if (res.requiresTotp && res.challengeToken) {
+        setChallengeToken(res.challengeToken)
+        setStep('totp')
+      } else {
+        setCooldown(res.retryAfterSec ?? 30)
+        if (res.mailDelivered === false) {
+          showWarning([
+            res.message ||
+              'No pudimos enviar el correo ahora. Revisa spam o reenvía en unos segundos.',
+          ])
+        } else if (res.mailDelivered === true) {
+          showSuccess(['Código enviado a tu correo.'])
+        }
+        setStep('reset')
+      }
+    } catch (err) {
+      const msg =
+        err instanceof ApiError ? err.message : 'No se pudo iniciar la recuperación.'
+      showErrors({ email: msg }, ['email'])
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleTotp(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!challengeToken || !totpCode.trim()) {
+      showErrors({ totp: 'Ingresa el código del autenticador.' }, ['totp'])
+      return
+    }
+    clear()
+    setBusy(true)
+    try {
+      const res = await resetPasswordTotp(
+        challengeToken,
+        normalizeOtpCode(totpCode, 8),
+      )
+      setEmail(res.email)
+      setCooldown(res.retryAfterSec ?? 30)
+      if (res.mailDelivered === false) {
+        showWarning([
+          res.message ||
+            'No pudimos enviar el correo ahora. Revisa spam o reenvía en unos segundos.',
+        ])
+      } else {
+        showSuccess([res.message || 'Código enviado a tu correo.'])
+      }
       setStep('reset')
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : 'No se pudo enviar el código.'
-      showErrors({ email: msg }, ['email'])
+      const msg =
+        err instanceof ApiError ? err.message : 'Código del autenticador incorrecto.'
+      showErrors({ totp: msg }, ['totp'])
     } finally {
       setBusy(false)
     }
@@ -80,31 +145,71 @@ export function ResetPasswordPage() {
     clear()
     setBusy(true)
     try {
-      await resetPassword(email.trim(), code.trim(), password)
+      await resetPassword(email.trim(), normalizeOtpCode(code, 6), password)
+      showSuccess(['Contraseña actualizada. Sesión iniciada.'])
       navigate('/cuenta', { replace: true })
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : 'No se pudo restablecer la contraseña.'
+      const msg =
+        err instanceof ApiError
+          ? err.message
+          : 'No se pudo restablecer la contraseña.'
       showErrors({ code: msg }, ['code'])
     } finally {
       setBusy(false)
     }
   }
 
+  async function handleResend() {
+    if (cooldown > 0 || resendBusy) return
+    setResendBusy(true)
+    try {
+      clear()
+      const res = await resendOtp(email, 'reset_password')
+      setCooldown(res.retryAfterSec ?? 30)
+      if (res.mailDelivered) {
+        showSuccess(['Código reenviado a tu correo.'])
+      } else {
+        showWarning([
+          res.message ||
+            'No pudimos enviar el correo ahora. Revisa spam o intenta más tarde.',
+        ])
+      }
+    } catch (err) {
+      const msg =
+        err instanceof ApiError
+          ? err.message
+          : 'No se pudo reenviar.'
+      showErrors({ code: msg }, ['code'])
+      if (err instanceof ApiError && typeof err.payload === 'object' && err.payload) {
+        const p = err.payload as { retryAfterSec?: number }
+        if (p.retryAfterSec) setCooldown(p.retryAfterSec)
+      }
+    } finally {
+      setResendBusy(false)
+    }
+  }
+
   return (
-    <main className="flex min-h-dvh items-center justify-center px-6 py-16">
+    <main className="hide-scrollbar flex h-full min-h-0 items-center justify-center overflow-y-auto overscroll-y-contain px-5 py-10 sm:px-6 sm:py-12">
       <FloatingToasts toasts={toasts} onDismiss={dismiss} />
       <div className="w-full max-w-md">
-        <h1 className="font-display text-3xl font-bold tracking-tight text-rosver-ink sm:text-4xl">
+        <h1 className="font-display text-3xl font-bold tracking-tight text-rosver-ink sm:text-4xl [@media(max-height:700px)]:text-3xl">
           Recuperar contraseña
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-rosver-muted">
           {step === 'email'
-            ? 'Ingresa tu correo y te enviamos un código para restablecer tu contraseña.'
-            : `Te enviamos un código a ${email}. Ingresa el código y tu nueva contraseña.`}
+            ? 'Ingresa tu correo. Si tienes autenticador, te lo pediremos primero; luego un OTP al correo.'
+            : step === 'totp'
+              ? 'Confirma con Google Authenticator o Microsoft Authenticator.'
+              : `Te enviamos un código a ${email}.`}
         </p>
 
         {step === 'email' ? (
-          <form noValidate onSubmit={handleRequestCode} className="mt-8 flex flex-col gap-3.5">
+          <form
+            noValidate
+            onSubmit={handleRequestCode}
+            className="mt-8 flex flex-col gap-3.5"
+          >
             <label className="sr-only" htmlFor="reset-email">
               Correo
             </label>
@@ -126,11 +231,44 @@ export function ResetPasswordPage() {
               disabled={busy}
               className="mt-2 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-rosver-red px-6 text-sm font-bold text-white transition hover:bg-rosver-red-dark disabled:opacity-60"
             >
-              {busy ? 'Enviando…' : 'Enviar código'}
+              {busy ? 'Continuando…' : 'Continuar'}
+            </button>
+          </form>
+        ) : step === 'totp' ? (
+          <form
+            noValidate
+            onSubmit={handleTotp}
+            className="mt-8 flex flex-col gap-3.5"
+          >
+            <input
+              value={totpCode}
+              onChange={(e) => setTotpCode(normalizeOtpCode(e.target.value, 8))}
+              onPaste={(e) => {
+                e.preventDefault()
+                setTotpCode(normalizeOtpCode(e.clipboardData.getData('text'), 8))
+              }}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="Código autenticador"
+              className={cnField(
+                `${pillInputClass} text-center tracking-[0.35em]`,
+                Boolean(errors.totp),
+              )}
+            />
+            <button
+              type="submit"
+              disabled={busy}
+              className="mt-2 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-rosver-red px-6 text-sm font-bold text-white transition hover:bg-rosver-red-dark disabled:opacity-60"
+            >
+              {busy ? 'Validando…' : 'Confirmar autenticador'}
             </button>
           </form>
         ) : (
-          <form noValidate onSubmit={handleReset} className="mt-8 flex flex-col gap-3.5">
+          <form
+            noValidate
+            onSubmit={handleReset}
+            className="mt-8 flex flex-col gap-3.5"
+          >
             <input
               inputMode="numeric"
               autoComplete="one-time-code"
@@ -138,69 +276,63 @@ export function ResetPasswordPage() {
               value={code}
               aria-invalid={Boolean(errors.code)}
               onChange={(e) => {
-                setCode(e.target.value)
+                setCode(normalizeOtpCode(e.target.value, 6))
+                setErrors((prev) => ({ ...prev, code: undefined }))
+              }}
+              onPaste={(e) => {
+                e.preventDefault()
+                setCode(normalizeOtpCode(e.clipboardData.getData('text'), 6))
                 setErrors((prev) => ({ ...prev, code: undefined }))
               }}
               className={cnField(
-                'rounded-lg border border-rosver-line bg-rosver-soft px-3 py-2.5 text-sm tracking-widest outline-none focus:border-rosver-red/50',
+                `${pillInputClass} text-center tracking-[0.35em]`,
                 Boolean(errors.code),
               )}
             />
-            <input
-              type="password"
-              autoComplete="new-password"
-              placeholder="Contraseña nueva"
-              value={password}
-              aria-invalid={Boolean(errors.password)}
-              onChange={(e) => {
-                setPassword(e.target.value)
-                setErrors((prev) => ({ ...prev, password: undefined }))
-              }}
-              className={cnField(pillInputClass, Boolean(errors.password))}
-            />
-            {password ? (
-              <div className="rounded-2xl bg-rosver-soft/80 px-4 py-3">
-                <div className="grid gap-1.5">
-                  {PASSWORD_RULES.map((rule) => {
-                    const ok = rule.test(password)
-                    return (
-                      <div
-                        key={rule.id}
-                        className={cn(
-                          'flex items-center gap-2 text-xs',
-                          ok ? 'text-rosver-success' : 'text-rosver-muted',
-                        )}
-                      >
-                        <span
+            <div>
+              <input
+                type="password"
+                autoComplete="new-password"
+                placeholder="Nueva contraseña"
+                value={password}
+                aria-invalid={Boolean(errors.password)}
+                onChange={(e) => {
+                  setPassword(e.target.value)
+                  setErrors((prev) => ({ ...prev, password: undefined }))
+                }}
+                className={cnField(pillInputClass, Boolean(errors.password))}
+              />
+              {password ? (
+                <>
+                  <ul className="mt-2 space-y-1">
+                    {PASSWORD_RULES.map((rule) => {
+                      const ok = rule.test(password)
+                      return (
+                        <li
+                          key={rule.id}
                           className={cn(
-                            'flex size-4 shrink-0 items-center justify-center rounded-full',
-                            ok ? 'bg-rosver-success/15' : 'bg-rosver-line/70',
+                            'flex items-center gap-1.5 text-xs',
+                            ok ? 'text-rosver-success' : 'text-rosver-muted',
                           )}
-                          aria-hidden
                         >
-                          {ok ? (
-                            <Check size={10} color="currentColor" strokeWidth={3} />
-                          ) : (
-                            <span className="size-1 rounded-full bg-rosver-muted" />
-                          )}
-                        </span>
-                        {rule.label}
-                      </div>
-                    )
-                  })}
-                </div>
-                {passwordStrength ? (
+                          <Check size={14} color="currentColor" strokeWidth={2} />
+                          {rule.label}
+                        </li>
+                      )
+                    })}
+                  </ul>
                   <p
                     className={cn(
                       'mt-2 text-xs font-bold',
-                      PASSWORD_STRENGTH_UI[passwordStrength].text,
+                      PASSWORD_STRENGTH_UI[passwordStrength ?? 'baja'].text,
                     )}
                   >
-                    Seguridad: {PASSWORD_STRENGTH_UI[passwordStrength].label}
+                    Seguridad:{' '}
+                    {PASSWORD_STRENGTH_UI[passwordStrength ?? 'baja'].label}
                   </p>
-                ) : null}
-              </div>
-            ) : null}
+                </>
+              ) : null}
+            </div>
             <input
               type="password"
               autoComplete="new-password"
@@ -222,16 +354,24 @@ export function ResetPasswordPage() {
             </button>
             <button
               type="button"
-              onClick={() => void resendOtp(email, 'reset_password')}
-              className="text-sm font-semibold text-rosver-red"
+              disabled={cooldown > 0 || resendBusy}
+              onClick={() => void handleResend()}
+              className="text-center text-sm font-semibold text-rosver-red disabled:text-rosver-muted disabled:opacity-70"
             >
-              Reenviar código
+              {resendBusy
+                ? 'Enviando…'
+                : cooldown > 0
+                  ? `Reenviar código (${cooldown}s)`
+                  : 'Reenviar código'}
             </button>
           </form>
         )}
 
         <p className="mt-8 text-center text-sm text-rosver-muted">
-          <Link to="/login" className="font-bold text-rosver-red hover:text-rosver-red-dark">
+          <Link
+            to="/login"
+            className="font-bold text-rosver-red hover:text-rosver-red-dark"
+          >
             Volver a ingresar
           </Link>
         </p>

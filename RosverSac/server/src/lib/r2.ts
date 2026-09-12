@@ -18,6 +18,15 @@ export function r2Enabled() {
   )
 }
 
+export function r2PrivateEnabled() {
+  return Boolean(
+    config.r2.endpoint &&
+      config.r2.accessKeyId &&
+      config.r2.secretAccessKey &&
+      config.r2.bucketPrivate,
+  )
+}
+
 function getClient() {
   if (!r2Enabled()) {
     throw new Error('R2 no configurado')
@@ -121,4 +130,31 @@ export async function deletePublicObject(key: string) {
       Key: key,
     }),
   )
+}
+
+/**
+ * Objeto en bucket privado (sin URL pública / CDN).
+ * Solo accesible vía API autenticada si se expone.
+ */
+export async function putPrivateObject(input: {
+  key: string
+  body: Buffer
+  contentType: string
+}) {
+  if (!r2PrivateEnabled()) {
+    throw new Error('R2 privado no configurado (R2_BUCKET_PRIVATE)')
+  }
+  await getClient().send(
+    new PutObjectCommand({
+      Bucket: config.r2.bucketPrivate,
+      Key: input.key,
+      Body: input.body,
+      ContentType: input.contentType,
+      CacheControl: 'private, no-store',
+    }),
+  )
+  return {
+    bucket: config.r2.bucketPrivate,
+    key: input.key,
+  }
 }

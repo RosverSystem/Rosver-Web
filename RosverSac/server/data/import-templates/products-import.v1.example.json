@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "format": "rosver-products-import",
+  "brandName": "ELFA",
+  "products": [
+    {
+      "sku": "ELFA-14M",
+      "name": "CINTA EMBALAJE TRANSPARENTE 14 mts",
+      "brandName": "ELFA",
+      "contentPerBox": 120,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 2,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "docena",
+          "contentQty": 12,
+          "label": "Docena",
+          "listAmount": 8,
+          "wholesaleAmount": 7
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 120,
+          "label": "Caja x120",
+          "listAmount": 65,
+          "wholesaleAmount": 60
+        }
+      ]
+    },
+    {
+      "sku": "ELFA-60M",
+      "name": "CINTA EMBALAJE TRANSPARENTE 60 mts",
+      "brandName": "ELFA",
+      "contentPerBox": 72,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 3,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "docena",
+          "contentQty": 12,
+          "label": "Docena",
+          "listAmount": 18,
+          "wholesaleAmount": 16
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 72,
+          "label": "Caja x72",
+          "listAmount": 80,
+          "wholesaleAmount": 75
+        }
+      ]
+    }
+  ]
+}

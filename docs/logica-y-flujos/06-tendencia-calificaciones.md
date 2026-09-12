@@ -1,8 +1,8 @@
 # Productos en tendencia + calificaciones — lógica 100%
 
-**Estado:** implementado (v0.1.13) · Postgres + Redis · UI tabs + estrellas en card  
-**UI:** `TrendingProducts` + `ProductCard` (rating) · Home  
-**APIs:** `GET /api/catalog/trending?category=` · reviews admin · `PATCH` producto (trending/rating)
+**Estado:** implementado (+ calificaciones públicas / ranking v0.1.44)  
+**UI:** `TrendingProducts` + `ProductCard` (rating) · ficha interactiva · `/ranking`  
+**APIs:** trending · `GET/POST …/products/:slug/rating` · `GET /api/catalog/ranking`
 
 ---
 
@@ -12,17 +12,31 @@ Sección **Top picks → Productos en tendencia**:
 
 1. **Pills de categoría** (solo raíces con productos visibles / en tendencia).
 2. Click en pill → filtra el carrusel a esa categoría.
-3. Cards iguales a Destacados (oferta / destacado / cotizar / precio / mayorista / MOQ) **más estrellas + N reseñas**.
+3. Cards iguales a Destacados **más estrellas + N reseñas**.
+4. Enlace **Ver ranking** → `/ranking` (mejores calificados).
 
 | Elemento | Origen |
 | --- | --- |
-| Tabs | Categorías raíz (`parent_id IS NULL`) que tengan ≥1 producto en el set tendencia |
-| Productos del carrusel | `trending = true` **o** (si ninguno marcado) top por score de calificación |
+| Tabs | Categorías raíz con ≥1 producto en el set tendencia |
+| Productos del carrusel | `trending = true` **o** top por score |
 | Orden | `trending_sort ASC`, luego `rating DESC`, `review_count DESC` |
-| Estrellas | `products.rating` (0–5, agregada) |
-| “(N)” reseñas | `products.review_count` |
+| Estrellas (cards) | `products.rating` (promedio) |
+| “(N)” | `products.review_count` |
 
 Límite por tab: **12**.
+
+### Ficha producto — calificar
+
+- Estrellas **clicables** (1–5).
+- **Sin registro** o **con sesión**: una sola calificación por producto.
+- Invitado: clave `guest_key` en `localStorage` (`rosver_rating_guest_key`).
+- Logueado: vínculo a `user_id` (cookie de sesión).
+- Tras votar: toast éxito; no se puede cambiar ni volver a votar.
+- Promedio y conteo se actualizan al instante.
+
+### Ranking `/ranking`
+
+Lista productos con al menos 1 voto, ordenados por score (mismo que fallback de tendencia).
 
 ---
 
@@ -32,61 +46,42 @@ Límite por tab: **12**.
 
 | Columna | Uso |
 | --- | --- |
-| `trending` | Incluir en «Productos en tendencia» |
-| `trending_sort` | Orden manual en el carrusel (menor = primero) |
-| `rating` | Promedio 0–5 (desnormalizado) |
+| `trending` / `trending_sort` | Carrusel home |
+| `rating` | Promedio 0–5 desnormalizado |
 | `review_count` | Cantidad de reseñas visibles |
 
-### Reseñas `product_reviews`
+### Reseñas `product_reviews` (+ `037`)
 
 | Columna | Uso |
 | --- | --- |
 | `product_id` | FK producto |
-| `user_id` | FK usuario (nullable: reseña importada / admin) |
-| `rating` | 1–5 entero |
-| `title` / `body` | Texto opcional |
+| `user_id` | Usuario logueado (nullable) |
+| `guest_key` | Invitado anónimo (nullable) |
+| `rating` | 1–5 |
+| `title` / `body` | Opcional (voto rápido: vacíos) |
 | `visible` | Soft-hide |
-| `created_at` | Orden |
 
-**Regla de agregación:** al crear/editar/borrar (soft) una reseña visible →
+**Unicidad (037):**
 
-```sql
-UPDATE products SET
-  rating = COALESCE((SELECT ROUND(AVG(rating)::numeric, 2) FROM product_reviews
-                     WHERE product_id = $1 AND visible), 0),
-  review_count = (SELECT COUNT(*) FROM product_reviews
-                  WHERE product_id = $1 AND visible)
-WHERE id = $1;
-```
+- `(product_id, user_id)` donde `user_id IS NOT NULL`
+- `(product_id, guest_key)` donde `guest_key` no vacío
 
-Invalidar caché Redis de trending (+ featured si aplica).
+**Agregación** al crear/editar/borrar reseña visible → `recalculateProductRating` + invalidar cachés home.
 
 ---
 
-## 3. Score de tendencia (fallback automático)
-
-Si **no hay** productos con `trending = true` en una categoría:
+## 3. Score (tendencia fallback + ranking)
 
 ```
-score = rating * LN(review_count + 1)   -- favorece bien valorados con reseñas
-ORDER BY score DESC, updated_at DESC
-LIMIT 12
+score = rating * LN(review_count + 1)
+ORDER BY score DESC, rating DESC, review_count DESC
 ```
-
-Si hay marcados `trending`, **solo** esos (más orden manual).
 
 ---
 
 ## 4. Redis
 
-| Clave | TTL |
-| --- | --- |
-| `rosver:catalog:trending:v1:all` | 90 s |
-| `rosver:catalog:trending:v1:{categorySlug}` | 90 s |
-
-Payload: `{ updatedAt, category, products[], tabs[] }`.
-
-Invalidación: patrón / delete de claves `rosver:catalog:trending:v1:*` (SCAN o lista conocida) al cambiar producto trending/rating/precios/reseñas.
+Igual que antes: claves `rosver:catalog:trending:v1:*` (TTL ~90 s). Invalidación al cambiar rating/reseñas.
 
 ---
 
@@ -94,22 +89,18 @@ Invalidación: patrón / delete de claves `rosver:catalog:trending:v1:*` (SCAN o
 
 | Método | Ruta | Uso |
 | --- | --- | --- |
-| `GET` | `/api/catalog/trending?category=slug` | Lista + tabs (Redis→Postgres) |
-| `GET` | `/api/catalog` | Incluye `trending` (all / meta) |
-| `GET/POST` | `/api/admin/products/:id/reviews` | Listar / crear reseña |
-| `PATCH/DELETE` | `/api/admin/reviews/:id` | Editar visible/rating · soft-delete |
-| `PATCH` | `/api/admin/products/:id` | `trending`, `trendingSort`, `rating`, `reviewCount` (override admin) |
-
-Override admin de `rating`/`reviewCount` permitido cuando aún no hay reseñas reales; si hay reseñas, el promedio de reseñas gana al recalcular.
+| `GET` | `/api/catalog/trending?category=` | Tendencia + tabs |
+| `GET` | `/api/catalog/ranking?limit=` | Mejores calificados |
+| `GET` | `/api/catalog/products/:slug/rating?guestKey=` | Mi voto + promedio |
+| `POST` | `/api/catalog/products/:slug/rating` | Body `{ rating, guestKey? }` → 409 si ya votó |
+| `GET/POST` | `/api/admin/products/:id/reviews` | Admin reseñas |
+| `PATCH/DELETE` | `/api/admin/reviews/:id` | Admin |
 
 ---
 
 ## 6. Admin
 
-En detalle de producto:
-
-- Checkbox **En tendencia (inicio)** + orden.
-- Bloque **Calificación**: estrellas / número + conteo (o listado de reseñas + «Agregar reseña»).
+Calificación agregada en producto; reseñas CRUD admin (texto). La tienda ya no depende de reseñas solo-admin para votar.
 
 ---
 
@@ -117,17 +108,13 @@ En detalle de producto:
 
 | Caso | Comportamiento |
 | --- | --- |
-| Live + trending/rating | Tabs y cards desde DB |
-| Live sin trending | Fallback score por rating |
-| Sin productos DB | Mocks; tabs por categorías con productos mock |
+| Sin votos | Estrellas vacías + «Sé el primero…» |
+| API caído al votar | Toast error; cards siguen con datos del catálogo |
+| Ranking vacío | Empty state + CTA catálogo |
+| Ranking API falla | Fallback: orden local del catálogo cargado |
 
 ---
 
-## 8. Checklist
+## 8. Pendientes relacionados
 
-- [ ] Migración `005` aplicada
-- [ ] Marcar producto «En tendencia» → aparece en tab de su categoría
-- [ ] Agregar reseña → rating/review_count se actualizan y se ven estrellas
-- [ ] Redis hit en `/api/catalog/trending`
-- [ ] Sin Redis sigue Postgres
-- [ ] Móvil / tablet / desktop: pills + carrusel + estrellas legibles
+- P30: reseñas con texto desde `/cuenta` (opcional; el **voto** ya es público).

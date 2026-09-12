@@ -14,11 +14,23 @@ export function SmoothScroll() {
   const shellKey = routeShellKey(pathname)
 
   const isAdmin = pathname === '/admin' || pathname.startsWith('/admin/')
+  const isAuth =
+    pathname === '/login' ||
+    pathname === '/registro' ||
+    pathname === '/recuperar' ||
+    pathname.startsWith('/login/') ||
+    pathname.startsWith('/registro/') ||
+    pathname.startsWith('/recuperar/')
 
   useEffect(() => {
-    if (prefersReducedMotion() || isAdmin) return
+    if (prefersReducedMotion() || isAdmin || isAuth) return
 
-    const lenis = new Lenis({ duration: 1.1, smoothWheel: true })
+    const lenis = new Lenis({
+      duration: 1.1,
+      smoothWheel: true,
+      // Dropdowns/listas: scrollean primero; al límite Lenis mueve la página
+      allowNestedScroll: true,
+    })
     lenisRef.current = lenis
     const onScroll = () => ScrollTrigger.update()
     lenis.on('scroll', onScroll)
@@ -32,16 +44,16 @@ export function SmoothScroll() {
       lenis.destroy()
       lenisRef.current = null
     }
-  }, [isAdmin])
+  }, [isAdmin, isAuth])
 
   useEffect(() => {
-    if (isAdmin) return
+    if (isAdmin || isAuth) return
     if (lenisRef.current) {
       lenisRef.current.scrollTo(0, { immediate: true })
     } else {
       window.scrollTo(0, 0)
     }
-  }, [shellKey, isAdmin])
+  }, [shellKey, isAdmin, isAuth])
 
   return null
 }

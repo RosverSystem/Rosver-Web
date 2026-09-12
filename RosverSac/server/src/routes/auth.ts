@@ -1,8 +1,13 @@
 import { Hono } from 'hono'
+import type { Context } from 'hono'
 import { config } from '../config.js'
 import { pool } from '../db.js'
+import { assertGoogleOAuthState } from '../lib/pricing-security.js'
 import { hashPassword, pickDefaultAvatar, verifyPassword } from '../lib/crypto.js'
-import { issueOtp, verifyOtp } from '../lib/otp.js'
+import { issueOtp, verifyOtp, OTP_RESEND_COOLDOWN_SEC, clearOtpSendHistory } from '../lib/otp.js'
+import {
+  pendingExpiresAt,
+} from '../lib/pending-registrations.js'
 import {
   buildOtpauthUrl,
   generateTotpSecret,
@@ -23,6 +28,7 @@ import {
   otpSchema,
   registerSchema,
   resetPasswordSchema,
+  resetPasswordStartSchema,
 } from '../lib/validation.js'
 import { requireAuth, type AuthVariables } from '../middleware/auth.js'
 import { loginLimiter, requestIp } from '../lib/rate-limit.js'
@@ -43,62 +49,63 @@ authRoutes.post('/register', async (c) => {
   }
   const data = parsed.data
 
-  const existing = await pool.query<{ id: string; email_verified_at: Date | null }>(
-    `SELECT id, email_verified_at FROM users WHERE email = $1`,
+  const existingUser = await pool.query<{ id: string }>(
+    `SELECT id FROM users WHERE lower(email) = $1`,
     [data.email],
   )
-
-  let userId: string
-
-  if (existing.rows[0]) {
-    // Cuenta ya verificada → correo realmente en uso, se bloquea.
-    if (existing.rows[0].email_verified_at) {
-      return c.json({ error: 'Ya existe una cuenta con ese correo.' }, 409)
-    }
-    // Cuenta sin verificar (ej. un intento anterior que no pudo completar
-    // el envío del OTP): se retoma el registro en vez de dejar al usuario
-    // sin poder registrarse ni verificar.
-    userId = existing.rows[0].id
-    const passwordHash = await hashPassword(data.password)
-    await pool.query(
-      `UPDATE users SET password_hash = $2, full_name = $3, phone = $4, updated_at = now()
-       WHERE id = $1`,
-      [userId, passwordHash, data.fullName, data.phone],
-    )
-  } else {
-    const role = await pool.query<{ id: string }>(
-      `SELECT id FROM roles WHERE code = 'client' LIMIT 1`,
-    )
-    if (!role.rows[0]) {
-      return c.json({ error: 'Rol cliente no configurado. Ejecuta el seed.' }, 500)
-    }
-
-    const passwordHash = await hashPassword(data.password)
-    const avatarUrl = pickDefaultAvatar(data.email)
-
-    const inserted = await pool.query<{ id: string }>(
-      `INSERT INTO users (email, password_hash, role_id, full_name, phone, avatar_url)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       RETURNING id`,
-      [
-        data.email,
-        passwordHash,
-        role.rows[0].id,
-        data.fullName,
-        data.phone,
-        avatarUrl,
-      ],
-    )
-    userId = inserted.rows[0].id
+  if (existingUser.rows[0]) {
+    return c.json({ error: 'Ya existe una cuenta con ese correo.' }, 409)
   }
 
-  await issueOtp({ email: data.email, purpose: 'email_verify', userId })
+  const passwordHash = await hashPassword(data.password)
+  const expiresAt = pendingExpiresAt()
+
+  const existingPending = await pool.query<{ id: string }>(
+    `SELECT id FROM pending_registrations WHERE email = $1`,
+    [data.email],
+  )
+  if (existingPending.rows[0]) {
+    await pool.query(
+      `UPDATE pending_registrations
+       SET password_hash = $2, full_name = $3, phone = $4,
+           created_at = now(), expires_at = $5
+       WHERE email = $1`,
+      [data.email, passwordHash, data.fullName, data.phone, expiresAt],
+    )
+  } else {
+    await pool.query(
+      `INSERT INTO pending_registrations (email, password_hash, full_name, phone, expires_at)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [data.email, passwordHash, data.fullName, data.phone, expiresAt],
+    )
+  }
+
+  const issued = await issueOtp({ email: data.email, purpose: 'email_verify' })
+  if (!issued.ok) {
+    return c.json(
+      {
+        ok: true,
+        requiresEmailVerification: true,
+        email: data.email,
+        message: issued.error,
+        mailDelivered: false,
+        retryAfterSec: issued.retryAfterSec ?? OTP_RESEND_COOLDOWN_SEC,
+        sendsLeft: issued.sendsLeft ?? 0,
+      },
+      200,
+    )
+  }
 
   return c.json({
     ok: true,
     requiresEmailVerification: true,
     email: data.email,
-    message: 'Te enviamos un código OTP para verificar tu correo.',
+    message:
+      'Te enviamos un código OTP. Tienes 24 horas para verificar tu correo.',
+    expiresAt: expiresAt.toISOString(),
+    mailDelivered: issued.mail.delivered,
+    retryAfterSec: issued.retryAfterSec,
+    sendsLeft: issued.sendsLeft,
   })
 })
 
@@ -116,28 +123,136 @@ authRoutes.post('/verify-email', async (c) => {
   })
   if (!result.ok) return c.json({ error: result.error }, 400)
 
-  const { rows } = await pool.query<{ id: string }>(
-    `UPDATE users SET email_verified_at = now(), updated_at = now()
-     WHERE email = $1
-     RETURNING id`,
+  const pending = await pool.query<{
+    id: string
+    email: string
+    password_hash: string
+    full_name: string
+    phone: string
+    expires_at: Date
+  }>(
+    `SELECT id, email, password_hash, full_name, phone, expires_at
+     FROM pending_registrations WHERE lower(email) = $1`,
     [parsed.data.email],
   )
-  if (!rows[0]) return c.json({ error: 'Usuario no encontrado.' }, 404)
+  const row = pending.rows[0]
+  if (!row) {
+    return c.json(
+      { error: 'Registro no encontrado o ya expiró. Vuelve a registrarte.' },
+      404,
+    )
+  }
+  if (row.expires_at.getTime() < Date.now()) {
+    await pool.query(`DELETE FROM pending_registrations WHERE id = $1`, [row.id])
+    return c.json(
+      { error: 'El plazo de 24 h venció. Vuelve a registrarte.' },
+      410,
+    )
+  }
 
-  await createSession(c, rows[0].id)
-  const user = await loadUserById(rows[0].id)
+  const role = await pool.query<{ id: string }>(
+    `SELECT id FROM roles WHERE code = 'client' LIMIT 1`,
+  )
+  if (!role.rows[0]) {
+    return c.json({ error: 'Rol cliente no configurado. Ejecuta el seed.' }, 500)
+  }
+
+  const avatarUrl = pickDefaultAvatar(row.email)
+  const inserted = await pool.query<{ id: string }>(
+    `INSERT INTO users (
+       email, password_hash, role_id, full_name, phone, avatar_url, email_verified_at
+     ) VALUES ($1, $2, $3, $4, $5, $6, now())
+     ON CONFLICT (email) DO UPDATE SET
+       password_hash = EXCLUDED.password_hash,
+       full_name = EXCLUDED.full_name,
+       phone = EXCLUDED.phone,
+       email_verified_at = COALESCE(users.email_verified_at, now()),
+       updated_at = now()
+     RETURNING id`,
+    [
+      row.email.toLowerCase(),
+      row.password_hash,
+      role.rows[0].id,
+      row.full_name,
+      row.phone,
+      avatarUrl,
+    ],
+  )
+
+  await pool.query(`DELETE FROM pending_registrations WHERE id = $1`, [row.id])
+
+  await createSession(c, inserted.rows[0].id)
+  const user = await loadUserById(inserted.rows[0].id)
   return c.json({ ok: true, user })
 })
+
+/**
+ * Tras validar identidad (password o passwordless):
+ * - autenticador vinculado → TOTP (sin correo)
+ * - sin autenticador → OTP al correo (purpose login)
+ */
+async function continueVerifiedLogin(
+  c: Context,
+  params: {
+    userId: string
+    email: string
+    totpEnabled: boolean
+    ip: string
+  },
+) {
+  if (params.totpEnabled) {
+    const challengeToken = await createLoginChallenge(params.userId, 'totp')
+    return c.json({
+      ok: false,
+      requiresTotp: true,
+      challengeToken,
+      email: params.email,
+      message: 'Ingresa el código de tu autenticador.',
+    })
+  }
+
+  const issued = await issueOtp({
+    email: params.email,
+    purpose: 'login',
+    userId: params.userId,
+  })
+  if (!issued.ok) {
+    return c.json({
+      ok: false,
+      requiresEmailOtp: true,
+      email: params.email,
+      message: issued.error,
+      mailDelivered: false,
+      retryAfterSec: issued.retryAfterSec ?? 0,
+      sendsLeft: issued.sendsLeft ?? 0,
+    })
+  }
+  return c.json({
+    ok: false,
+    requiresEmailOtp: true,
+    email: params.email,
+    message: 'Te enviamos un código OTP a tu correo.',
+    mailDelivered: issued.mail.delivered,
+    retryAfterSec: issued.retryAfterSec,
+    sendsLeft: issued.sendsLeft,
+  })
+}
 
 authRoutes.post('/login', async (c) => {
   const body = await c.req.json().catch(() => null)
   const parsed = loginSchema.safeParse(body)
   if (!parsed.success) {
-    return c.json({ error: 'Correo o contraseña inválidos.' }, 400)
+    return c.json({ error: 'Correo inválido.' }, 400)
   }
 
+  const email = parsed.data.email
+  const passwordless =
+    Boolean(parsed.data.passwordless) ||
+    !parsed.data.password ||
+    parsed.data.password.length === 0
+
   const ip = requestIp(c.req.raw.headers)
-  const lock = await loginLimiter.check(parsed.data.email, ip)
+  const lock = await loginLimiter.check(email, ip)
   if (lock.locked) {
     return c.json(
       {
@@ -147,76 +262,146 @@ authRoutes.post('/login', async (c) => {
     )
   }
 
+  // 1) Cuenta verificada en users
   const { rows } = await pool.query<{
     id: string
     password_hash: string | null
-    email_verified_at: Date | null
     totp_enabled: boolean
     status: string
-    role_code: string
   }>(
-    `SELECT u.id, u.password_hash, u.email_verified_at, u.totp_enabled, u.status, r.code AS role_code
-     FROM users u JOIN roles r ON r.id = u.role_id
-     WHERE u.email = $1`,
+    `SELECT id, password_hash, totp_enabled, status FROM users WHERE lower(email) = $1`,
+    [email],
+  )
+  const user = rows[0]
+
+  if (user) {
+    if (user.status !== 'active') {
+      await recordLoginAttempt({
+        userId: user.id,
+        email,
+        ip,
+        success: false,
+        reason: 'disabled',
+      })
+      return c.json({ error: 'Cuenta deshabilitada.' }, 403)
+    }
+
+    if (!passwordless) {
+      if (!user.password_hash) {
+        await loginLimiter.recordFailure(email, ip)
+        await recordLoginAttempt({
+          email,
+          ip,
+          success: false,
+          reason: 'bad_credentials',
+        })
+        return c.json({ error: 'Correo o contraseña incorrectos.' }, 401)
+      }
+      const ok = await verifyPassword(user.password_hash, parsed.data.password!)
+      if (!ok) {
+        await loginLimiter.recordFailure(email, ip)
+        await recordLoginAttempt({
+          userId: user.id,
+          email,
+          ip,
+          success: false,
+          reason: 'bad_credentials',
+        })
+        return c.json({ error: 'Correo o contraseña incorrectos.' }, 401)
+      }
+    }
+
+    await loginLimiter.recordSuccess(email, ip)
+    return continueVerifiedLogin(c, {
+      userId: user.id,
+      email,
+      totpEnabled: user.totp_enabled,
+      ip,
+    })
+  }
+
+  // 2) Registro pendiente (no verificado)
+  const pending = await pool.query<{
+    id: string
+    password_hash: string
+    expires_at: Date
+  }>(
+    `SELECT id, password_hash, expires_at FROM pending_registrations WHERE lower(email) = $1`,
+    [email],
+  )
+  const pend = pending.rows[0]
+  if (!pend) {
+    await loginLimiter.recordFailure(email, ip)
+    await recordLoginAttempt({ email, ip, success: false, reason: 'bad_credentials' })
+    return c.json({ error: 'Correo o contraseña incorrectos.' }, 401)
+  }
+  if (pend.expires_at.getTime() < Date.now()) {
+    await pool.query(`DELETE FROM pending_registrations WHERE id = $1`, [pend.id])
+    return c.json(
+      { error: 'Tu registro expiró (24 h). Vuelve a crear la cuenta.' },
+      410,
+    )
+  }
+
+  if (!passwordless) {
+    const ok = await verifyPassword(pend.password_hash, parsed.data.password!)
+    if (!ok) {
+      await loginLimiter.recordFailure(email, ip)
+      await recordLoginAttempt({
+        email,
+        ip,
+        success: false,
+        reason: 'bad_credentials',
+      })
+      return c.json({ error: 'Correo o contraseña incorrectos.' }, 401)
+    }
+  }
+
+  await loginLimiter.recordSuccess(email, ip)
+  const issued = await issueOtp({ email, purpose: 'email_verify' })
+  return c.json({
+    ok: false,
+    requiresEmailVerification: true,
+    email,
+    message:
+      'Debes verificar tu correo con el código OTP. Sin verificación la cuenta se elimina a las 24 h.',
+    mailDelivered: issued.ok ? issued.mail.delivered : false,
+    retryAfterSec: issued.ok
+      ? issued.retryAfterSec
+      : (issued.retryAfterSec ?? 0),
+    sendsLeft: issued.ok ? issued.sendsLeft : (issued.sendsLeft ?? 0),
+  })
+})
+
+authRoutes.post('/login/otp', async (c) => {
+  const body = await c.req.json().catch(() => null)
+  const parsed = otpSchema.safeParse(body)
+  if (!parsed.success) return c.json({ error: 'Datos inválidos.' }, 400)
+
+  const result = await verifyOtp({
+    email: parsed.data.email,
+    purpose: 'login',
+    code: parsed.data.code,
+  })
+  if (!result.ok) return c.json({ error: result.error }, 400)
+
+  const { rows } = await pool.query<{ id: string; status: string }>(
+    `SELECT id, status FROM users WHERE lower(email) = $1`,
     [parsed.data.email],
   )
-
   const row = rows[0]
-  if (!row?.password_hash) {
-    await loginLimiter.recordFailure(parsed.data.email, ip)
-    await recordLoginAttempt({ email: parsed.data.email, ip, success: false, reason: 'bad_credentials' })
-    return c.json({ error: 'Correo o contraseña incorrectos.' }, 401)
-  }
-  const ok = await verifyPassword(row.password_hash, parsed.data.password)
-  if (!ok) {
-    await loginLimiter.recordFailure(parsed.data.email, ip)
-    await recordLoginAttempt({
-      userId: row.id,
-      email: parsed.data.email,
-      ip,
-      success: false,
-      reason: 'bad_credentials',
-    })
-    return c.json({ error: 'Correo o contraseña incorrectos.' }, 401)
-  }
-  await loginLimiter.recordSuccess(parsed.data.email, ip)
-  if (row.status !== 'active') {
-    await recordLoginAttempt({
-      userId: row.id,
-      email: parsed.data.email,
-      ip,
-      success: false,
-      reason: 'disabled',
-    })
-    return c.json({ error: 'Cuenta deshabilitada.' }, 403)
+  if (!row || row.status !== 'active') {
+    return c.json({ error: 'Usuario no encontrado.' }, 404)
   }
 
-  if (!row.email_verified_at) {
-    await issueOtp({
-      email: parsed.data.email,
-      purpose: 'email_verify',
-      userId: row.id,
-    })
-    return c.json({
-      ok: false,
-      requiresEmailVerification: true,
-      email: parsed.data.email,
-      message: 'Verifica tu correo con el código OTP enviado.',
-    })
-  }
-
-  if (row.totp_enabled) {
-    const challengeToken = await createLoginChallenge(row.id, 'totp')
-    return c.json({
-      ok: false,
-      requiresTotp: true,
-      challengeToken,
-      message: 'Ingresa el código de tu autenticador.',
-    })
-  }
-
+  const ip = requestIp(c.req.raw.headers)
   await createSession(c, row.id)
-  await recordLoginAttempt({ userId: row.id, email: parsed.data.email, ip, success: true })
+  await recordLoginAttempt({
+    userId: row.id,
+    email: parsed.data.email,
+    ip,
+    success: true,
+  })
   const user = await loadUserById(row.id)
   return c.json({ ok: true, user })
 })
@@ -243,12 +428,19 @@ authRoutes.post('/login/totp', async (c) => {
   if (!u?.totp_enabled || !u.totp_secret) {
     return c.json({ error: '2FA no está activo.' }, 400)
   }
-  if (!verifyTotpCode(u.totp_secret, body.data.code)) {
-    await recordLoginAttempt({ userId, email: u.email, ip, success: false, reason: 'bad_totp' })
+  if (!(await verifyTotpCode(u.totp_secret, body.data.code))) {
+    await recordLoginAttempt({
+      userId,
+      email: u.email,
+      ip,
+      success: false,
+      reason: 'bad_totp',
+    })
     return c.json({ error: 'Código del autenticador incorrecto.' }, 401)
   }
 
   await createSession(c, userId)
+  await clearOtpSendHistory(u.email, 'login')
   await recordLoginAttempt({ userId, email: u.email, ip, success: true })
   const user = await loadUserById(userId)
   return c.json({ ok: true, user })
@@ -274,18 +466,178 @@ authRoutes.post('/otp/resend', async (c) => {
     .safeParse(await c.req.json().catch(() => null))
   if (!body.success) return c.json({ error: 'Datos inválidos.' }, 400)
 
+  const email = body.data.email
+  const purpose = body.data.purpose
+
+  if (purpose === 'email_verify') {
+    const pend = await pool.query(
+      `SELECT id FROM pending_registrations WHERE lower(email) = $1 AND expires_at > now()`,
+      [email],
+    )
+    if (!pend.rows[0]) {
+      return c.json({
+        ok: true,
+        message: 'Si el correo existe, enviamos un nuevo código.',
+      })
+    }
+  } else {
+    const u = await pool.query(
+      `SELECT id FROM users WHERE lower(email) = $1`,
+      [email],
+    )
+    if (!u.rows[0]) {
+      return c.json({
+        ok: true,
+        message: 'Si el correo existe, enviamos un nuevo código.',
+      })
+    }
+  }
+
   const { rows } = await pool.query<{ id: string }>(
-    `SELECT id FROM users WHERE email = $1`,
-    [body.data.email],
+    `SELECT id FROM users WHERE lower(email) = $1`,
+    [email],
   )
-  await issueOtp({
-    email: body.data.email,
-    purpose: body.data.purpose,
+  const issued = await issueOtp({
+    email,
+    purpose,
     userId: rows[0]?.id,
   })
+  if (!issued.ok) {
+    return c.json(
+      {
+        ok: false,
+        error: issued.error,
+        retryAfterSec: issued.retryAfterSec ?? 0,
+        sendsLeft: issued.sendsLeft ?? 0,
+      },
+      429,
+    )
+  }
   return c.json({
     ok: true,
-    message: 'Si el correo existe, enviamos un nuevo código.',
+    message: issued.mail.delivered
+      ? 'Te enviamos un nuevo código.'
+      : 'No pudimos enviar el correo ahora. Revisa spam o intenta más tarde.',
+    mailDelivered: issued.mail.delivered,
+    retryAfterSec: issued.retryAfterSec,
+    sendsLeft: issued.sendsLeft,
+  })
+})
+
+/** Paso 1 recuperación: si hay autenticador → TOTP primero; si no → OTP correo. */
+authRoutes.post('/reset-password/start', async (c) => {
+  const body = await c.req.json().catch(() => null)
+  const parsed = resetPasswordStartSchema.safeParse(body)
+  if (!parsed.success) return c.json({ error: 'Correo inválido.' }, 400)
+
+  const email = parsed.data.email
+  const { rows } = await pool.query<{
+    id: string
+    totp_enabled: boolean
+    status: string
+  }>(
+    `SELECT id, totp_enabled, status FROM users WHERE lower(email) = $1`,
+    [email],
+  )
+  const row = rows[0]
+  // Respuesta genérica si no existe
+  if (!row || row.status !== 'active') {
+    return c.json({
+      ok: true,
+      requiresEmailOtp: true,
+      email,
+      message: 'Si el correo existe, enviamos un código OTP.',
+    })
+  }
+
+  if (row.totp_enabled) {
+    const challengeToken = await createLoginChallenge(row.id, 'reset_totp')
+    return c.json({
+      ok: true,
+      requiresTotp: true,
+      challengeToken,
+      email,
+      message: 'Confirma con el código de tu autenticador.',
+    })
+  }
+
+  const issued = await issueOtp({ email, purpose: 'reset_password', userId: row.id })
+  if (!issued.ok) {
+    return c.json({
+      ok: true,
+      requiresEmailOtp: true,
+      email,
+      message: issued.error,
+      mailDelivered: false,
+      retryAfterSec: issued.retryAfterSec ?? 0,
+      sendsLeft: issued.sendsLeft ?? 0,
+    })
+  }
+  return c.json({
+    ok: true,
+    requiresEmailOtp: true,
+    email,
+    message: issued.mail.delivered
+      ? 'Te enviamos un código OTP a tu correo.'
+      : 'No pudimos enviar el correo ahora. Revisa spam o intenta más tarde.',
+    mailDelivered: issued.mail.delivered,
+    retryAfterSec: issued.retryAfterSec,
+    sendsLeft: issued.sendsLeft,
+  })
+})
+
+/** Tras TOTP en recuperación → se envía OTP al correo. */
+authRoutes.post('/reset-password/totp', async (c) => {
+  const body = z
+    .object({
+      challengeToken: z.string().min(10),
+      code: z.string().min(4).max(8),
+    })
+    .safeParse(await c.req.json().catch(() => null))
+  if (!body.success) return c.json({ error: 'Datos inválidos.' }, 400)
+
+  const userId = await consumeLoginChallenge(body.data.challengeToken, 'reset_totp')
+  if (!userId) return c.json({ error: 'Desafío expirado. Vuelve a empezar.' }, 401)
+
+  const { rows } = await pool.query<{
+    email: string
+    totp_secret: string | null
+    totp_enabled: boolean
+  }>(`SELECT email, totp_secret, totp_enabled FROM users WHERE id = $1`, [userId])
+  const u = rows[0]
+  if (!u?.totp_enabled || !u.totp_secret) {
+    return c.json({ error: '2FA no está activo.' }, 400)
+  }
+  if (!(await verifyTotpCode(u.totp_secret, body.data.code))) {
+    return c.json({ error: 'Código del autenticador incorrecto.' }, 401)
+  }
+
+  const issued = await issueOtp({
+    email: u.email,
+    purpose: 'reset_password',
+    userId,
+  })
+  if (!issued.ok) {
+    return c.json({
+      ok: true,
+      requiresEmailOtp: true,
+      email: u.email,
+      message: issued.error,
+      mailDelivered: false,
+      retryAfterSec: issued.retryAfterSec ?? 0,
+      sendsLeft: issued.sendsLeft ?? 0,
+    })
+  }
+  return c.json({
+    ok: true,
+    requiresEmailOtp: true,
+    email: u.email,
+    message: issued.mail.delivered
+      ? 'Autenticador OK. Te enviamos un código OTP al correo.'
+      : 'Autenticador OK. No pudimos enviar el correo ahora; revisa spam o reintenta.',
+    mailDelivered: issued.mail.delivered,
+    retryAfterSec: issued.retryAfterSec,
+    sendsLeft: issued.sendsLeft,
   })
 })
 
@@ -307,7 +659,7 @@ authRoutes.post('/reset-password', async (c) => {
   if (!result.ok) return c.json({ error: result.error }, 400)
 
   const { rows } = await pool.query<{ id: string; status: string }>(
-    `SELECT id, status FROM users WHERE email = $1`,
+    `SELECT id, status FROM users WHERE lower(email) = $1`,
     [parsed.data.email],
   )
   const row = rows[0]
@@ -320,7 +672,6 @@ authRoutes.post('/reset-password', async (c) => {
     `UPDATE users SET password_hash = $2, updated_at = now() WHERE id = $1`,
     [row.id, passwordHash],
   )
-  // Cierra cualquier sesión existente: una contraseña nueva invalida las viejas.
   await revokeAllSessionsForUser(row.id)
 
   await createSession(c, row.id)
@@ -347,10 +698,11 @@ authRoutes.get('/google/start', async (c) => {
   url.searchParams.set('access_type', 'online')
   url.searchParams.set('prompt', 'select_account')
   url.searchParams.set('state', state)
-  // cookie short-lived state
   c.header(
     'Set-Cookie',
-    `google_oauth_state=${state}; Path=/; HttpOnly; SameSite=Lax; Max-Age=600`,
+    `google_oauth_state=${state}; Path=/; HttpOnly; SameSite=Lax; Max-Age=600${
+      config.isProd ? '; Secure' : ''
+    }`,
   )
   return c.redirect(url.toString())
 })
@@ -360,11 +712,11 @@ authRoutes.get('/google/callback', async (c) => {
     return c.redirect(`${config.appUrl}/login?error=google_not_configured`)
   }
 
-  // Valida el state contra la cookie emitida en /google/start (anti-CSRF).
   const stateParam = c.req.query('state')
   const stateCookie = getCookie(c, 'google_oauth_state')
   deleteCookie(c, 'google_oauth_state', { path: '/' })
-  if (!stateParam || !stateCookie || stateParam !== stateCookie) {
+  const stateCheck = assertGoogleOAuthState(stateCookie, stateParam)
+  if (!stateCheck.ok) {
     return c.redirect(`${config.appUrl}/login?error=google_state`)
   }
 
@@ -401,7 +753,6 @@ authRoutes.get('/google/callback', async (c) => {
     email?: string
     name?: string
     picture?: string
-    verified_email?: boolean
   }
   if (!profile.email || !profile.id) {
     return c.redirect(`${config.appUrl}/login?error=google_email`)
@@ -416,12 +767,17 @@ authRoutes.get('/google/callback', async (c) => {
   let userId = oauth.rows[0]?.user_id
   if (!userId) {
     const byEmail = await pool.query<{ id: string }>(
-      `SELECT id FROM users WHERE email = $1`,
+      `SELECT id FROM users WHERE lower(email) = $1`,
       [email],
     )
     if (byEmail.rows[0]) {
       userId = byEmail.rows[0].id
     } else {
+      // Limpiar pending del mismo correo si existía
+      await pool.query(
+        `DELETE FROM pending_registrations WHERE lower(email) = $1`,
+        [email],
+      )
       const role = await pool.query<{ id: string }>(
         `SELECT id FROM roles WHERE code = 'client' LIMIT 1`,
       )
@@ -485,7 +841,7 @@ authRoutes.post('/2fa/enable', requireAuth, async (c) => {
   )
   const secret = rows[0]?.totp_secret
   if (!secret) return c.json({ error: 'Primero inicia el setup 2FA.' }, 400)
-  if (!verifyTotpCode(secret, body.data.code)) {
+  if (!(await verifyTotpCode(secret, body.data.code))) {
     return c.json({ error: 'Código incorrecto.' }, 400)
   }
   await pool.query(
@@ -495,25 +851,25 @@ authRoutes.post('/2fa/enable', requireAuth, async (c) => {
   return c.json({ ok: true })
 })
 
+/** Desvincular: solo código del autenticador (sin password). */
 authRoutes.post('/2fa/disable', requireAuth, async (c) => {
   const user = c.get('user')
   const body = z
     .object({
-      password: z.string().min(1),
       code: z.string().min(4).max(8),
     })
     .safeParse(await c.req.json().catch(() => null))
   if (!body.success) return c.json({ error: 'Datos inválidos.' }, 400)
 
   const { rows } = await pool.query<{
-    password_hash: string | null
     totp_secret: string | null
-  }>(`SELECT password_hash, totp_secret FROM users WHERE id = $1`, [user.id])
+    totp_enabled: boolean
+  }>(`SELECT totp_secret, totp_enabled FROM users WHERE id = $1`, [user.id])
   const row = rows[0]
-  if (!row?.password_hash || !(await verifyPassword(row.password_hash, body.data.password))) {
-    return c.json({ error: 'Contraseña incorrecta.' }, 401)
+  if (!row?.totp_enabled || !row.totp_secret) {
+    return c.json({ error: 'El autenticador no está vinculado.' }, 400)
   }
-  if (!row.totp_secret || !verifyTotpCode(row.totp_secret, body.data.code)) {
+  if (!(await verifyTotpCode(row.totp_secret, body.data.code))) {
     return c.json({ error: 'Código del autenticador incorrecto.' }, 401)
   }
   await pool.query(

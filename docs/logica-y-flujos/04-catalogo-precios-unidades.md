@@ -63,7 +63,8 @@ Producto
 ## Carrito
 
 - Línea = `product` + **`packaging_id`** + cantidad de ese empaque + `unit_price` congelado al agregar.
-- Pendiente UI: selector de empaque en ficha/card.
+- Ficha (0155): selector **Precio por presentación** (todas las presentaciones con precio); al agregar usa la elegida.
+- Card de catálogo: sigue usando empaque default (sin selector en card).
 
 ## APIs
 
@@ -77,6 +78,13 @@ Producto
 | POST | `/api/admin/products/:id/prices` | Upsert / guardar como nuevo |
 | GET | `/api/catalog` | Tienda (`live: true` si hay filas) |
 
+## Seed demo multi-presentación
+
+- Migración `013_product_pack_prices_seed.sql`: RS-5402 con Unidad + Paquete×6 + Caja×12 y precios lista/mayorista.
+
 ## Qué falta (pendientes)
+
+- Selector de presentación en card/carrito (opcional).
+- Cotización: mapear `packagingId` en vez de presentation mock.
 
 Ver `docs/pendientes/PENDIENTES.md` (P10, P16–P22): selector empaque en carrito, specs UI completa, ofertas ERP, import CSV, stock real, topbar mega-menú con todos los hijos, etc.

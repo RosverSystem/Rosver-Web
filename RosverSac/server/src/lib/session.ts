@@ -97,6 +97,7 @@ export async function createSession(c: Context, userId: string) {
     sameSite: 'Lax',
     path: '/',
     expires: expiresAt,
+    ...(config.cookieDomain ? { domain: config.cookieDomain } : {}),
   })
 
   return { expiresAt }
@@ -147,6 +148,7 @@ export async function resolveSessionUser(
       sameSite: 'Lax',
       path: '/',
       expires: newExpiresAt,
+      ...(config.cookieDomain ? { domain: config.cookieDomain } : {}),
     })
   }
 

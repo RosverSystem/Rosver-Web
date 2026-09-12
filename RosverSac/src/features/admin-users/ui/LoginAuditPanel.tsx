@@ -1,6 +1,7 @@
 import { api, ApiError } from '@/shared/lib/api'
 import { cn } from '@/shared/lib'
 import { AdminEmptyState } from '@/shared/ui/admin-field'
+import { BootstrapTable } from '@/shared/ui/bootstrap-table'
 import { useEffect, useState } from 'react'
 
 type AuditEntry = {
@@ -65,41 +66,39 @@ export function LoginAuditPanel() {
       ) : entries.length === 0 ? (
         <AdminEmptyState title="Todavía no hay actividad registrada" />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[520px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-rosver-line bg-rosver-soft/60 text-xs text-rosver-muted uppercase">
-                <th className="px-4 py-2.5 font-semibold">Correo</th>
-                <th className="px-4 py-2.5 font-semibold">Resultado</th>
-                <th className="px-4 py-2.5 font-semibold">IP</th>
-                <th className="px-4 py-2.5 font-semibold">Fecha</th>
+        <BootstrapTable className="min-w-[520px]" size="sm">
+          <thead>
+            <tr>
+              <th>Correo</th>
+              <th>Resultado</th>
+              <th>IP</th>
+              <th>Fecha</th>
+            </tr>
+          </thead>
+          <tbody>
+            {entries.map((e) => (
+              <tr key={e.id}>
+                <td>{e.email}</td>
+                <td>
+                  <span
+                    className={cn(
+                      'rounded-full px-2 py-0.5 text-[11px] font-bold',
+                      e.success
+                        ? 'bg-rosver-success/15 text-rosver-success'
+                        : 'bg-rosver-red/10 text-rosver-red',
+                    )}
+                  >
+                    {e.success ? 'Éxito' : (e.reason && REASON_LABEL[e.reason]) || 'Fallo'}
+                  </span>
+                </td>
+                <td className="text-rosver-muted">{e.ip ?? '—'}</td>
+                <td className="text-rosver-muted">
+                  {DATETIME_FMT.format(new Date(e.createdAt))}
+                </td>
               </tr>
-            </thead>
-            <tbody className="divide-y divide-rosver-line">
-              {entries.map((e) => (
-                <tr key={e.id}>
-                  <td className="px-4 py-2.5 text-rosver-ink">{e.email}</td>
-                  <td className="px-4 py-2.5">
-                    <span
-                      className={cn(
-                        'rounded-full px-2 py-0.5 text-[11px] font-bold',
-                        e.success
-                          ? 'bg-rosver-success/15 text-rosver-success'
-                          : 'bg-rosver-red/10 text-rosver-red',
-                      )}
-                    >
-                      {e.success ? 'Éxito' : (e.reason && REASON_LABEL[e.reason]) || 'Fallo'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2.5 text-rosver-muted">{e.ip ?? '—'}</td>
-                  <td className="px-4 py-2.5 text-rosver-muted">
-                    {DATETIME_FMT.format(new Date(e.createdAt))}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </BootstrapTable>
       )}
     </div>
   )

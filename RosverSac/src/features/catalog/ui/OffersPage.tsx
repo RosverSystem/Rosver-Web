@@ -1,7 +1,6 @@
 import { CatalogPagination } from '@/features/catalog/ui/CatalogPagination'
 import { OfferCard } from '@/features/catalog/ui/OfferCard'
 import { useCatalog } from '@/features/catalog/model/catalog-store'
-import { discountPercent } from '@/features/catalog/model/offers'
 import { prefersReducedMotion } from '@/shared/lib/gsap'
 import { ArrowRight } from 'cssvg-icons'
 import { motion } from 'motion/react'
@@ -11,24 +10,25 @@ import { Link } from 'react-router-dom'
 const PAGE_SIZE = 8
 
 /**
- * Vista Ofertas: cards horizontales (campaña, ahorro, carrito + WhatsApp).
+ * Vista Ofertas: combos ERP (2x1 / packs) desde `offerCombos`.
  */
 export function OffersPage() {
-  const { offers, refresh, refreshing, live, liveProducts } = useCatalog()
+  const { offerCombos, refresh, refreshing, live, liveProducts } = useCatalog()
   const [page, setPage] = useState(1)
   const reduce = prefersReducedMotion()
 
-  const totalPages = Math.max(1, Math.ceil(offers.length / PAGE_SIZE))
+  const combos = [...offerCombos].sort((a, b) => {
+    const ra = a.rating ?? 0
+    const rb = b.rating ?? 0
+    if (rb !== ra) return rb - ra
+    return a.name.localeCompare(b.name, 'es')
+  })
+  const totalPages = Math.max(1, Math.ceil(combos.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
   const start = (safePage - 1) * PAGE_SIZE
-  const pageProducts = offers.slice(start, start + PAGE_SIZE)
-  const showingFrom = offers.length ? start + 1 : 0
-  const showingTo = Math.min(start + PAGE_SIZE, offers.length)
-
-  const maxDiscount = offers.reduce(
-    (max, p) => Math.max(max, discountPercent(p)),
-    0,
-  )
+  const pageCombos = combos.slice(start, start + PAGE_SIZE)
+  const showingFrom = combos.length ? start + 1 : 0
+  const showingTo = Math.min(start + PAGE_SIZE, combos.length)
 
   const goToPage = (next: number) => {
     setPage(next)
@@ -42,11 +42,7 @@ export function OffersPage() {
   return (
     <main className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-6 overflow-x-hidden px-4 pb-28 lg:px-6">
       <div className="pt-4 sm:pt-6">
-        <OffersBanner
-          maxDiscount={maxDiscount}
-          count={offers.length}
-          reduce={reduce}
-        />
+        <OffersBanner count={combos.length} reduce={reduce} />
       </div>
 
       <div
@@ -59,8 +55,8 @@ export function OffersPage() {
             <span className="font-bold text-rosver-ink">
               {showingFrom}-{showingTo}
             </span>{' '}
-            de <span className="font-bold text-rosver-ink">{offers.length}</span>{' '}
-            ofertas
+            de <span className="font-bold text-rosver-ink">{combos.length}</span>{' '}
+            combos
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <button
@@ -69,7 +65,11 @@ export function OffersPage() {
               disabled={refreshing}
               className="text-sm font-semibold text-rosver-muted transition hover:text-rosver-ink disabled:opacity-60"
             >
-              {refreshing ? 'Actualizando…' : live || liveProducts ? 'Actualizar' : 'Buscar novedades'}
+              {refreshing
+                ? 'Actualizando…'
+                : live || liveProducts
+                  ? 'Actualizar'
+                  : 'Buscar novedades'}
             </button>
             <Link
               to="/catalogo"
@@ -80,12 +80,12 @@ export function OffersPage() {
           </div>
         </div>
 
-        {offers.length ? (
+        {combos.length ? (
           <>
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-              {pageProducts.map((product, index) => (
+              {pageCombos.map((combo, index) => (
                 <motion.div
-                  key={product.slug}
+                  key={combo.id}
                   initial={reduce ? false : { opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{
@@ -93,7 +93,7 @@ export function OffersPage() {
                     delay: reduce ? 0 : Math.min(index * 0.04, 0.24),
                   }}
                 >
-                  <OfferCard product={product} />
+                  <OfferCard combo={combo} />
                 </motion.div>
               ))}
             </div>
@@ -106,12 +106,12 @@ export function OffersPage() {
         ) : (
           <div className="rounded-2xl border border-dashed border-rosver-line bg-rosver-soft/50 px-6 py-16 text-center">
             <p className="font-display text-xl font-bold text-rosver-ink uppercase">
-              Sin ofertas activas
+              Sin combos activos
             </p>
             <p className="mx-auto mt-2 max-w-md text-sm text-rosver-muted">
               {liveProducts
-                ? 'No hay precios en oferta en la base de datos. Agrégalos en el ERP → Ofertas.'
-                : 'Cuando el catálogo esté en línea, las ofertas del ERP aparecerán aquí.'}
+                ? 'Crea un combo 2x1 o pack en el ERP → Ofertas.'
+                : 'Cuando el catálogo esté en línea, los combos del ERP aparecerán aquí.'}
             </p>
             <div className="mt-5 flex flex-wrap justify-center gap-2">
               <Link
@@ -135,11 +135,9 @@ export function OffersPage() {
 }
 
 function OffersBanner({
-  maxDiscount,
   count,
   reduce,
 }: {
-  maxDiscount: number
   count: number
   reduce: boolean
 }) {
@@ -189,7 +187,7 @@ function OffersBanner({
           animate={{ opacity: 1, scale: 1 }}
           transition={{ type: 'spring', stiffness: 320, damping: 18 }}
         >
-          {maxDiscount > 0 ? `Hasta ${maxDiscount}% OFF` : 'Ofertas Rosver'}
+          Combos y packs
         </motion.span>
 
         <motion.div
@@ -215,8 +213,8 @@ function OffersBanner({
           transition={{ duration: 0.35, delay: 0.12 }}
         >
           {count > 0
-            ? `${count} lote${count === 1 ? '' : 's'} con precio rebajado. Añade al carrito o consulta por WhatsApp.`
-            : 'Pronto publicaremos nuevas promociones de importación.'}
+            ? `${count} combo${count === 1 ? '' : 's'} listo${count === 1 ? '' : 's'} para agregar al carrito.`
+            : 'Pronto publicaremos nuevos packs y promociones 2x1.'}
         </motion.p>
 
         <motion.div

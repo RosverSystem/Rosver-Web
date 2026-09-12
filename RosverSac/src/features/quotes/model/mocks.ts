@@ -1,34 +1,24 @@
-export type QuoteStatus =
-  | 'borrador'
-  | 'enviada'
-  | 'en revisión'
-  | 'respondida'
-  | 'cerrada'
+import {
+  QUOTE_PIPELINE_LABEL,
+  QUOTE_PIPELINE_STATUSES,
+  type QuotePipelineStatus,
+} from '@/shared/lib/quote-pipeline'
 
-/** Pasos visibles tipo tracker (omitimos borrador en UI cliente). */
-export const QUOTE_STATUS_STEPS: QuoteStatus[] = [
-  'enviada',
-  'en revisión',
-  'respondida',
-  'cerrada',
-]
+export type QuoteStatus = QuotePipelineStatus
 
-export const QUOTE_STATUS_LABEL: Record<QuoteStatus, string> = {
-  borrador: 'Borrador',
-  enviada: 'Enviada',
-  'en revisión': 'En revisión',
-  respondida: 'Respondida',
-  cerrada: 'Cerrada',
-}
+/** Pasos visibles tipo tracker. */
+export const QUOTE_STATUS_STEPS: QuoteStatus[] = [...QUOTE_PIPELINE_STATUSES]
+
+export const QUOTE_STATUS_LABEL = QUOTE_PIPELINE_LABEL
 
 export const QUOTE_STATUS_TONE: Record<
   QuoteStatus,
   'neutral' | 'info' | 'success' | 'warning'
 > = {
-  borrador: 'neutral',
-  enviada: 'info',
-  'en revisión': 'warning',
+  recibida: 'info',
+  en_revision: 'warning',
   respondida: 'success',
+  aceptada: 'success',
   cerrada: 'neutral',
 }
 
@@ -69,7 +59,7 @@ export const QUOTES: Quote[] = [
       { name: 'Taladro percutor 20V', qty: 2, imageUrl: IMG.taladro },
       { name: 'Amoladora angular 115mm', qty: 1, imageUrl: IMG.amoladora },
     ],
-    status: 'en revisión',
+    status: 'en_revision',
     note: 'Comercial revisando stock y precios mayoristas',
   },
   {

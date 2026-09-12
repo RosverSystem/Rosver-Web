@@ -6,6 +6,7 @@ import {
 } from '@/features/catalog/model/mocks'
 import { BRANDS, type Brand } from '@/features/catalog/model/brands'
 import { getOfferProducts } from '@/features/catalog/model/offers'
+import type { OfferCombo } from '@/features/catalog/model/offer-combo'
 import { api } from '@/shared/lib/api'
 import { IconWrench } from '@/shared/ui/icons'
 import {
@@ -51,13 +52,17 @@ type CatalogPayload = {
   updatedAt?: string
   products?: Product[]
   offers?: Product[]
+  offerCombos?: OfferCombo[]
   categories?: ApiCategory[]
   brands?: ApiBrand[]
 }
 
 type CatalogContextValue = {
   products: Product[]
+  /** Productos con precio markdown (ficha producto). */
   offers: Product[]
+  /** Combos ERP (`/admin/ofertas`). */
+  offerCombos: OfferCombo[]
   categories: Category[]
   brands: Brand[]
   live: boolean
@@ -111,6 +116,7 @@ function wantsCatalogRefresh(pathname: string) {
     pathname === '/' ||
     pathname.startsWith('/catalogo') ||
     pathname.startsWith('/ofertas') ||
+    pathname.startsWith('/ranking') ||
     pathname.startsWith('/producto') ||
     pathname.startsWith('/carrito') ||
     pathname.startsWith('/cotizar')
@@ -121,6 +127,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
   const [products, setProducts] = useState<Product[]>(PRODUCTS)
   const [offers, setOffers] = useState<Product[]>([])
+  const [offerCombos, setOfferCombos] = useState<OfferCombo[]>([])
   const [categories, setCategories] = useState<Category[]>(CATEGORIES)
   const [brands, setBrands] = useState<Brand[]>(BRANDS)
   const [live, setLive] = useState(false)
@@ -161,7 +168,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
         setProducts(PRODUCTS)
       }
 
-      // Ofertas solo desde DB (nunca mocks)
+      // Ofertas markdown (precio offer) solo desde DB
       if (Array.isArray(data.offers)) {
         setOffers(data.offers)
       } else if (hasDbProducts) {
@@ -170,12 +177,20 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
         setOffers([])
       }
 
+      // Combos ERP
+      if (Array.isArray(data.offerCombos)) {
+        setOfferCombos(data.offerCombos)
+      } else {
+        setOfferCombos([])
+      }
+
       setLiveProducts(hasDbProducts)
       setLive(Boolean(data.live) || hasDbCategories || hasDbBrands || hasDbProducts)
       setUpdatedAt(data.updatedAt ?? new Date().toISOString())
     } catch {
       setProducts(PRODUCTS)
       setOffers([])
+      setOfferCombos([])
       setCategories(CATEGORIES)
       setBrands(BRANDS)
       setLive(false)
@@ -206,7 +221,11 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
   }, [refresh])
 
   useEffect(() => {
-    if (!pathname.startsWith('/catalogo') && !pathname.startsWith('/ofertas')) {
+    if (
+      !pathname.startsWith('/catalogo') &&
+      !pathname.startsWith('/ofertas') &&
+      !pathname.startsWith('/ranking')
+    ) {
       return
     }
     const id = window.setInterval(() => {
@@ -219,6 +238,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     () => ({
       products,
       offers,
+      offerCombos,
       categories,
       brands,
       live,
@@ -231,6 +251,7 @@ export function CatalogProvider({ children }: { children: ReactNode }) {
     [
       products,
       offers,
+      offerCombos,
       categories,
       brands,
       live,
@@ -251,6 +272,7 @@ export function useCatalog() {
     return {
       products: PRODUCTS,
       offers: [],
+      offerCombos: [],
       categories: CATEGORIES,
       brands: BRANDS,
       live: false,

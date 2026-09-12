@@ -17,8 +17,10 @@ Skill: `erp-systemrsv-saas-ux`.
 | --- | --- |
 | Inicio | `/admin` |
 | Almacenamiento | `/admin/almacenamiento` (R2, preview modal) |
-| Catálogo → Productos | `/admin/productos` |
-| Catálogo → Listado de precios | `/admin/listado-precios` (unidades + presentaciones) |
+| Catálogo → Presentaciones | `/admin/listado-precios` |
+| Catálogo → Especificaciones | `/admin/especificaciones` (tipos de ficha técnica) |
+| Catálogo → Productos | `/admin/productos` (listado); ficha CRM `/admin/productos/nuevo` · `/admin/productos/:id` |
+| Catálogo → Presentaciones | `/admin/listado-precios` (tipos de unidad + cantidades) |
 | Catálogo → Categorías | `/admin/categorias` |
 | Catálogo → Marcas | `/admin/marcas` |
 | Catálogo → Ofertas | `/admin/ofertas` |
@@ -31,6 +33,6 @@ Skill: `erp-systemrsv-saas-ux`.
 
 ## Formularios
 
-- Alta/edición en **`AdminModal`** (regla `17-erp-forms-modal`). Listado + CTA en la página; no forms inline permanentes.
+- Alta/edición en **`AdminModal`** (regla `17-erp-forms-modal`). Excepción **Productos**: ficha CRM de página completa. Listado + CTA en la página; no forms inline permanentes en el resto de módulos.
 - No aplica a la tienda pública.
 - Selects: `AdminSelect` (regla `14`).

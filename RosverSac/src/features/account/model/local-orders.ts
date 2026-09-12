@@ -1,7 +1,10 @@
 import type { CartLine } from '@/features/cart'
 import type { Order, OrderItem, OrderStatus } from '@/features/account/model/mocks'
+import { isOrderPipelineStatus } from '@/shared/lib/order-pipeline'
 
 export type LocalOrderDraft = {
+  /** Si viene del API (PD-…), se usa como id visible. */
+  id?: string
   customerName: string
   docNumber: string
   phone: string
@@ -12,13 +15,25 @@ export type LocalOrderDraft = {
 
 const KEY = 'rosver.local-orders.v1'
 
+function normalizeStatus(raw: unknown): OrderStatus {
+  if (typeof raw !== 'string') return 'confirmacion_pedido'
+  if (isOrderPipelineStatus(raw)) return raw
+  if (raw === 'pendiente') return 'confirmacion_pedido'
+  if (raw === 'enproceso') return 'realizando_envio'
+  if (raw === 'enviado' || raw === 'entregado') return raw
+  return 'confirmacion_pedido'
+}
+
 export function readLocalOrders(): Order[] {
   try {
     const raw = localStorage.getItem(KEY)
     if (!raw) return []
     const parsed = JSON.parse(raw) as unknown
     if (!Array.isArray(parsed)) return []
-    return parsed.filter(isOrderLike)
+    return parsed.filter(isOrderLike).map((o) => ({
+      ...o,
+      status: normalizeStatus(o.status),
+    }))
   } catch {
     return []
   }
@@ -43,9 +58,9 @@ export function buildLocalOrderId() {
 }
 
 export function createLocalOrderFromCart(draft: LocalOrderDraft): Order {
-  const id = buildLocalOrderId()
+  const id = draft.id?.trim() || buildLocalOrderId()
   const date = new Date().toISOString().slice(0, 10)
-  const status: OrderStatus = 'pendiente'
+  const status: OrderStatus = 'confirmacion_pedido'
   const itemsSummary = draft.items
     .map((i) => `${i.name} x${i.qty}`)
     .join(', ')

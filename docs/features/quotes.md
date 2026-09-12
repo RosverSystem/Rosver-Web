@@ -1,42 +1,37 @@
 # Feature: Cotizaciones
 
 **Slug:** `features/quotes/`  
-**Estado:** activa (diseño visual alineado a contacto/catálogo)
+**Estado:** activa (pipeline admin + cotizar público)
 
 ## Propósito
 
-Solicitar cotizaciones desde el catálogo/carrito y gestionarlas en backoffice (comercial/admin).
-
-## Alcance
-
-- Público/cliente: formulario `/cotizar`, confirmación.
-- Cliente: listado en `/cuenta/cotizaciones`.
-- Admin/sales: `/admin/cotizaciones`.
+Solicitar cotizaciones desde `/cotizar` y gestionarlas en backoffice con pipeline comercial.
 
 ## Pantallas / rutas
 
-| Ruta | Componente | Notas |
-| --- | --- | --- |
-| `/cotizar` | `QuoteRequestPage` | Datos negocio + ítems (carrito o buscador) + WhatsApp / pasar a carrito; beneficios 24h/TC abajo |
-| `/cuenta/cotizaciones` | `ClientQuotesPage` | Listado estados |
-| `/admin/cotizaciones` | `AdminQuotesPage` | Bandeja comercial |
+| Ruta | Notas |
+| --- | --- |
+| `/cotizar` | Formulario público |
+| `/c/:slug` | Link público 15 días |
+| `/cuenta/cotizaciones` | Listado cliente (mocks alineados al pipeline) |
+| `/admin/cotizaciones` | Tabla + CRUD iconos + búsqueda |
+| `/admin/cotizaciones/vista?codigo-cotizacion=` | Pipeline + productos + evidencias |
 
-## Comportamiento visual (`/cotizar`)
+## Pipeline
 
-1. Si el carrito tiene ítems → se precargan en la lista (vía `useCart`).
-2. Si está vacío → buscador de catálogo para agregar.
-3. Tab alternativo: pegar lista libre.
-4. Total estimado + TC referencial mock; CTA WhatsApp y “Pasar lista a carrito”.
+`recibida` → `en_revision` → `respondida` → `aceptada` → `cerrada`
 
-## Flujos
+Evidencias R2: `quotes/evidence/{id}/` (aparte de pedidos y catálogo).
 
-`03-vistas-y-flujos.md` → F3, F6.
+## API admin
+
+- `GET /api/admin/quotes` (+ `?code=`)
+- `PATCH /api/admin/quotes/:id`
+- `DELETE /api/admin/quotes/:id`
+- `POST /api/admin/quotes/:id/evidence`
 
 ## Verificación
 
-- [x] Formulario visual completo (`QuoteRequestPage`, `/cotizar`)
-- [x] Diseño final visual (datos + lista + CTAs + beneficios abajo)
-- [x] Prefill desde carrito compartido (`CartProvider`)
-- [x] Listado cliente con estados (`ClientQuotesPage`, `/cuenta/cotizaciones`)
-- [x] Vista admin lista con estados (badges) (`AdminQuotesPage`, `/admin/cotizaciones`)
-- [ ] Persistencia real de `QuoteRequest` (fase lógica)
+- [x] Admin tabla + vista pipeline
+- [x] Migración `027`
+- [ ] Cuenta cliente conectada a API real (aún mocks)

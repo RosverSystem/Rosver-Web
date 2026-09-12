@@ -8,7 +8,7 @@ import {
   AdminPageHeader,
 } from '@/shared/ui/admin-field'
 import { AdminModal } from '@/shared/ui/admin-modal'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 type UnitType = {
   id: string
@@ -87,11 +87,13 @@ export function AdminUnitTypesPage() {
           method: 'PATCH',
           body: JSON.stringify(payload),
         })
+        showMessages(['Unidad actualizada'])
       } else {
         await api('/api/admin/unit-types', {
           method: 'POST',
           body: JSON.stringify(payload),
         })
+        showMessages(['Unidad creada'])
       }
       closeModal()
       await load()
@@ -111,6 +113,7 @@ export function AdminUnitTypesPage() {
       await api(`/api/admin/unit-types/${u.id}`, { method: 'DELETE' })
       if (editingId === u.id) closeModal()
       await load()
+      showMessages(['Unidad eliminada'])
     } catch (err) {
       showMessages([
         err instanceof ApiError ? err.message : 'No se pudo eliminar',
@@ -118,16 +121,30 @@ export function AdminUnitTypesPage() {
     }
   }
 
+  const stats = useMemo(
+    () => ({
+      total: units.length,
+      base: units.filter((u) => u.isBase).length,
+    }),
+    [units],
+  )
+
   return (
     <div className="space-y-5">
       <FloatingToasts toasts={toasts} onDismiss={dismiss} />
       <AdminPageHeader
+        eyebrow="Catálogo"
         title="Tipos de unidad"
+        description="Unidad, paquete o caja para presentaciones."
+        stats={[
+          { label: 'Total', value: stats.total },
+          { label: 'Base', value: stats.base, tone: 'success' },
+        ]}
         actions={
           <button
             type="button"
             onClick={openCreate}
-            className="h-9 rounded-xl bg-rosver-red px-4 text-xs font-semibold text-white hover:bg-rosver-red-dark"
+            className="rounded-full bg-rosver-red px-4 py-2.5 text-xs font-bold text-white uppercase shadow-sm shadow-rosver-red/30 hover:bg-rosver-red-dark"
           >
             Nueva unidad
           </button>

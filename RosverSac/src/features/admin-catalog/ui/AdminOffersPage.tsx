@@ -10,6 +10,7 @@ import {
 } from '@/shared/ui/admin-field'
 import { AdminImageUpload } from '@/shared/ui/admin-image-upload'
 import { AdminModal } from '@/shared/ui/admin-modal'
+import { Plus } from 'cssvg-icons'
 import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 
@@ -27,19 +28,36 @@ type OfferProduct = {
 
 type CatalogOption = { id: string; name: string; sku?: string }
 
+type PromoItem = {
+  id: string
+  productId: string
+  productName: string
+  productSku: string
+  buyQty: number
+  payQty: number
+  active: boolean
+  notes: string | null
+}
+
 /**
  * Ofertas ERP → tienda /ofertas (Postgres, sin mocks).
- * Alta en AdminModal (regla 17).
+ * Alta en AdminModal (regla 17). Incluye promos 2×1 automáticas.
  */
 export function AdminOffersPage() {
-  const { toasts, showMessages, dismiss, clear } = useFormToasts()
+  const { toasts, showMessages, showSuccess, dismiss, clear } = useFormToasts()
   const [products, setProducts] = useState<OfferProduct[]>([])
   const [allProducts, setAllProducts] = useState<CatalogOption[]>([])
   const [brands, setBrands] = useState<CatalogOption[]>([])
   const [categories, setCategories] = useState<CatalogOption[]>([])
+  const [promos, setPromos] = useState<PromoItem[]>([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
+  const [promoModal, setPromoModal] = useState(false)
+  const [promoProductId, setPromoProductId] = useState('')
+  const [promoBuy, setPromoBuy] = useState('2')
+  const [promoPay, setPromoPay] = useState('1')
+  const [promoNotes, setPromoNotes] = useState('')
 
   const [mode, setMode] = useState<'existing' | 'new'>('new')
   const [productId, setProductId] = useState('')
@@ -55,7 +73,7 @@ export function AdminOffersPage() {
   async function load() {
     setLoading(true)
     try {
-      const [offers, list, b, c] = await Promise.all([
+      const [offers, list, b, c, p] = await Promise.all([
         api<{ products: OfferProduct[] }>('/api/admin/offers'),
         api<{ products: { id: string; name: string; sku: string }[] }>(
           '/api/admin/products',
@@ -64,11 +82,15 @@ export function AdminOffersPage() {
         api<{ categories: { id: string; name: string }[] }>(
           '/api/admin/categories',
         ),
+        api<{ items: PromoItem[] }>('/api/admin/promos').catch(() => ({
+          items: [] as PromoItem[],
+        })),
       ])
       setProducts(offers.products)
       setAllProducts(list.products)
       setBrands(b.brands)
       setCategories(c.categories)
+      setPromos(p.items ?? [])
     } catch (e) {
       showMessages([
         e instanceof ApiError ? e.message : 'No se pudieron cargar las ofertas',
@@ -177,6 +199,73 @@ export function AdminOffersPage() {
     }
   }
 
+  async function createPromo(e: React.FormEvent) {
+    e.preventDefault()
+    clear()
+    const buyQty = Number(promoBuy)
+    const payQty = Number(promoPay)
+    if (!promoProductId) {
+      showMessages(['Elige un producto'])
+      return
+    }
+    if (!Number.isFinite(buyQty) || buyQty < 2 || !Number.isFinite(payQty) || payQty < 1 || payQty >= buyQty) {
+      showMessages(['Usa por ejemplo 2×1 (compra 2, paga 1)'])
+      return
+    }
+    setBusy(true)
+    try {
+      await api('/api/admin/promos', {
+        method: 'POST',
+        body: JSON.stringify({
+          productId: promoProductId,
+          buyQty,
+          payQty,
+          notes: promoNotes.trim() || null,
+        }),
+      })
+      setPromoModal(false)
+      setPromoProductId('')
+      setPromoBuy('2')
+      setPromoPay('1')
+      setPromoNotes('')
+      showSuccess(['Promoción 2×1 activa. Se aplica sola en el carrito.'])
+      await load()
+    } catch (err) {
+      showMessages([
+        err instanceof ApiError ? err.message : 'No se pudo crear la promo',
+      ])
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function togglePromo(id: string, active: boolean) {
+    try {
+      await api(`/api/admin/promos/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ active: !active }),
+      })
+      await load()
+    } catch (err) {
+      showMessages([
+        err instanceof ApiError ? err.message : 'No se pudo actualizar',
+      ])
+    }
+  }
+
+  async function removePromo(id: string, label: string) {
+    if (!window.confirm(`¿Eliminar la promo de «${label}»?`)) return
+    try {
+      await api(`/api/admin/promos/${id}`, { method: 'DELETE' })
+      showSuccess(['Promo eliminada'])
+      await load()
+    } catch (err) {
+      showMessages([
+        err instanceof ApiError ? err.message : 'No se pudo eliminar',
+      ])
+    }
+  }
+
   return (
     <div className="space-y-5">
       <FloatingToasts toasts={toasts} onDismiss={dismiss} />
@@ -272,6 +361,69 @@ export function AdminOffersPage() {
           })
         )}
       </div>
+
+      <section className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-bold text-rosver-ink">Promociones 2×1</h2>
+            <p className="text-xs text-rosver-muted">
+              Se aplican solas al agregar al carrito (ej. lleva 2, paga 1).
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setPromoModal(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-rosver-line bg-white px-3 py-2 text-xs font-bold text-rosver-ink hover:border-rosver-red hover:text-rosver-red"
+          >
+            <Plus size={14} color="currentColor" strokeWidth={2} />
+            Nueva 2×1
+          </button>
+        </div>
+        {promos.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-rosver-line bg-white px-4 py-6 text-center text-sm text-rosver-muted">
+            Aún no hay promociones automáticas.
+          </p>
+        ) : (
+          <ul className="divide-y divide-rosver-line overflow-hidden rounded-xl border border-rosver-line bg-white">
+            {promos.map((pr) => (
+              <li
+                key={pr.id}
+                className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-rosver-ink">
+                    {pr.productName}
+                  </p>
+                  <p className="text-xs text-rosver-muted">
+                    {pr.productSku} · {pr.buyQty}×{pr.payQty}
+                    {pr.notes ? ` · ${pr.notes}` : ''}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void togglePromo(pr.id, pr.active)}
+                    className={
+                      pr.active
+                        ? 'rounded-lg bg-rosver-success/15 px-2.5 py-1 text-xs font-bold text-rosver-success'
+                        : 'rounded-lg bg-rosver-soft px-2.5 py-1 text-xs font-bold text-rosver-muted'
+                    }
+                  >
+                    {pr.active ? 'Activa' : 'Pausada'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void removePromo(pr.id, pr.productName)}
+                    className="text-xs font-semibold text-rosver-muted hover:text-rosver-red"
+                  >
+                    Eliminar
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <AdminModal
         open={modalOpen}
@@ -431,6 +583,78 @@ export function AdminOffersPage() {
             onError={(msg) => showMessages([msg])}
             label="Foto (opcional)"
           />
+        </form>
+      </AdminModal>
+
+      <AdminModal
+        open={promoModal}
+        onClose={() => setPromoModal(false)}
+        title="Nueva promoción 2×1"
+        size="md"
+        layer={85}
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setPromoModal(false)}
+              className="h-10 rounded-xl border border-rosver-line px-4 text-sm font-semibold text-rosver-muted"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              form="promo-form"
+              disabled={busy}
+              className="h-10 rounded-xl bg-rosver-red px-5 text-sm font-semibold text-white hover:bg-rosver-red-dark disabled:opacity-60"
+            >
+              {busy ? 'Guardando…' : 'Activar promo'}
+            </button>
+          </>
+        }
+      >
+        <form id="promo-form" noValidate onSubmit={createPromo} className="space-y-4">
+          <AdminField label="Producto" htmlFor="promo-prod">
+            <AdminSelect
+              id="promo-prod"
+              value={promoProductId}
+              onChange={(e) => setPromoProductId(e.target.value)}
+            >
+              <option value="">Elegir producto</option>
+              {allProducts.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.sku})
+                </option>
+              ))}
+            </AdminSelect>
+          </AdminField>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <AdminField label="Compra (unidades)" htmlFor="promo-buy">
+              <AdminInput
+                id="promo-buy"
+                value={promoBuy}
+                onChange={(e) => setPromoBuy(e.target.value)}
+                inputMode="numeric"
+                placeholder="2"
+              />
+            </AdminField>
+            <AdminField label="Paga (unidades)" htmlFor="promo-pay">
+              <AdminInput
+                id="promo-pay"
+                value={promoPay}
+                onChange={(e) => setPromoPay(e.target.value)}
+                inputMode="numeric"
+                placeholder="1"
+              />
+            </AdminField>
+          </div>
+          <AdminField label="Nota interna (opcional)" htmlFor="promo-notes">
+            <AdminInput
+              id="promo-notes"
+              value={promoNotes}
+              onChange={(e) => setPromoNotes(e.target.value)}
+              placeholder="Ej. Campaña marzo"
+            />
+          </AdminField>
         </form>
       </AdminModal>
     </div>

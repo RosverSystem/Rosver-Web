@@ -15,6 +15,7 @@ Fuente de verdad para el agente al implementar UI y, después, lógica.
 | `/catalogo` | Listado con filtros / búsqueda | `catalog` |
 | `/catalogo/:categorySlug` | Listado filtrado por categoría | `catalog` |
 | `/ofertas` | Ofertas — **implementado:** cards horizontales + volumen (`OffersPage`) | `catalog` |
+| `/ranking` | Ranking — mejores calificados (`RankingPage`) | `catalog` |
 | `/producto/:slug` | Ficha — **implementado:** hero + specs + relacionados (`ProductPage`) | `catalog` |
 | `/carrito` | Carrito — **implementado:** lista + buscador + CTAs duales (`CartPage`) | `cart` |
 | `/contacto` | Contacto / WhatsApp — **implementado:** banner + info + form (`ContactPage`) | `contact` |
@@ -39,6 +40,9 @@ Shell SaaS soft (sidebar blanca + top bar). UX: `docs/architecture/09-erp-system
 | Ruta | Vista | Roles | Feature |
 | --- | --- | --- | --- |
 | `/admin` | Inicio (vacío) | admin | shell |
+| `/admin/analitica` | Analítica tops + gráficas | admin | `admin-analytics` |
+| `/admin/clientes` | Clientes e interés | admin | `admin-clients` |
+| `/admin/clientes/:id` | Detalle cliente + oferta | admin | `admin-clients` |
 | `/admin/productos` | Listado productos (vacío) | admin | `admin-catalog` |
 | `/admin/categorias` | Categorías (vacío) | admin | `admin-catalog` |
 | `/admin/ofertas` | Ofertas (vacío) | admin | `admin-catalog` |

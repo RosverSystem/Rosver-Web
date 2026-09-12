@@ -1,25 +1,22 @@
-export type OrderStatus = 'pendiente' | 'en proceso' | 'enviado' | 'entregado'
+import type { OrderPipelineStatus } from '@/shared/lib/order-pipeline'
+import {
+  ORDER_PIPELINE_LABEL,
+  ORDER_PIPELINE_STATUSES,
+} from '@/shared/lib/order-pipeline'
 
-export const ORDER_STATUS_STEPS: OrderStatus[] = [
-  'pendiente',
-  'en proceso',
-  'enviado',
-  'entregado',
-]
+export type OrderStatus = OrderPipelineStatus
 
-export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
-  pendiente: 'Pendiente',
-  'en proceso': 'En proceso',
-  enviado: 'Enviado',
-  entregado: 'Entregado',
-}
+export const ORDER_STATUS_STEPS = [...ORDER_PIPELINE_STATUSES]
+
+export const ORDER_STATUS_LABEL = ORDER_PIPELINE_LABEL
 
 export const ORDER_STATUS_TONE: Record<
   OrderStatus,
   'neutral' | 'info' | 'success' | 'warning'
 > = {
-  pendiente: 'neutral',
-  'en proceso': 'warning',
+  confirmacion_pedido: 'neutral',
+  confirmacion_pago: 'warning',
+  realizando_envio: 'info',
   enviado: 'info',
   entregado: 'success',
 }
@@ -64,7 +61,7 @@ export const ORDERS: Order[] = [
       },
     ],
     total: 249,
-    status: 'en proceso',
+    status: 'realizando_envio',
     trackingHint: 'Preparando despacho en almacén Lima',
   },
   {

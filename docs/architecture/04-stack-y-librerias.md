@@ -22,16 +22,21 @@ App: `RosverSac/` · Alias: `@` → `RosverSac/src`
 | API auth | Hono (`RosverSac/server`) | Sesiones cookie, RBAC, OTP, TOTP, Google OAuth |
 | DB | `pg` + Postgres Railway | Migraciones SQL en `server/sql/` |
 | Caché | `ioredis` + Redis Railway | Destacados home (`rosver:catalog:featured:v1`, TTL 90s); opcional |
-| Object storage | `@aws-sdk/client-s3` → Cloudflare R2 | Avatares / media (`/api/profile/avatar`, `/api/media`) |
+| Object storage | `@aws-sdk/client-s3` → Cloudflare R2 | Público (`rosver-public-media`) + privado (`rosver-private-docs`) |
+| Excel import | `xlsx` (parse) + `exceljs` (plantilla con estilos) | ELFA + plantilla Rosver admin |
 | Password | `argon2` | argon2id |
 | Mail | `nodemailer` | SMTP Hostinger |
 | 2FA | `otplib` + `qrcode` | TOTP autenticador |
 | Validación API | `zod` | Schemas en server |
-| PDF cotización | `jspdf` | Cotización estilo factura (carrito → Continuar pedido) |
+| PDF cotización / pedido | `jspdf` | Plantilla factura (carrito / cotizar) |
+| PDF catálogo | **Puppeteer** (HTML/CSS → A4) + `pdf-lib` | `GET /api/catalog/pdf`; carátula `Caratula.pdf` |
+| Direcciones Perú | **Geoapify** (freemium) + Nominatim fallback; opcional Google Places | `/cotizar`; `GEOAPIFY_API_KEY` |
+| Ubigeo Perú | JSON `server/data/ubigeo` (padrón **2026**) + tablas `peru_*` | `npm run db:build-ubigeo` / `db:seed-ubigeo` |
+| Tablas admin | `BootstrapTable` (clases Bootstrap `table-*` + tokens Rosver) | Sin Bootstrap CSS completo |
 | Iconos (UI general) | **`cssvg-icons`** | Obligatorio para iconos UI nuevos — [icon.cssvg.com](https://icon.cssvg.com) |
 | Iconos (legado / marca) | `shared/ui/icons.tsx`, `lucide-react` (solo código ya existente) | No usar Lucide en código nuevo |
 
-| Scroll suave | `lenis` | Inercia de scroll sincronizada con GSAP ScrollTrigger |
+| Scroll suave | `lenis` (`allowNestedScroll`) | Dropdowns scrollean primero; al límite sigue la página |
 | Lint | Oxlint | `npm run lint` |
 
 **No usamos (por ahora):** Next.js, shadcn CLI como runtime, CSS Modules como sistema principal, Redux/Zustand, React Query, axios (fase visual con mocks).
@@ -186,8 +191,17 @@ Al elegir librería (paso 1 arriba): preferir la opción más liviana que cumpla
 
 ### `jspdf` (^3+)
 
-- Generación cliente de PDF cotización (plantilla tipo factura) en «Continuar pedido».
-- WhatsApp no admite adjunto por `wa.me`: se descarga el PDF y se abre el chat con resumen.
+- Generación cliente de PDF cotización/pedido (plantilla tipo factura).
+
+### `@react-pdf/renderer` + `pdf-lib`
+
+- (Legacy cliente) prototipo de catálogo; **producción del catálogo** usa Puppeteer.
+
+### `puppeteer` + `pdf-lib` (catálogo)
+
+- HTML/CSS moderno (flex/grid) → PDF A4 vía Chromium.
+- `GET /api/catalog/pdf`; fusiona `public/CatalagoPDF/Caratula.pdf`.
+- FAB descarga el endpoint. En Railway hace falta Chromium disponible (revisar deploy).
 
 ---
 

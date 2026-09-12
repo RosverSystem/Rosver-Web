@@ -21,18 +21,30 @@ export const registerSchema = z.object({
 
 export const loginSchema = z.object({
   email: z.string().trim().email().transform((v) => v.toLowerCase()),
-  password: z.string().min(1, 'Ingresa tu contraseña'),
+  /** Vacío / omitido = login sin contraseña (OTP o autenticador). */
+  password: z.string().optional(),
+  passwordless: z.boolean().optional(),
 })
 
 export const otpSchema = z.object({
   email: z.string().trim().email().transform((v) => v.toLowerCase()),
-  code: z.string().trim().min(4).max(8),
+  code: z
+    .string()
+    .transform((v) => v.replace(/[\s\-_.]/g, ''))
+    .pipe(z.string().min(4).max(8)),
 })
 
 export const resetPasswordSchema = z.object({
   email: z.string().trim().email().transform((v) => v.toLowerCase()),
-  code: z.string().trim().min(4).max(8),
+  code: z
+    .string()
+    .transform((v) => v.replace(/[\s\-_.]/g, ''))
+    .pipe(z.string().min(4).max(8)),
   newPassword: passwordSchema,
+})
+
+export const resetPasswordStartSchema = z.object({
+  email: z.string().trim().email().transform((v) => v.toLowerCase()),
 })
 
 export const profileSchema = z.object({

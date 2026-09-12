@@ -1,31 +1,45 @@
 # Feature: Área cliente
 
 **Slug:** `features/account/`  
-**Estado:** activa (wireframe de baja fidelidad; diseño final pendiente)
+**Estado:** activa
 
 ## Propósito
 
-Espacio del cliente autenticado: resumen, pedidos, cotizaciones, perfil.
+Espacio del cliente autenticado: resumen, pedidos, cotizaciones, perfil personal y datos de empresa (DNI/RUC).
 
 ## Rutas
 
-`/cuenta`, `/cuenta/pedidos`, `/cuenta/pedidos/:id`, `/cuenta/cotizaciones`, `/cuenta/perfil`.
+| Ruta | Componente | Notas |
+| --- | --- | --- |
+| `/cuenta` | `AccountOverviewPage` | Resumen |
+| `/cuenta/pedidos` | `AccountOrdersPage` | |
+| `/cuenta/pedidos/:id` | `AccountOrderDetailPage` | |
+| `/cuenta/cotizaciones` | `ClientQuotesPage` (quotes) | Montada en App |
+| `/cuenta/perfil` | `AccountProfilePage` | Nombre, teléfono, avatar, 2FA |
+| `/cuenta/empresa` | `AccountCompanyPage` | DNI/RUC + razón social (Decolecta blur) |
+
+## Menú sesión
+
+Solo **Mi perfil** y **Mi empresa** (más SystemRSV si admin). Pedidos/resumen siguen en tabs del layout.
 
 ## API pública
 
 | Export | Tipo | Descripción |
 | --- | --- | --- |
-| `AccountLayout` | layout | Sub-nav (Resumen/Pedidos/Cotizaciones/Perfil) + `Outlet` |
-| `AccountOverviewPage` | página | `/cuenta` |
-| `AccountOrdersPage` | página | `/cuenta/pedidos` |
-| `AccountOrderDetailPage` | página | `/cuenta/pedidos/:id` |
-| `AccountProfilePage` | página | `/cuenta/perfil` |
+| `AccountLayout` | layout | Tabs + banner |
+| `AccountOverviewPage` | página | |
+| `AccountOrdersPage` | página | |
+| `AccountOrderDetailPage` | página | |
+| `AccountProfilePage` | página | |
+| `AccountCompanyPage` | página | Datos fiscales |
 
-`/cuenta/cotizaciones` usa `ClientQuotesPage` de `quotes` (montada desde `app/App.tsx`, no importada internamente por `account`).
+## Prefill
+
+Datos de `Mi empresa` (`documentType`, `documentNumber`, `companyName`, `fullName`) + teléfono del perfil alimentan Contacto y Cotizar sin reconsultar Decolecta.
 
 ## Verificación
 
-- [x] Layout cuenta con tabs activos por ruta
-- [x] Listados mock con estados (badges)
-- [ ] Guarda de sesión (fase lógica — hoy la ruta es de acceso directo)
-- [ ] Reemplazar `WireBlock` por diseño final
+- [x] Layout cuenta con tabs (incl. Mi empresa)
+- [x] Menú dropdown reducido
+- [x] Guardado vía `PATCH /api/profile`
+- [ ] Persistencia de pedidos en Postgres (sigue pendiente)

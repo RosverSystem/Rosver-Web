@@ -11,6 +11,15 @@ export default defineConfig({
     },
   },
   server: {
+    watch: {
+      // Evita F5/HMR cuando la API escribe SQL/data/logs bajo server/
+      ignored: [
+        '**/server/data/**',
+        '**/server/sql/**',
+        '**/server/**/*.log',
+        '**/.env',
+      ],
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:8787',

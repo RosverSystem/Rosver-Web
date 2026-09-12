@@ -6,12 +6,13 @@ import {
   AdminField,
   AdminInput,
   AdminPageHeader,
-  AdminSelect,
 } from '@/shared/ui/admin-field'
 import { AdminImageUpload } from '@/shared/ui/admin-image-upload'
 import { AdminModal } from '@/shared/ui/admin-modal'
 import { CategoryHomeCard } from '@/features/catalog'
+import { cn } from '@/shared/lib'
 import { IconWrench } from '@/shared/ui/icons'
+import { Pen, Plus, Trash } from 'cssvg-icons'
 import { AdminWebPreview } from './AdminWebPreview'
 import { useEffect, useMemo, useState } from 'react'
 
@@ -39,8 +40,6 @@ const emptyForm = () => ({
   point2: '',
   point3: '',
   imageUrl: '',
-  showInNav: true,
-  showOnHome: true,
 })
 
 export function AdminCategoriesPage() {
@@ -54,6 +53,10 @@ export function AdminCategoriesPage() {
   const [query, setQuery] = useState('')
 
   const isRoot = !form.parentId
+  const parentName = useMemo(
+    () => categories.find((c) => c.id === form.parentId)?.name ?? null,
+    [categories, form.parentId],
+  )
 
   const previewCategory = useMemo(
     () => ({
@@ -71,6 +74,15 @@ export function AdminCategoriesPage() {
     () => categories.filter((c) => !c.parentId),
     [categories],
   )
+
+  const stats = useMemo(() => {
+    const rootCount = roots.length
+    return {
+      total: categories.length,
+      roots: rootCount,
+      subs: categories.length - rootCount,
+    }
+  }, [categories, roots])
 
   const filteredRoots = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -107,8 +119,16 @@ export function AdminCategoriesPage() {
     setForm(emptyForm())
   }
 
+  /** Alta general: siempre categoría principal. */
   function openCreate() {
     resetForm()
+    setModalOpen(true)
+  }
+
+  /** Subcategoría desde la card padre (sin select de ubicación). */
+  function openCreateSub(parentId: string) {
+    setEditingId(null)
+    setForm({ ...emptyForm(), parentId })
     setModalOpen(true)
   }
 
@@ -124,8 +144,6 @@ export function AdminCategoriesPage() {
       point2: pts[1] ?? '',
       point3: pts[2] ?? '',
       imageUrl: cat.imageUrl ?? '',
-      showInNav: cat.showInNav,
-      showOnHome: Boolean(cat.showOnHome),
     })
     setModalOpen(true)
   }
@@ -145,7 +163,7 @@ export function AdminCategoriesPage() {
       .map((p) => p.trim())
       .filter(Boolean)
 
-    if (isRoot && form.showOnHome) {
+    if (isRoot) {
       if (!form.tagline.trim()) {
         errors.push('Etiqueta corta (texto rojo arriba del nombre en el inicio)')
       }
@@ -165,8 +183,8 @@ export function AdminCategoriesPage() {
       name: form.name.trim(),
       sku: form.sku.trim() || undefined,
       parentId: form.parentId || null,
-      showInNav: form.showInNav,
-      showOnHome: isRoot ? form.showOnHome : false,
+      showInNav: true,
+      showOnHome: isRoot,
       tagline: isRoot ? form.tagline.trim() || null : null,
       highlightPoints: isRoot ? points : [],
       imageUrl: form.imageUrl.trim() || undefined,
@@ -179,11 +197,13 @@ export function AdminCategoriesPage() {
           method: 'PATCH',
           body: JSON.stringify(payload),
         })
+        showMessages(['Categoría actualizada'])
       } else {
         await api('/api/admin/categories', {
           method: 'POST',
           body: JSON.stringify(payload),
         })
+        showMessages(['Categoría creada'])
       }
       closeModal()
       await load()
@@ -205,6 +225,7 @@ export function AdminCategoriesPage() {
       await api(`/api/admin/categories/${id}`, { method: 'DELETE' })
       if (editingId === id) closeModal()
       await load()
+      showMessages(['Categoría eliminada'])
     } catch (err) {
       showMessages([
         err instanceof ApiError ? err.message : 'No se pudo eliminar',
@@ -212,24 +233,34 @@ export function AdminCategoriesPage() {
     }
   }
 
+  const modalTitle = editingId
+    ? isRoot
+      ? 'Editar categoría'
+      : 'Editar subcategoría'
+    : isRoot
+      ? 'Nueva categoría'
+      : 'Nueva subcategoría'
+
   return (
     <div className="space-y-5">
       <FloatingToasts toasts={toasts} onDismiss={dismiss} />
       <AdminPageHeader
+        eyebrow="Catálogo"
         title="Categorías"
+        description="Principales del menú y subcategorías del catálogo."
+        stats={[
+          { label: 'Total', value: stats.total },
+          { label: 'Principales', value: stats.roots, tone: 'success' },
+          { label: 'Subcategorías', value: stats.subs, tone: 'warning' },
+        ]}
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-rosver-muted ring-1 ring-rosver-line">
-              {categories.length} en total
-            </span>
-            <button
-              type="button"
-              onClick={openCreate}
-              className="h-9 rounded-xl bg-rosver-red px-4 text-xs font-semibold text-white hover:bg-rosver-red-dark"
-            >
-              Nueva categoría
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={openCreate}
+            className="rounded-full bg-rosver-red px-4 py-2.5 text-xs font-bold text-white uppercase shadow-sm shadow-rosver-red/30 hover:bg-rosver-red-dark"
+          >
+            Nueva categoría
+          </button>
         }
       />
 
@@ -279,35 +310,35 @@ export function AdminCategoriesPage() {
                       <h3 className="truncate font-semibold text-rosver-ink">
                         {root.name}
                       </h3>
-                      {root.showInNav ? (
-                        <span className="rounded-full bg-rosver-red/10 px-2 py-0.5 text-[10px] font-bold text-rosver-red">
-                          Menú
-                        </span>
-                      ) : null}
-                      {root.showOnHome ? (
-                        <span className="rounded-full bg-rosver-ink/10 px-2 py-0.5 text-[10px] font-bold text-rosver-ink">
-                          Inicio
-                        </span>
-                      ) : null}
+                      <span className="rounded-full bg-rosver-red/10 px-2 py-0.5 text-[10px] font-bold text-rosver-red">
+                        Menú
+                      </span>
+                      <span className="rounded-full bg-rosver-ink/10 px-2 py-0.5 text-[10px] font-bold text-rosver-ink">
+                        Inicio
+                      </span>
                     </div>
                     <p className="mt-0.5 text-xs text-rosver-muted">
                       {root.tagline || 'Sin etiqueta de inicio'} · {children.length}{' '}
                       {children.length === 1 ? 'subcategoría' : 'subcategorías'}
                     </p>
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
                       <button
                         type="button"
+                        title="Editar"
+                        aria-label={`Editar ${root.name}`}
                         onClick={() => startEdit(root)}
-                        className="text-xs font-semibold text-rosver-red hover:underline"
+                        className="inline-flex size-9 items-center justify-center rounded-xl bg-rosver-yellow text-rosver-ink shadow-sm shadow-rosver-yellow/30 hover:opacity-90"
                       >
-                        Editar
+                        <Pen size={16} color="currentColor" strokeWidth={2} />
                       </button>
                       <button
                         type="button"
+                        title="Eliminar"
+                        aria-label={`Eliminar ${root.name}`}
                         onClick={() => void onDelete(root.id, root.name)}
-                        className="text-xs font-semibold text-rosver-muted hover:text-rosver-red"
+                        className="inline-flex size-9 items-center justify-center rounded-xl bg-rosver-red text-white shadow-sm shadow-rosver-red/25 hover:bg-rosver-red-dark"
                       >
-                        Eliminar
+                        <Trash size={16} color="currentColor" strokeWidth={2} />
                       </button>
                     </div>
                   </div>
@@ -315,7 +346,7 @@ export function AdminCategoriesPage() {
                 <ul className="flex-1 divide-y divide-rosver-line">
                   {children.length === 0 ? (
                     <li className="px-4 py-3 text-xs text-rosver-muted">
-                      Sin grupos dentro
+                      Sin subcategorías todavía
                     </li>
                   ) : (
                     children.map((ch) => (
@@ -330,25 +361,43 @@ export function AdminCategoriesPage() {
                           />
                           <span className="truncate font-medium">{ch.name}</span>
                         </span>
-                        <span className="flex shrink-0 gap-2">
+                        <span className="flex shrink-0 items-center gap-1">
                           <button
                             type="button"
+                            title="Editar"
+                            aria-label={`Editar ${ch.name}`}
                             onClick={() => startEdit(ch)}
-                            className="text-xs font-semibold text-rosver-red"
+                            className="inline-flex size-8 items-center justify-center rounded-lg bg-rosver-yellow/90 text-rosver-ink hover:opacity-90"
                           >
-                            Editar
+                            <Pen size={14} color="currentColor" strokeWidth={2} />
                           </button>
                           <button
                             type="button"
+                            title="Eliminar"
+                            aria-label={`Eliminar ${ch.name}`}
                             onClick={() => void onDelete(ch.id, ch.name)}
-                            className="text-xs font-semibold text-rosver-muted hover:text-rosver-red"
+                            className="inline-flex size-8 items-center justify-center rounded-lg bg-rosver-red text-white hover:bg-rosver-red-dark"
                           >
-                            Eliminar
+                            <Trash size={14} color="currentColor" strokeWidth={2} />
                           </button>
                         </span>
                       </li>
                     ))
                   )}
+                  <li className="px-3 py-2.5">
+                    <button
+                      type="button"
+                      onClick={() => openCreateSub(root.id)}
+                      className={cn(
+                        'flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-rosver-line',
+                        'px-3 py-2.5 text-xs font-bold text-rosver-muted transition',
+                        'hover:border-rosver-red/40 hover:bg-rosver-red/5 hover:text-rosver-red',
+                      )}
+                    >
+                      <Plus size={14} color="currentColor" strokeWidth={2} />
+                      Agregar subcategoría
+                    </button>
+                  </li>
                 </ul>
               </article>
             )
@@ -359,7 +408,7 @@ export function AdminCategoriesPage() {
       <AdminModal
         open={modalOpen}
         onClose={closeModal}
-        title={editingId ? 'Editar categoría' : 'Nueva categoría'}
+        title={modalTitle}
         size="xl"
         layer={80}
         closeOnEscape={false}
@@ -382,7 +431,9 @@ export function AdminCategoriesPage() {
                 ? 'Guardando…'
                 : editingId
                   ? 'Guardar cambios'
-                  : 'Agregar categoría'}
+                  : isRoot
+                    ? 'Agregar categoría'
+                    : 'Agregar subcategoría'}
             </button>
           </>
         }
@@ -392,98 +443,60 @@ export function AdminCategoriesPage() {
             id="category-form"
             noValidate
             onSubmit={onSubmit}
-            className="min-w-0 space-y-4"
+            className="min-w-0 space-y-5"
           >
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <AdminField label="Nombre" htmlFor="cat-name">
-              <AdminInput
-                id="cat-name"
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="Ej. Herramientas"
-              />
-            </AdminField>
-            <AdminField label="Código interno (opcional)" htmlFor="cat-sku">
-              <AdminInput
-                id="cat-sku"
-                value={form.sku}
-                onChange={(e) => setForm((f) => ({ ...f, sku: e.target.value }))}
-                placeholder="Opcional"
-                className="uppercase"
-              />
-            </AdminField>
-            <AdminField label="Ubicación" htmlFor="cat-parent">
-              <AdminSelect
-                id="cat-parent"
-                value={form.parentId}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    parentId: e.target.value,
-                    showOnHome: e.target.value ? false : f.showOnHome,
-                  }))
-                }
-              >
-                <option value="">Categoría principal (menú)</option>
-                {roots
-                  .filter((r) => r.id !== editingId)
-                  .map((r) => (
-                    <option key={r.id} value={r.id}>
-                      Dentro de: {r.name}
-                    </option>
-                  ))}
-              </AdminSelect>
-            </AdminField>
-          </div>
-
-          {isRoot ? (
-            <div className="space-y-4 rounded-xl border border-rosver-line bg-rosver-soft/40 p-4">
-              <p className="text-sm font-semibold text-rosver-ink">
-                Card en inicio — «Explora por categoría»
+            {!isRoot && parentName ? (
+              <p className="rounded-xl border border-rosver-line bg-rosver-soft/60 px-3 py-2 text-sm text-rosver-ink">
+                Dentro de{' '}
+                <span className="font-semibold text-rosver-red">{parentName}</span>
               </p>
-              <label className="flex items-center gap-2 text-sm text-rosver-ink">
-                <input
-                  type="checkbox"
-                  checked={form.showOnHome}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, showOnHome: e.target.checked }))
-                  }
-                  className="size-4 rounded border-rosver-line text-rosver-red"
-                />
-                Mostrar en el inicio
-              </label>
-              <label className="flex items-center gap-2 text-sm text-rosver-ink">
-                <input
-                  type="checkbox"
-                  checked={form.showInNav}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, showInNav: e.target.checked }))
-                  }
-                  className="size-4 rounded border-rosver-line text-rosver-red"
-                />
-                Mostrar en menú «Ver categorías»
-              </label>
-              {form.showOnHome ? (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <AdminField label="Etiqueta corta" htmlFor="cat-tagline">
-                    <AdminInput
-                      id="cat-tagline"
-                      value={form.tagline}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, tagline: e.target.value }))
-                      }
-                      placeholder="Ej. Listas para obra y taller"
-                    />
-                  </AdminField>
-                  <div className="sm:col-span-2">
-                    <AdminImageUpload
-                      folder="categories"
-                      value={form.imageUrl}
-                      onChange={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
-                      onError={(msg) => showMessages([msg])}
-                      label="Imagen de la card"
-                    />
-                  </div>
+            ) : null}
+
+            <section className="space-y-3">
+              <p className="text-xs font-bold tracking-wide text-rosver-muted uppercase">
+                Datos
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <AdminField label="Nombre" htmlFor="cat-name">
+                  <AdminInput
+                    id="cat-name"
+                    value={form.name}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, name: e.target.value }))
+                    }
+                    placeholder="Ej. Herramientas"
+                  />
+                </AdminField>
+                <AdminField label="Código interno (opcional)" htmlFor="cat-sku">
+                  <AdminInput
+                    id="cat-sku"
+                    value={form.sku}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, sku: e.target.value }))
+                    }
+                    placeholder="Opcional"
+                    className="uppercase"
+                  />
+                </AdminField>
+              </div>
+            </section>
+
+            {isRoot ? (
+              <section className="space-y-4 rounded-xl border border-rosver-line bg-rosver-soft/40 p-4">
+                <p className="text-sm font-semibold text-rosver-ink">
+                  Card en inicio — «Explora por categoría»
+                </p>
+                <AdminField label="Etiqueta corta" htmlFor="cat-tagline">
+                  <AdminInput
+                    id="cat-tagline"
+                    value={form.tagline}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, tagline: e.target.value }))
+                    }
+                    placeholder="Ej. Listas para obra y taller"
+                  />
+                </AdminField>
+                <div className="grid gap-3 sm:grid-cols-3">
                   <AdminField label="Punto 1" htmlFor="cat-p1">
                     <AdminInput
                       id="cat-p1"
@@ -515,43 +528,30 @@ export function AdminCategoriesPage() {
                     />
                   </AdminField>
                 </div>
-              ) : null}
-            </div>
-          ) : (
-            <label className="flex items-center gap-2 text-sm text-rosver-ink">
-              <input
-                type="checkbox"
-                checked={form.showInNav}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, showInNav: e.target.checked }))
-                }
-                className="size-4 rounded border-rosver-line text-rosver-red"
-              />
-              Mostrar en el menú (bajo su categoría padre)
-            </label>
-          )}
-        </form>
-
-          <AdminWebPreview
-            label={
-              isRoot
-                ? 'Vista previa — inicio (Explora por categoría)'
-                : 'Vista previa — card de categoría'
-            }
-            className="lg:sticky lg:top-0"
-            wide
-          >
-            <CategoryHomeCard
-              category={previewCategory}
-              preview
-              className="mx-auto"
-            />
-            {isRoot && !form.showOnHome ? (
-              <p className="mt-3 text-center text-[11px] text-rosver-muted">
-                No aparecerá en el inicio hasta marcar «Mostrar en el inicio».
-              </p>
+                <AdminImageUpload
+                  folder="categories"
+                  value={form.imageUrl}
+                  onChange={(url) => setForm((f) => ({ ...f, imageUrl: url }))}
+                  onError={(msg) => showMessages([msg])}
+                  label="Imagen de la card"
+                />
+              </section>
             ) : null}
-          </AdminWebPreview>
+          </form>
+
+          {isRoot ? (
+            <AdminWebPreview
+              label="Vista previa — inicio"
+              className="lg:sticky lg:top-0"
+              wide
+            >
+              <CategoryHomeCard
+                category={previewCategory}
+                preview
+                className="mx-auto"
+              />
+            </AdminWebPreview>
+          ) : null}
         </div>
       </AdminModal>
     </div>

@@ -1,7 +1,9 @@
 import { useCatalog, type Product } from '@/features/catalog'
 import { prefersReducedMotion } from '@/shared/lib/gsap'
+import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { ProductImagePlaceholder } from '@/shared/ui/product-image-placeholder'
 import { cn } from '@/shared/lib'
+import { attachNestedScrollWheel } from '@/shared/lib/nested-scroll-wheel'
 import {
   ArrowRight,
   Clock,
@@ -16,8 +18,10 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useCart } from '../model/cart-store'
 import { addInputFromProduct, unitPriceOfLine } from '../model/cart-line'
-import { type CartLine } from '../model/mocks'
+import { type CartLine, isComboLine } from '../model/mocks'
 import { ContinueOrderModal } from './ContinueOrderModal'
+import { useCartPromos, promosBySlug } from '../model/use-cart-promos'
+import { lineDisplayTotal } from '@/shared/lib/promo-utils'
 
 /** TC referencial mock (fase visual). */
 const TC_REFERENCIAL = 3.75
@@ -40,13 +44,34 @@ const BENEFITS = [
   },
 ] as const
 
-function resolveLine(line: CartLine, products: Product[]) {
-  const product = products.find((p) => p.slug === line.productSlug)
-  if (!product) return null
+type ResolvedCartRow =
+  | {
+      kind: 'product'
+      line: CartLine
+      product: Product
+      key: string
+      quantity: number
+    }
+  | {
+      kind: 'combo'
+      line: CartLine
+      key: string
+      quantity: number
+    }
+
+function resolveLine(line: CartLine, products: Product[]): ResolvedCartRow | null {
   const key = line.packagingId
     ? `${line.productSlug}::${line.packagingId}`
-    : line.productSlug
-  return { ...line, product, key }
+    : isComboLine(line)
+      ? `combo::${line.comboId}`
+      : line.productSlug
+
+  if (isComboLine(line)) {
+    return { kind: 'combo', line, key, quantity: line.quantity }
+  }
+  const product = products.find((p) => p.slug === line.productSlug)
+  if (!product) return null
+  return { kind: 'product', line, product, key, quantity: line.quantity }
 }
 
 /**
@@ -57,17 +82,31 @@ export function CartPage() {
   const { products } = useCatalog()
   const { lines, addItem, updateQuantity, removeLine, clear, lineKey } =
     useCart()
+  const { showSuccess } = useFormToasts()
   const [orderModalOpen, setOrderModalOpen] = useState(false)
+  const { items: promos } = useCartPromos()
+  const promoMap = promosBySlug(promos)
 
   const items = lines
     .map((l) => resolveLine(l, products))
-    .filter((l): l is NonNullable<typeof l> => l !== null)
+    .filter((l): l is ResolvedCartRow => l !== null)
   const visibleCount = items.reduce((sum, item) => sum + item.quantity, 0)
   const total = items.reduce((sum, item) => {
-    const unit = unitPriceOfLine(item, item.product)
-    return sum + (unit ?? 0) * item.quantity
+    if (item.kind === 'combo') {
+      const unit = unitPriceOfLine(item.line)
+      return sum + (unit ?? 0) * item.quantity
+    }
+    const unit = unitPriceOfLine(item.line, item.product)
+    if (unit == null) return sum
+    const promo = promoMap.get(item.product.slug) ?? null
+    const { lineTotal } = lineDisplayTotal(unit, item.quantity, promo)
+    return sum + lineTotal
   }, 0)
-  const hasConsult = items.some((item) => unitPriceOfLine(item, item.product) === null)
+  const hasConsult = items.some((item) =>
+    item.kind === 'combo'
+      ? unitPriceOfLine(item.line) === null
+      : unitPriceOfLine(item.line, item.product) === null,
+  )
 
   return (
     <main className="mx-auto flex w-full min-w-0 max-w-4xl flex-col gap-6 overflow-x-hidden px-4 pb-28 lg:px-6">
@@ -90,7 +129,10 @@ export function CartPage() {
           <div className="mt-3">
             <CartProductSearcher
               products={products}
-              onPick={(product) => addItem(addInputFromProduct(product, 1))}
+              onPick={(product) => {
+                addItem(addInputFromProduct(product, 1))
+                showSuccess(['Agregado al carrito'])
+              }}
             />
           </div>
         </div>
@@ -117,10 +159,95 @@ export function CartPage() {
         ) : (
           <ul className="flex flex-col divide-y divide-rosver-line px-4 sm:px-5">
             {items.map((item) => {
-              const { product, quantity, packagingLabel, key } = item
-              const unit = unitPriceOfLine(item, product)
-              const lineTotal =
-                unit != null ? unit * quantity : null
+              if (item.kind === 'combo') {
+                const { line, quantity, key } = item
+                const unit = unitPriceOfLine(line)
+                const lineTotal = unit != null ? unit * quantity : null
+                const nested = line.comboItems ?? []
+                return (
+                  <li
+                    key={key}
+                    className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center"
+                  >
+                    <div className="shrink-0">
+                      <CartThumb
+                        src={line.comboImageUrl}
+                        alt={line.comboName || 'Combo'}
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-rosver-ink">
+                        {line.comboName || 'Combo'}
+                      </p>
+                      <p className="mt-0.5 text-xs text-rosver-muted">
+                        {line.comboSku ? `SKU ${line.comboSku} · ` : ''}
+                        Combo
+                        {line.comboKind === 'bogo' ? ' 2x1' : ' pack'}
+                      </p>
+                      {nested.length ? (
+                        <p className="mt-1 line-clamp-2 text-[11px] text-rosver-muted">
+                          {nested
+                            .map((n) => `${n.quantity}× ${n.productName}`)
+                            .join(' · ')}
+                        </p>
+                      ) : null}
+                      <p className="mt-1 text-sm font-bold text-rosver-red">
+                        {unit != null ? `S/ ${unit.toFixed(2)}` : 'Consultar'}
+                        {unit != null && quantity > 1 ? (
+                          <span className="ml-2 text-xs font-semibold text-rosver-muted">
+                            × {quantity} = S/ {(lineTotal ?? 0).toFixed(2)}
+                          </span>
+                        ) : null}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateQuantity(lineKey(line), quantity - 1)
+                        }
+                        className="inline-flex size-10 items-center justify-center rounded-full border border-rosver-line text-lg text-rosver-ink transition hover:border-rosver-red/40 hover:text-rosver-red"
+                        aria-label="Disminuir cantidad"
+                      >
+                        −
+                      </button>
+                      <span className="w-8 text-center text-sm font-bold text-rosver-ink">
+                        {quantity}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          updateQuantity(lineKey(line), quantity + 1)
+                        }
+                        className="inline-flex size-10 items-center justify-center rounded-full border border-rosver-line text-lg text-rosver-ink transition hover:border-rosver-red/40 hover:text-rosver-red"
+                        aria-label="Aumentar cantidad"
+                      >
+                        +
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        removeLine(lineKey(line))
+                        showSuccess(['Combo quitado del carrito'])
+                      }}
+                      className="inline-flex min-h-10 items-center justify-center gap-1.5 self-start rounded-lg px-2 text-xs font-bold text-rosver-muted transition hover:bg-rosver-soft hover:text-rosver-red sm:self-center"
+                    >
+                      <Trash size={16} color="currentColor" strokeWidth={2} />
+                      Quitar
+                    </button>
+                  </li>
+                )
+              }
+
+              const { product, quantity, key, line } = item
+              const packagingLabel = line.packagingLabel
+              const unit = unitPriceOfLine(line, product)
+              const promo = promoMap.get(product.slug) ?? null
+              const promoCalc = unit != null
+                ? lineDisplayTotal(unit, quantity, promo)
+                : null
+              const lineTotal = promoCalc ? promoCalc.lineTotal : unit != null ? unit * quantity : null
               return (
                 <li
                   key={key}
@@ -141,9 +268,14 @@ export function CartPage() {
                     >
                       {product.name}
                     </Link>
-                    <p className="mt-0.5 text-xs text-rosver-muted">
+                    <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-rosver-muted">
                       {product.sku} · {product.vendor}
                       {packagingLabel ? ` · ${packagingLabel}` : ''}
+                      {promo && (
+                        <span className="inline-flex items-center rounded-full bg-rosver-yellow px-2 py-0.5 text-[10px] font-bold text-rosver-ink uppercase">
+                          {promo.label}
+                        </span>
+                      )}
                     </p>
                     <p className="mt-1 text-sm font-bold text-rosver-red">
                       {unit != null ? `S/ ${unit.toFixed(2)}` : 'Consultar'}
@@ -152,6 +284,11 @@ export function CartPage() {
                           × {quantity} = S/ {(lineTotal ?? 0).toFixed(2)}
                         </span>
                       ) : null}
+                      {promoCalc?.hasPromo && promoCalc.savings > 0 && (
+                        <span className="ml-2 text-xs font-semibold text-rosver-success">
+                          Ahorras S/ {promoCalc.savings.toFixed(2)}
+                        </span>
+                      )}
                     </p>
                   </div>
 
@@ -159,7 +296,7 @@ export function CartPage() {
                     <button
                       type="button"
                       onClick={() =>
-                        updateQuantity(lineKey(item), quantity - 1)
+                        updateQuantity(lineKey(line), quantity - 1)
                       }
                       className="inline-flex size-10 items-center justify-center rounded-full border border-rosver-line text-lg text-rosver-ink transition hover:border-rosver-red/40 hover:text-rosver-red"
                       aria-label="Disminuir cantidad"
@@ -172,7 +309,7 @@ export function CartPage() {
                     <button
                       type="button"
                       onClick={() =>
-                        updateQuantity(lineKey(item), quantity + 1)
+                        updateQuantity(lineKey(line), quantity + 1)
                       }
                       className="inline-flex size-10 items-center justify-center rounded-full border border-rosver-line text-lg text-rosver-ink transition hover:border-rosver-red/40 hover:text-rosver-red"
                       aria-label="Aumentar cantidad"
@@ -183,7 +320,10 @@ export function CartPage() {
 
                   <button
                     type="button"
-                    onClick={() => removeLine(lineKey(item))}
+                    onClick={() => {
+                      removeLine(lineKey(line))
+                      showSuccess(['Producto quitado del carrito'])
+                    }}
                     className="inline-flex min-h-10 items-center justify-center gap-1.5 self-start rounded-lg px-2 text-xs font-bold text-rosver-muted transition hover:bg-rosver-soft hover:text-rosver-red sm:self-center"
                   >
                     <Trash size={16} color="currentColor" strokeWidth={2} />
@@ -396,6 +536,7 @@ function CartProductSearcher({
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<HTMLUListElement>(null)
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -418,6 +559,13 @@ function CartProductSearcher({
     document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
   }, [])
+
+  useEffect(() => {
+    if (!open) return
+    const el = listRef.current
+    if (!el) return
+    return attachNestedScrollWheel(el)
+  }, [open, results.length])
 
   return (
     <div ref={wrapRef} className="relative">
@@ -447,7 +595,11 @@ function CartProductSearcher({
         />
       </div>
       {open ? (
-        <ul className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-xl border border-rosver-line bg-white py-1 shadow-[0_16px_40px_-20px_rgba(17,17,17,0.35)]">
+        <ul
+          ref={listRef}
+          data-lenis-prevent
+          className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto overscroll-contain rounded-xl border border-rosver-line bg-white py-1 shadow-[0_16px_40px_-20px_rgba(17,17,17,0.35)]"
+        >
           {results.length === 0 ? (
             <li className="px-3 py-3 text-sm text-rosver-muted">
               Sin coincidencias

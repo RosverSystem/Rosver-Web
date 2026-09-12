@@ -21,10 +21,29 @@ adminCatalogRoutes.use('*', requireAuth, requireRole('admin'))
 // no un 500 sin controlar por Postgres rechazando el UUID en la query.
 adminCatalogRoutes.use('/brands/:id', validateUuidParams('id'))
 adminCatalogRoutes.use('/categories/:id', validateUuidParams('id'))
-adminCatalogRoutes.use('/unit-types/:id', validateUuidParams('id'))
+adminCatalogRoutes.use('/unit-types/:id', async (c, next) => {
+  const id = c.req.param('id')
+  if (id === 'next-code') return next()
+  return validateUuidParams('id')(c, next)
+})
+adminCatalogRoutes.use('/unit-types/:id/quantities', validateUuidParams('id'))
+adminCatalogRoutes.use('/unit-type-quantities/:id', async (c, next) => {
+  const id = c.req.param('id')
+  if (id === 'next-code') return next()
+  return validateUuidParams('id')(c, next)
+})
 adminCatalogRoutes.use('/offers/:productId', validateUuidParams('productId'))
-adminCatalogRoutes.use('/products/:id', validateUuidParams('id'))
-adminCatalogRoutes.use('/products/:id/*', validateUuidParams('id'))
+// No validar UUID en rutas literales bajo /products/… (ej. next-code, import)
+adminCatalogRoutes.use('/products/:id', async (c, next) => {
+  const id = c.req.param('id')
+  if (id === 'next-code' || id === 'import') return next()
+  return validateUuidParams('id')(c, next)
+})
+adminCatalogRoutes.use('/products/:id/*', async (c, next) => {
+  const id = c.req.param('id')
+  if (id === 'next-code' || id === 'import') return next()
+  return validateUuidParams('id')(c, next)
+})
 adminCatalogRoutes.use(
   '/products/:id/packagings/:packagingId',
   validateUuidParams('id', 'packagingId'),
@@ -34,6 +53,59 @@ adminCatalogRoutes.use(
   validateUuidParams('id', 'priceId'),
 )
 adminCatalogRoutes.use('/reviews/:id', validateUuidParams('id'))
+adminCatalogRoutes.use('/spec-attributes/:id', async (c, next) => {
+  const id = c.req.param('id')
+  if (id === 'next-code') return next()
+  return validateUuidParams('id')(c, next)
+})
+
+/** Próximo código interno (preview; no consume la secuencia). */
+adminCatalogRoutes.get('/products/next-code', async (c) => {
+  const { rows } = await pool.query<{ next: string }>(
+    `SELECT (COALESCE(MAX(code), -1) + 1)::text AS next FROM products`,
+  )
+  const next = Math.max(0, Math.floor(Number(rows[0]?.next ?? 0)))
+  return c.json({
+    code: next,
+    codeLabel: String(next).padStart(8, '0'),
+  })
+})
+
+/** Preview código interno de cantidades de presentación. */
+adminCatalogRoutes.get('/unit-type-quantities/next-code', async (c) => {
+  const { rows } = await pool.query<{ next: string }>(
+    `SELECT (COALESCE(MAX(code), -1) + 1)::text AS next FROM unit_type_quantities`,
+  )
+  const next = Math.max(0, Math.floor(Number(rows[0]?.next ?? 0)))
+  return c.json({
+    code: next,
+    codeLabel: String(next).padStart(8, '0'),
+  })
+})
+
+/** Preview código interno de tipos de unidad. */
+adminCatalogRoutes.get('/unit-types/next-code', async (c) => {
+  const { rows } = await pool.query<{ next: string }>(
+    `SELECT (COALESCE(MAX(internal_code), -1) + 1)::text AS next FROM unit_types`,
+  )
+  const next = Math.max(0, Math.floor(Number(rows[0]?.next ?? 0)))
+  return c.json({
+    code: next,
+    codeLabel: String(next).padStart(8, '0'),
+  })
+})
+
+/** Preview SKU interno de tipos de especificación. */
+adminCatalogRoutes.get('/spec-attributes/next-code', async (c) => {
+  const { rows } = await pool.query<{ next: string }>(
+    `SELECT (COALESCE(MAX(internal_code), -1) + 1)::text AS next FROM spec_attributes`,
+  )
+  const next = Math.max(0, Math.floor(Number(rows[0]?.next ?? 0)))
+  return c.json({
+    code: next,
+    codeLabel: String(next).padStart(8, '0'),
+  })
+})
 
 /* ——— Upload R2 (categorías / marcas / productos) ——— */
 adminCatalogRoutes.post('/uploads', async (c) => {
@@ -255,7 +327,8 @@ adminCatalogRoutes.post('/categories', async (c) => {
   }
   const d = body.data
   const isRoot = !d.parentId
-  const showOnHome = isRoot ? (d.showOnHome ?? false) : false
+  const showInNav = true
+  const showOnHome = isRoot
   if (showOnHome) {
     if (!d.tagline?.trim()) {
       return c.json({ error: 'Para el inicio necesitas la etiqueta corta' }, 400)
@@ -284,7 +357,7 @@ adminCatalogRoutes.post('/categories', async (c) => {
         d.iconKey || null,
         d.imageUrl || null,
         d.visible ?? true,
-        d.showInNav ?? true,
+        showInNav,
         showOnHome,
         d.tagline?.trim() || null,
         points,
@@ -325,8 +398,7 @@ adminCatalogRoutes.patch('/categories/:id', async (c) => {
     d.parentId !== undefined ? d.parentId : (cur.parent_id as string | null)
   const isRoot = !nextParent
   const nextShowOnHome = isRoot
-    ? (d.showOnHome !== undefined ? d.showOnHome : Boolean(cur.show_on_home))
-    : false
+  const nextShowInNav = true
   const nextTagline =
     d.tagline !== undefined ? d.tagline : (cur.tagline as string | null)
   const nextPoints =
@@ -357,7 +429,7 @@ adminCatalogRoutes.patch('/categories/:id', async (c) => {
        icon_key = COALESCE($7, icon_key),
        image_url = CASE WHEN $8::boolean THEN $9 ELSE image_url END,
        visible = COALESCE($10, visible),
-       show_in_nav = COALESCE($11, show_in_nav),
+       show_in_nav = $11,
        show_on_home = $12,
        tagline = CASE WHEN $13::boolean THEN $14 ELSE tagline END,
        highlight_points = CASE WHEN $15::boolean THEN $16::jsonb ELSE highlight_points END,
@@ -376,7 +448,7 @@ adminCatalogRoutes.patch('/categories/:id', async (c) => {
       d.imageUrl !== undefined,
       d.imageUrl ?? null,
       d.visible ?? null,
-      d.showInNav ?? null,
+      nextShowInNav,
       nextShowOnHome,
       d.tagline !== undefined,
       d.tagline ?? null,
@@ -408,7 +480,8 @@ adminCatalogRoutes.delete('/categories/:id', async (c) => {
 /* ——— Tipos de unidad ——— */
 adminCatalogRoutes.get('/unit-types', async (c) => {
   const { rows } = await pool.query(
-    `SELECT id, code, name, is_base AS "isBase", sort_order AS "sortOrder"
+    `SELECT id, code, internal_code AS "internalCode", name,
+            is_base AS "isBase", sort_order AS "sortOrder"
      FROM unit_types ORDER BY sort_order, name`,
   )
   return c.json({ unitTypes: rows })
@@ -429,7 +502,8 @@ adminCatalogRoutes.post('/unit-types', async (c) => {
     const { rows } = await pool.query(
       `INSERT INTO unit_types (code, name, is_base, sort_order)
        VALUES ($1,$2,$3,$4)
-       RETURNING id, code, name, is_base AS "isBase", sort_order AS "sortOrder"`,
+       RETURNING id, code, internal_code AS "internalCode", name,
+                 is_base AS "isBase", sort_order AS "sortOrder"`,
       [code, body.data.name, body.data.isBase ?? false, body.data.sortOrder ?? 99],
     )
     return c.json({ unitType: rows[0] }, 201)
@@ -458,7 +532,8 @@ adminCatalogRoutes.patch('/unit-types/:id', async (c) => {
          is_base = COALESCE($4, is_base),
          sort_order = COALESCE($5, sort_order)
        WHERE id = $1
-       RETURNING id, code, name, is_base AS "isBase", sort_order AS "sortOrder"`,
+       RETURNING id, code, internal_code AS "internalCode", name,
+                 is_base AS "isBase", sort_order AS "sortOrder"`,
       [id, d.name ?? null, d.code ?? null, d.isBase ?? null, d.sortOrder ?? null],
     )
     if (!rows[0]) return c.json({ error: 'Unidad no encontrada' }, 404)
@@ -482,6 +557,157 @@ adminCatalogRoutes.delete('/unit-types/:id', async (c) => {
   }
   const { rowCount } = await pool.query(`DELETE FROM unit_types WHERE id = $1`, [id])
   if (!rowCount) return c.json({ error: 'Unidad no encontrada' }, 404)
+  return c.json({ ok: true })
+})
+
+function mapUnitQty(row: Record<string, unknown>) {
+  return {
+    id: row.id,
+    unitTypeId: row.unit_type_id,
+    code: row.code != null ? Number(row.code) : null,
+    contentQty: Number(row.content_qty),
+    label: (row.label as string | null) ?? null,
+    sortOrder: Number(row.sort_order ?? 0),
+  }
+}
+
+/** Presentaciones del catálogo global (tipo + cantidad) para asignar precio en productos. */
+adminCatalogRoutes.get('/presentations', async (c) => {
+  const { rows } = await pool.query(
+    `SELECT * FROM (
+       SELECT q.id::text AS id, q.unit_type_id, q.code, q.content_qty, q.label, q.sort_order,
+              ut.name AS unit_name, ut.code AS unit_code, ut.sort_order AS unit_sort
+       FROM unit_type_quantities q
+       JOIN unit_types ut ON ut.id = q.unit_type_id
+       UNION ALL
+       SELECT ('unit:' || ut.id::text) AS id, ut.id AS unit_type_id, NULL::int AS code,
+              1::numeric AS content_qty, NULL::text AS label, 0 AS sort_order,
+              ut.name AS unit_name, ut.code AS unit_code, ut.sort_order AS unit_sort
+       FROM unit_types ut
+       WHERE NOT EXISTS (
+         SELECT 1 FROM unit_type_quantities q WHERE q.unit_type_id = ut.id
+       )
+     ) t
+     ORDER BY unit_sort, unit_name, sort_order, content_qty`,
+  )
+  return c.json({
+    presentations: rows.map((r) => ({
+      id: String(r.id),
+      unitTypeId: r.unit_type_id,
+      unitName: r.unit_name,
+      unitCode: r.unit_code,
+      code: r.code != null ? Number(r.code) : null,
+      contentQty: Number(r.content_qty),
+      label: (r.label as string | null) ?? null,
+      sortOrder: Number(r.sort_order ?? 0),
+      displayName:
+        (r.label as string | null)?.trim() ||
+        `${r.unit_name} × ${Number(r.content_qty)}`,
+    })),
+  })
+})
+
+/** Cantidades por tipo de unidad (Caja → 10, 20, 100…). */
+adminCatalogRoutes.get('/unit-types/:id/quantities', async (c) => {
+  const id = c.req.param('id')
+  const exists = await pool.query(`SELECT 1 FROM unit_types WHERE id = $1`, [id])
+  if (!exists.rows[0]) return c.json({ error: 'Unidad no encontrada' }, 404)
+  const { rows } = await pool.query(
+    `SELECT id, unit_type_id, code, content_qty, label, sort_order
+     FROM unit_type_quantities
+     WHERE unit_type_id = $1
+     ORDER BY sort_order, content_qty`,
+    [id],
+  )
+  return c.json({ quantities: rows.map(mapUnitQty) })
+})
+
+adminCatalogRoutes.post('/unit-types/:id/quantities', async (c) => {
+  const unitTypeId = c.req.param('id')
+  const body = z
+    .object({
+      contentQty: z.number().positive().max(1_000_000),
+      label: z.string().trim().max(80).optional().nullable(),
+      sortOrder: z.number().int().min(0).max(9999).optional(),
+    })
+    .safeParse(await c.req.json().catch(() => null))
+  if (!body.success) {
+    return c.json(
+      { error: body.error.issues[0]?.message ?? 'Datos inválidos' },
+      400,
+    )
+  }
+  const exists = await pool.query(`SELECT 1 FROM unit_types WHERE id = $1`, [
+    unitTypeId,
+  ])
+  if (!exists.rows[0]) return c.json({ error: 'Unidad no encontrada' }, 404)
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO unit_type_quantities (unit_type_id, content_qty, label, sort_order)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, unit_type_id, code, content_qty, label, sort_order`,
+      [
+        unitTypeId,
+        body.data.contentQty,
+        body.data.label?.trim() || null,
+        body.data.sortOrder ?? 0,
+      ],
+    )
+    return c.json({ quantity: mapUnitQty(rows[0]) }, 201)
+  } catch {
+    return c.json(
+      { error: 'Esa cantidad ya existe para este tipo de unidad.' },
+      409,
+    )
+  }
+})
+
+adminCatalogRoutes.patch('/unit-type-quantities/:id', async (c) => {
+  const id = c.req.param('id')
+  const body = z
+    .object({
+      contentQty: z.number().positive().max(1_000_000).optional(),
+      label: z.string().trim().max(80).optional().nullable(),
+      sortOrder: z.number().int().min(0).max(9999).optional(),
+    })
+    .safeParse(await c.req.json().catch(() => null))
+  if (!body.success) return c.json({ error: 'Datos inválidos' }, 400)
+  const d = body.data
+  try {
+    const { rows } = await pool.query(
+      `UPDATE unit_type_quantities SET
+         content_qty = CASE WHEN $2::boolean THEN $3 ELSE content_qty END,
+         label = CASE WHEN $4::boolean THEN $5 ELSE label END,
+         sort_order = CASE WHEN $6::boolean THEN $7 ELSE sort_order END
+       WHERE id = $1
+       RETURNING id, unit_type_id, code, content_qty, label, sort_order`,
+      [
+        id,
+        d.contentQty !== undefined,
+        d.contentQty ?? null,
+        d.label !== undefined,
+        d.label === null ? null : d.label?.trim() || null,
+        d.sortOrder !== undefined,
+        d.sortOrder ?? null,
+      ],
+    )
+    if (!rows[0]) return c.json({ error: 'Cantidad no encontrada' }, 404)
+    return c.json({ quantity: mapUnitQty(rows[0]) })
+  } catch {
+    return c.json(
+      { error: 'Esa cantidad ya existe para este tipo de unidad.' },
+      409,
+    )
+  }
+})
+
+adminCatalogRoutes.delete('/unit-type-quantities/:id', async (c) => {
+  const id = c.req.param('id')
+  const { rowCount } = await pool.query(
+    `DELETE FROM unit_type_quantities WHERE id = $1`,
+    [id],
+  )
+  if (!rowCount) return c.json({ error: 'Cantidad no encontrada' }, 404)
   return c.json({ ok: true })
 })
 
@@ -642,13 +868,36 @@ adminCatalogRoutes.delete('/offers/:productId', async (c) => {
 })
 
 /* ——— Specs ——— */
+function mapSpecAttr(r: Record<string, unknown>) {
+  const rawCode = r.internal_code ?? r.internalCode
+  const internalCode =
+    rawCode == null || rawCode === ''
+      ? 0
+      : Math.max(0, Math.floor(Number(rawCode)))
+  return {
+    id: r.id,
+    key: r.key,
+    name: r.name,
+    internalCode,
+    codeLabel: String(internalCode).padStart(8, '0'),
+    valueType: r.value_type ?? r.valueType,
+    unitHint: r.unit_hint ?? r.unitHint ?? null,
+    sortOrder: Number(r.sort_order ?? r.sortOrder ?? 0),
+    isSystem: Boolean(r.is_system ?? r.isSystem),
+    isCatalog: r.is_catalog == null && r.isCatalog == null
+      ? true
+      : Boolean(r.is_catalog ?? r.isCatalog),
+  }
+}
+
 adminCatalogRoutes.get('/spec-attributes', async (c) => {
   const { rows } = await pool.query(
-    `SELECT id, key, name, value_type AS "valueType", unit_hint AS "unitHint",
-            sort_order AS "sortOrder"
-     FROM spec_attributes ORDER BY sort_order, name`,
+    `SELECT id, key, name, internal_code, value_type, unit_hint, sort_order, is_system, is_catalog
+     FROM spec_attributes
+     WHERE COALESCE(is_catalog, true) = true
+     ORDER BY is_system DESC, sort_order, name`,
   )
-  return c.json({ attributes: rows })
+  return c.json({ attributes: rows.map((r) => mapSpecAttr(r)) })
 })
 
 adminCatalogRoutes.post('/spec-attributes', async (c) => {
@@ -658,24 +907,127 @@ adminCatalogRoutes.post('/spec-attributes', async (c) => {
       key: z.string().trim().min(1).max(60).optional(),
       valueType: z.enum(['text', 'number', 'measure']).optional(),
       unitHint: z.string().trim().max(20).optional().nullable(),
+      sortOrder: z.number().int().min(0).max(9999).optional(),
     })
     .safeParse(await c.req.json().catch(() => null))
   if (!body.success) return c.json({ error: 'Datos inválidos' }, 400)
   const name = body.data.name
-  const key = body.data.key || slugify(name)
+  let key = body.data.key || slugify(name)
+  if (!key) key = `spec-${Date.now()}`
   try {
+    // Clave técnica única (si choca, sufijo numérico). El SKU visible es internal_code.
+    for (let i = 0; i < 20; i++) {
+      const candidate = i === 0 ? key : `${key}-${i + 1}`
+      const exists = await pool.query(
+        `SELECT 1 FROM spec_attributes WHERE key = $1`,
+        [candidate],
+      )
+      if (!exists.rows[0]) {
+        key = candidate
+        break
+      }
+    }
     const { rows } = await pool.query(
-      `INSERT INTO spec_attributes (key, name, value_type, unit_hint, sort_order)
-       VALUES ($1,$2,$3,$4,50)
-       ON CONFLICT (key) DO UPDATE SET name = EXCLUDED.name
-       RETURNING id, key, name, value_type AS "valueType", unit_hint AS "unitHint",
-                 sort_order AS "sortOrder"`,
-      [key, name, body.data.valueType ?? 'text', body.data.unitHint ?? null],
+      `INSERT INTO spec_attributes (key, name, value_type, unit_hint, sort_order, is_system, is_catalog)
+       VALUES ($1,$2,$3,$4,$5,false,true)
+       RETURNING id, key, name, internal_code, value_type, unit_hint, sort_order, is_system, is_catalog`,
+      [
+        key,
+        name,
+        body.data.valueType ?? 'text',
+        body.data.unitHint ?? null,
+        body.data.sortOrder ?? 50,
+      ],
     )
-    return c.json({ attribute: rows[0] }, 201)
+    return c.json({ attribute: mapSpecAttr(rows[0]) }, 201)
   } catch {
     return c.json({ error: 'No se pudo crear el tipo de especificación.' }, 409)
   }
+})
+
+adminCatalogRoutes.patch('/spec-attributes/:id', async (c) => {
+  const id = c.req.param('id')
+  const body = z
+    .object({
+      name: z.string().trim().min(1).max(80).optional(),
+      valueType: z.enum(['text', 'number', 'measure']).optional(),
+      unitHint: z.string().trim().max(20).optional().nullable(),
+      sortOrder: z.number().int().min(0).max(9999).optional(),
+    })
+    .safeParse(await c.req.json().catch(() => null))
+  if (!body.success) return c.json({ error: 'Datos inválidos' }, 400)
+  const current = await pool.query(
+    `SELECT id, is_system, is_catalog FROM spec_attributes WHERE id = $1`,
+    [id],
+  )
+  if (!current.rows[0]) return c.json({ error: 'Especificación no encontrada' }, 404)
+  if (current.rows[0].is_catalog === false) {
+    return c.json(
+      { error: 'Ese dato es de la tienda (producto) y no se gestiona aquí.' },
+      409,
+    )
+  }
+
+  const d = body.data
+  const { rows } = await pool.query(
+    `UPDATE spec_attributes SET
+       name = COALESCE($2, name),
+       value_type = COALESCE($3, value_type),
+       unit_hint = CASE WHEN $4 THEN $5 ELSE unit_hint END,
+       sort_order = COALESCE($6, sort_order)
+     WHERE id = $1 AND COALESCE(is_catalog, true) = true
+     RETURNING id, key, name, internal_code, value_type, unit_hint, sort_order, is_system, is_catalog`,
+    [
+      id,
+      d.name ?? null,
+      d.valueType ?? null,
+      d.unitHint !== undefined,
+      d.unitHint === undefined ? null : d.unitHint,
+      d.sortOrder ?? null,
+    ],
+  )
+  if (!rows[0]) return c.json({ error: 'Especificación no encontrada' }, 404)
+  return c.json({ attribute: mapSpecAttr(rows[0]) })
+})
+
+adminCatalogRoutes.delete('/spec-attributes/:id', async (c) => {
+  const id = c.req.param('id')
+  const current = await pool.query<{ is_system: boolean; is_catalog: boolean }>(
+    `SELECT is_system, COALESCE(is_catalog, true) AS is_catalog FROM spec_attributes WHERE id = $1`,
+    [id],
+  )
+  if (!current.rows[0]) return c.json({ error: 'Especificación no encontrada' }, 404)
+  if (!current.rows[0].is_catalog) {
+    return c.json(
+      { error: 'Ese dato es de la tienda (producto) y no se gestiona aquí.' },
+      409,
+    )
+  }
+  if (current.rows[0].is_system) {
+    return c.json(
+      { error: 'Esta especificación es del sistema y no se puede eliminar.' },
+      409,
+    )
+  }
+  const used = await pool.query(
+    `SELECT 1 FROM product_spec_values WHERE attribute_id = $1 LIMIT 1`,
+    [id],
+  )
+  if (used.rows[0]) {
+    return c.json(
+      {
+        error:
+          'Hay productos usando esta especificación. Quita esos valores antes de eliminar.',
+      },
+      409,
+    )
+  }
+  const { rowCount } = await pool.query(
+    `DELETE FROM spec_attributes WHERE id = $1 AND is_system = false AND COALESCE(is_catalog, true) = true`,
+    [id],
+  )
+  if (!rowCount) return c.json({ error: 'Especificación no encontrada' }, 404)
+  return c.json({ ok: true })
 })
 
 adminCatalogRoutes.put('/products/:id/specs', async (c) => {
@@ -687,7 +1039,8 @@ adminCatalogRoutes.put('/products/:id/specs', async (c) => {
           attributeId: z.string().uuid(),
           valueText: z.string().optional(),
           valueNumber: z.number().nullable().optional(),
-          unit: z.string().optional(),
+          unit: z.string().optional().nullable(),
+          sortOrder: z.number().int().min(0).max(9999).optional(),
         }),
       ),
     })
@@ -703,15 +1056,18 @@ adminCatalogRoutes.put('/products/:id/specs', async (c) => {
     await client.query(`DELETE FROM product_spec_values WHERE product_id = $1`, [
       productId,
     ])
+    let order = 0
     for (const s of body.data.specs) {
       const text = s.valueText?.trim() || null
       const num = s.valueNumber ?? null
       if (!text && num == null) continue
+      const sortOrder = s.sortOrder ?? order
       await client.query(
-        `INSERT INTO product_spec_values (product_id, attribute_id, value_text, value_number, unit)
-         VALUES ($1,$2,$3,$4,$5)`,
-        [productId, s.attributeId, text, num, s.unit ?? null],
+        `INSERT INTO product_spec_values (product_id, attribute_id, value_text, value_number, unit, sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6)`,
+        [productId, s.attributeId, text, num, s.unit ?? null, sortOrder],
       )
+      order += 1
     }
     await client.query('COMMIT')
   } catch (e) {
@@ -740,6 +1096,10 @@ adminCatalogRoutes.get('/products', async (c) => {
     products: rows.map((r) => ({
       id: r.id,
       code: r.code,
+      codeLabel: String(Math.max(0, Math.floor(Number(r.code ?? 0)))).padStart(
+        8,
+        '0',
+      ),
       sku: r.sku,
       slug: r.slug,
       name: r.name,
@@ -795,6 +1155,10 @@ adminCatalogRoutes.get('/products/:id', async (c) => {
     product: {
       id: p.id,
       code: p.code,
+      codeLabel: String(Math.max(0, Math.floor(Number(p.code ?? 0)))).padStart(
+        8,
+        '0',
+      ),
       sku: p.sku,
       slug: p.slug,
       name: p.name,
@@ -835,6 +1199,8 @@ adminCatalogRoutes.get('/products/:id', async (c) => {
       isActive: r.is_active,
       replacesPriceId: r.replaces_price_id,
       notes: r.notes,
+      validFrom: r.valid_from ? new Date(String(r.valid_from)).toISOString() : null,
+      validTo: r.valid_to ? new Date(String(r.valid_to)).toISOString() : null,
       createdAt: r.created_at,
       updatedAt: r.updated_at,
     })),
@@ -915,7 +1281,17 @@ adminCatalogRoutes.post('/products', async (c) => {
     }
     await client.query('COMMIT')
     await invalidateCatalogHomeCaches()
-    return c.json({ product: { id: productId, sku: rows[0].sku, slug: rows[0].slug } }, 201)
+    return c.json({
+      product: {
+        id: productId,
+        sku: rows[0].sku,
+        slug: rows[0].slug,
+        code: rows[0].code,
+        codeLabel: String(
+          Math.max(0, Math.floor(Number(rows[0].code ?? 0))),
+        ).padStart(8, '0'),
+      },
+    }, 201)
   } catch {
     await client.query('ROLLBACK')
     return c.json({ error: 'SKU o slug de producto ya existe.' }, 409)
@@ -1187,12 +1563,29 @@ adminCatalogRoutes.post('/products/:id/prices', async (c) => {
       currency: z.string().default('PEN'),
       notes: z.string().max(300).optional(),
       saveAsNew: z.boolean().default(false),
+      /** ISO datetime; solo relevante para ofertas. null = sin límite. */
+      validFrom: z.string().min(1).nullable().optional(),
+      validTo: z.string().min(1).nullable().optional(),
     })
     .safeParse(await c.req.json().catch(() => null))
   if (!body.success) {
     return c.json({ error: body.error.issues[0]?.message ?? 'Datos inválidos' }, 400)
   }
   const d = body.data
+  const parseBoundary = (v: string | null | undefined) => {
+    if (v == null || v === '') return null
+    const t = new Date(v).getTime()
+    if (Number.isNaN(t)) return 'invalid' as const
+    return new Date(v).toISOString()
+  }
+  const validFrom = parseBoundary(d.validFrom)
+  const validTo = parseBoundary(d.validTo)
+  if (validFrom === 'invalid' || validTo === 'invalid') {
+    return c.json({ error: 'Fecha de vigencia inválida' }, 400)
+  }
+  if (validFrom && validTo && new Date(validFrom) >= new Date(validTo)) {
+    return c.json({ error: 'La fecha de inicio debe ser anterior al fin' }, 400)
+  }
   const actor = c.get('user')
   const client = await pool.connect()
   try {
@@ -1213,8 +1606,10 @@ adminCatalogRoutes.post('/products/:id/prices', async (c) => {
            compare_at_amount = $7,
            currency = $8,
            notes = $9,
+           valid_from = $10,
+           valid_to = $11,
            updated_at = now()
-         WHERE id = $1 AND product_id = $10
+         WHERE id = $1 AND product_id = $12
          RETURNING *`,
         [
           d.id,
@@ -1226,6 +1621,8 @@ adminCatalogRoutes.post('/products/:id/prices', async (c) => {
           d.compareAtAmount ?? null,
           d.currency,
           d.notes ?? null,
+          validFrom,
+          validTo,
           productId,
         ],
       )
@@ -1259,8 +1656,9 @@ adminCatalogRoutes.post('/products/:id/prices', async (c) => {
     const { rows } = await client.query(
       `INSERT INTO product_prices
          (product_id, packaging_id, price_kind, min_qty, max_qty, amount,
-          compare_at_amount, currency, is_active, replaces_price_id, notes)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true,$9,$10)
+          compare_at_amount, currency, is_active, replaces_price_id, notes,
+          valid_from, valid_to)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true,$9,$10,$11,$12)
        RETURNING *`,
       [
         productId,
@@ -1273,6 +1671,8 @@ adminCatalogRoutes.post('/products/:id/prices', async (c) => {
         d.currency,
         d.id ?? null,
         d.notes ?? null,
+        validFrom,
+        validTo,
       ],
     )
     await client.query('COMMIT')
@@ -1310,6 +1710,8 @@ function mapPrice(r: Record<string, unknown>) {
     isActive: r.is_active,
     replacesPriceId: r.replaces_price_id,
     notes: r.notes,
+    validFrom: r.valid_from ? new Date(String(r.valid_from)).toISOString() : null,
+    validTo: r.valid_to ? new Date(String(r.valid_to)).toISOString() : null,
   }
 }
 

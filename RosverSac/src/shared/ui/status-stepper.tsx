@@ -6,15 +6,14 @@ type StepperProps = {
   className?: string
 }
 
-/** Tracker horizontal estilo marketplace (Falabella-like). */
+/** Tracker horizontal estilo marketplace / CRM. */
 export function StatusStepper({ steps, currentIndex, className }: StepperProps) {
   return (
     <ol
-      className={cn(
-        'grid w-full gap-2',
-        steps.length === 4 ? 'grid-cols-4' : 'grid-cols-3',
-        className,
-      )}
+      className={cn('grid w-full gap-2', className)}
+      style={{
+        gridTemplateColumns: `repeat(${Math.max(steps.length, 1)}, minmax(0, 1fr))`,
+      }}
     >
       {steps.map((step, i) => {
         const done = i <= currentIndex
@@ -36,7 +35,8 @@ export function StatusStepper({ steps, currentIndex, className }: StepperProps) 
             </div>
             <span
               className={cn(
-                'w-full truncate text-center text-[10px] font-bold uppercase sm:text-[11px]',
+                'w-full text-center text-[9px] font-bold uppercase sm:text-[11px]',
+                steps.length >= 5 ? 'leading-tight' : 'truncate',
                 done ? 'text-rosver-ink' : 'text-rosver-muted',
               )}
             >

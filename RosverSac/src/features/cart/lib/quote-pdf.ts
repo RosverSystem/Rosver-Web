@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf'
 import QRCode from 'qrcode'
+import { BRAND_KEYS, brandMediaPath } from '@/shared/lib/brand-assets'
 import { ROSVER_COMPANY } from '@/shared/lib/company'
 import { amountToWordsEs } from '@/shared/lib/number-to-words-es'
 
@@ -21,10 +22,15 @@ export type QuotePdfLine = {
 export type QuotePdfInput = {
   customer: QuotePdfCustomer
   lines: QuotePdfLine[]
-  /** Número documento ej. C001 N°00001234 */
+  /** Número documento ej. QT-2026-000003 o PD-2026-000001 */
   docNumber?: string
   currency?: string
+  /** Link público temporal (QR / pie del PDF). */
+  shareUrl?: string
+  /** Cotización (`quote_requests`) vs pedido (`order_requests`). */
+  kind?: 'quote' | 'order'
 }
+
 
 function money(n: number) {
   return n.toLocaleString('es-PE', {
@@ -44,7 +50,7 @@ function loadLogoDataUrl() {
   if (!logoDataUrlPromise) {
     logoDataUrlPromise = (async () => {
       try {
-        const res = await fetch('/logo_sinfondo.png')
+        const res = await fetch(brandMediaPath(BRAND_KEYS.logoSinfondo))
         if (!res.ok) return null
         const blob = await res.blob()
         return await new Promise<string>((resolve, reject) => {
@@ -62,14 +68,15 @@ function loadLogoDataUrl() {
 }
 
 /** URL personalizada por cotización (QR funcional). */
-export function quoteLandingUrl(docNumber: string) {
+export function quoteLandingUrl(docNumber: string, shareUrl?: string) {
+  if (shareUrl?.trim()) return shareUrl.trim()
   const base = ROSVER_COMPANY.web.replace(/\/$/, '')
   return `${base}/cotizar?ref=${encodeURIComponent(docNumber)}`
 }
 
 /**
- * PDF cotización estilo factura impresa Rosver (A4) + pie web/QR.
- * No es comprobante SUNAT; el layout replica la plantilla comercial.
+ * PDF comercial Rosver (A4) — cotización o pedido + pie web/QR.
+ * No es comprobante SUNAT; el layout replica la plantilla impresa.
  */
 export async function buildQuotePdf(input: QuotePdfInput): Promise<{
   blob: Blob
@@ -78,10 +85,13 @@ export async function buildQuotePdf(input: QuotePdfInput): Promise<{
   total: number
 }> {
   const docNumber = input.docNumber ?? nextDocNumber()
+  const kind = input.kind ?? 'quote'
+  const docTitle = kind === 'order' ? 'PEDIDO' : 'COTIZACIÓN'
+  const docNoun = kind === 'order' ? 'pedido' : 'cotización'
   const currency = input.currency ?? 'SOLES'
   const co = ROSVER_COMPANY
   const lines = input.lines.filter((l) => l.description.trim())
-  const landingUrl = quoteLandingUrl(docNumber)
+  const landingUrl = quoteLandingUrl(docNumber, input.shareUrl)
 
   const subtotal = lines.reduce((sum, l) => {
     if (l.unitPrice == null) return sum
@@ -135,7 +145,7 @@ export async function buildQuotePdf(input: QuotePdfInput): Promise<{
     y += 3.4
   }
 
-  // ── Cabecera derecha: caja RUC / COTIZACIÓN / N° ──
+  // ── Cabecera derecha: caja RUC / COTIZACIÓN|PEDIDO / N° ──
   const boxW = 72
   const boxH = 30
   const boxX = pageW - margin - boxW
@@ -148,7 +158,7 @@ export async function buildQuotePdf(input: QuotePdfInput): Promise<{
   doc.setTextColor(13, 13, 13)
   doc.text(`R.U.C. ${co.ruc}`, boxX + boxW / 2, boxY + 8, { align: 'center' })
   doc.setFontSize(12)
-  doc.text('COTIZACIÓN', boxX + boxW / 2, boxY + 17, { align: 'center' })
+  doc.text(docTitle, boxX + boxW / 2, boxY + 17, { align: 'center' })
   doc.setFontSize(10)
   doc.text(docNumber, boxX + boxW / 2, boxY + 25, { align: 'center' })
 
@@ -351,7 +361,9 @@ export async function buildQuotePdf(input: QuotePdfInput): Promise<{
   doc.setFontSize(6.5)
   doc.setTextColor(80, 80, 80)
   doc.text(
-    'Documento de cotización referencial — no es boleta, factura ni comprobante SUNAT.',
+    kind === 'order'
+      ? 'Documento de pedido referencial — no es boleta, factura ni comprobante SUNAT.'
+      : 'Documento de cotización referencial — no es boleta, factura ni comprobante SUNAT.',
     margin,
     y,
   )
@@ -404,7 +416,7 @@ export async function buildQuotePdf(input: QuotePdfInput): Promise<{
   doc.setFontSize(6.5)
   doc.setTextColor(90, 90, 90)
   doc.text(
-    `Escanea el QR para abrir tu cotización ${docNumber} en línea.`,
+    `Escanea el QR para abrir tu ${docNoun} ${docNumber} en línea.`,
     footTextX,
     footerTop + 29,
     { maxWidth: pageW - footTextX - margin - 4 },
@@ -427,7 +439,10 @@ export async function buildQuotePdf(input: QuotePdfInput): Promise<{
 
   const blob = doc.output('blob')
   const safeName = docNumber.replace(/[^\w.-]+/g, '-')
-  const fileName = `Cotizacion-Rosver-${safeName}.pdf`
+  const fileName =
+    kind === 'order'
+      ? `Pedido-Rosver-${safeName}.pdf`
+      : `Cotizacion-Rosver-${safeName}.pdf`
   return { blob, fileName, docNumber, total }
 }
 

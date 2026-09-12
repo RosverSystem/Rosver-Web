@@ -7,11 +7,13 @@ import {
 } from '@/features/catalog/ui/FiltersPanel'
 import { ProductGrid } from '@/features/catalog/ui/ProductGrid'
 import { useCatalog } from '@/features/catalog/model/catalog-store'
+import { filterProductsByQuery } from '@/features/catalog/model/catalog-search'
 import { productMatchesCategory } from '@/features/catalog/model/category-tree'
 import type { Product } from '@/features/catalog/model/mocks'
 import { cn } from '@/shared/lib'
+import { SelectCombobox } from '@/shared/ui/select-combobox'
 import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useLocation, useParams, useSearchParams } from 'react-router-dom'
 
 const PAGE_SIZE = 18 // grilla 3 columnas × 6 filas
 
@@ -55,6 +57,9 @@ function sortProducts(products: Product[], sort: SortKey): Product[] {
 
 export function CatalogPage() {
   const { categorySlug } = useParams()
+  const { hash, pathname } = useLocation()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const searchQuery = (searchParams.get('q') ?? '').trim()
   const { products, categories, brands } = useCatalog()
   const category = categories.find((c) => c.slug === categorySlug)
 
@@ -94,8 +99,16 @@ export function CatalogPage() {
           productMatchesCategory(p.category, categorySlug, categories),
         )
       : visibleProducts
-    return sortProducts(applyFilters(byCategory, filters), sort)
-  }, [visibleProducts, categorySlug, categories, filters, sort])
+    const bySearch = filterProductsByQuery(byCategory, searchQuery)
+    return sortProducts(applyFilters(bySearch, filters), sort)
+  }, [
+    visibleProducts,
+    categorySlug,
+    categories,
+    filters,
+    sort,
+    searchQuery,
+  ])
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
@@ -106,7 +119,30 @@ export function CatalogPage() {
 
   useEffect(() => {
     setPage(1)
-  }, [categorySlug, filters, sort])
+  }, [categorySlug, filters, sort, searchQuery])
+
+  // Scroll a productos solo con Enter (hash #catalogo-resultados), no al tipear.
+  useEffect(() => {
+    if (hash !== '#catalogo-resultados') return
+    const id = window.requestAnimationFrame(() => {
+      document
+        .getElementById('catalogo-resultados')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      // Quitar el hash para que al seguir escribiendo no vuelva a bajar.
+      window.history.replaceState(
+        null,
+        '',
+        `${pathname}${searchParams.toString() ? `?${searchParams}` : ''}`,
+      )
+    })
+    return () => window.cancelAnimationFrame(id)
+  }, [hash, pathname, searchParams])
+
+  function clearSearch() {
+    const next = new URLSearchParams(searchParams)
+    next.delete('q')
+    setSearchParams(next, { replace: true })
+  }
 
   const goToPage = (next: number) => {
     setPage(next)
@@ -163,14 +199,42 @@ export function CatalogPage() {
     <main className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-6 overflow-x-hidden px-4 pb-28 lg:px-6">
       <div className="pt-4 sm:pt-6">
         <CatalogBanner
-          title={category ? category.name : 'Nuestros productos'}
+          title={
+            searchQuery
+              ? `Resultados para “${searchQuery}”`
+              : category
+                ? category.name
+                : 'Nuestros productos'
+          }
           categoryName={category?.name}
           subtitle={
-            category
-              ? `${filtered.length} producto${filtered.length === 1 ? '' : 's'} en ${category.name}`
-              : undefined
+            searchQuery
+              ? `${filtered.length} producto${filtered.length === 1 ? '' : 's'} encontrado${filtered.length === 1 ? '' : 's'}`
+              : category
+                ? `${filtered.length} producto${filtered.length === 1 ? '' : 's'} en ${category.name}`
+                : undefined
           }
         />
+        {searchQuery ? (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-rosver-soft px-3 py-1 text-xs font-bold text-rosver-ink">
+              Búsqueda: {searchQuery}
+            </span>
+            <button
+              type="button"
+              onClick={clearSearch}
+              className="text-xs font-bold text-rosver-red hover:text-rosver-red-dark"
+            >
+              Quitar búsqueda
+            </button>
+            <Link
+              to="/catalogo"
+              className="text-xs font-semibold text-rosver-muted hover:text-rosver-ink"
+            >
+              Ver todo el catálogo
+            </Link>
+          </div>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[260px_1fr] lg:items-start">
@@ -184,8 +248,10 @@ export function CatalogPage() {
           onChange={setFilters}
         />
 
-        <div id="catalogo-resultados" className="flex min-w-0 flex-col gap-4 scroll-mt-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rosver-line bg-white px-3 py-3 shadow-[0_8px_24px_-20px_rgba(17,17,17,0.35)] sm:px-4">
+        <div
+          id="catalogo-resultados"
+          className="flex min-w-0 flex-col gap-4 scroll-mt-28 sm:scroll-mt-32"
+        >          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rosver-line bg-white px-3 py-3 shadow-[0_8px_24px_-20px_rgba(17,17,17,0.35)] sm:px-4">
             <p className="text-sm text-rosver-muted">
               Mostrando{' '}
               <span className="font-bold text-rosver-ink">
@@ -197,18 +263,20 @@ export function CatalogPage() {
             </p>
             <label className="flex items-center gap-2 text-sm text-rosver-muted">
               <span className="hidden sm:inline">Ordenar</span>
-              <select
+              <SelectCombobox
+                size="sm"
+                className="min-w-[11rem] sm:min-w-[13rem]"
                 value={sort}
-                onChange={(e) => setSort(e.target.value as SortKey)}
-                className="min-h-10 rounded-full border border-rosver-line bg-rosver-soft/70 px-3 py-1.5 text-sm font-semibold text-rosver-ink outline-none focus:border-rosver-red/40"
+                onValueChange={(v) => setSort(v as SortKey)}
                 aria-label="Ordenar productos"
-              >
-                <option value="featured">Destacados</option>
-                <option value="price-asc">Precio: menor a mayor</option>
-                <option value="price-desc">Precio: mayor a menor</option>
-                <option value="rating">Mejor valorados</option>
-                <option value="name">Nombre A–Z</option>
-              </select>
+                options={[
+                  { value: 'featured', label: 'Destacados' },
+                  { value: 'price-asc', label: 'Precio: menor a mayor' },
+                  { value: 'price-desc', label: 'Precio: mayor a menor' },
+                  { value: 'rating', label: 'Mejor valorados' },
+                  { value: 'name', label: 'Nombre A–Z' },
+                ]}
+              />
             </label>
           </div>
 

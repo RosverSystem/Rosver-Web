@@ -33,8 +33,10 @@ Referencia: sidebar clara colapsable (iconos / iconos+labels) + top bar limpia. 
 
 1. **Inicio** → `/admin`
 2. **Almacenamiento** → `/admin/almacenamiento` (medios R2 + modal preview)
-3. **Catálogo** → Productos · Listado de precios · Categorías · Marcas · Ofertas
-   - Tipos de unidad viven dentro de **Listado de precios** (no menú aparte).
+3. **Catálogo** → Productos · Presentaciones · Especificaciones · Categorías · Marcas · Ofertas
+   - Tipos de unidad viven dentro de **Presentaciones** (no menú aparte).
+   - Tipos de ficha técnica viven en **Especificaciones** (defaults de sistema no se borran).
+   - Precios por producto se gestionan en **Productos**.
 
 ## Layout
 
@@ -50,7 +52,7 @@ Referencia: sidebar clara colapsable (iconos / iconos+labels) + top bar limpia. 
 - Tablas “planas” como única UI de listados: preferir cards / filas densas con jerarquía.
 - Textos de ayuda técnicos bajo el título (regla `14-erp-selects-copy`).
 - Selects nativos sin `AdminSelect` / jerga (“sin padre”, “raíz”).
-- Formularios create/edit inline permanentes (regla `17-erp-forms-modal` → `AdminModal`).
+- Formularios create/edit inline permanentes (regla `17-erp-forms-modal` → `AdminModal`; **excepción Productos** → ficha CRM `/admin/productos/nuevo|:id`).
 
 ## Checklist
 
@@ -61,4 +63,4 @@ Referencia: sidebar clara colapsable (iconos / iconos+labels) + top bar limpia. 
 - [ ] `cssvg-icons` + docs `09-erp-systemrsv-ux.md`
 - [ ] Selects con `AdminSelect` + copy cotidiano
 - [ ] Sin mensajes de ayuda de arquitectura en UI
-- [ ] Alta/edición en `AdminModal` (no card form encima del listado)
+- [ ] Alta/edición en `AdminModal` (excepto Productos → ficha CRM)

@@ -1,22 +1,77 @@
+import { fetchMyOrder } from '@/features/account/model/api-orders'
 import { readLocalOrders } from '@/features/account/model/local-orders'
 import {
-  ORDERS,
   ORDER_STATUS_LABEL,
   ORDER_STATUS_STEPS,
   ORDER_STATUS_TONE,
+  type Order,
 } from '@/features/account/model/mocks'
+import { useAuth } from '@/features/auth'
 import { Badge } from '@/shared/ui/badge'
 import { StatusStepper } from '@/shared/ui/status-stepper'
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 
 export function AccountOrderDetailPage() {
   const { id } = useParams()
-  const local = readLocalOrders()
-  const order =
-    local.find((o) => o.id === id) ??
-    ORDERS.find((o) => o.id === id) ??
-    local[0] ??
-    ORDERS[0]
+  const { user } = useAuth()
+  const code = id ? decodeURIComponent(id) : ''
+  const [order, setOrder] = useState<Order | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      if (!code) {
+        setOrder(null)
+        setLoading(false)
+        return
+      }
+      if (user && !code.startsWith('LOC-')) {
+        const remote = await fetchMyOrder(code)
+        if (!cancelled) {
+          setOrder(remote)
+          setLoading(false)
+        }
+        return
+      }
+      const local = readLocalOrders().find((o) => o.id === code) ?? null
+      if (!cancelled) {
+        setOrder(local)
+        setLoading(false)
+      }
+    }
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [code, user])
+
+  if (loading) {
+    return (
+      <p className="rounded-2xl border border-rosver-line bg-white px-4 py-10 text-center text-sm text-rosver-muted">
+        Cargando pedido…
+      </p>
+    )
+  }
+
+  if (!order) {
+    return (
+      <div className="rounded-2xl border border-rosver-line bg-white px-4 py-8 text-center sm:px-6">
+        <p className="text-sm font-semibold text-rosver-ink">
+          No encontramos este pedido
+        </p>
+        <Link
+          to="/cuenta/pedidos"
+          className="mt-3 inline-block text-xs font-bold text-rosver-red uppercase"
+        >
+          ← Volver a mis pedidos
+        </Link>
+      </div>
+    )
+  }
+
   const stepIndex = Math.max(0, ORDER_STATUS_STEPS.indexOf(order.status))
 
   return (
@@ -27,7 +82,7 @@ export function AccountOrderDetailPage() {
             to="/cuenta/pedidos"
             className="text-xs font-bold text-rosver-red uppercase"
           >
-            ← Pedidos
+            ← Mis pedidos
           </Link>
           <h2 className="mt-1 font-display text-xl font-bold text-rosver-ink">
             Pedido {order.id}
@@ -59,13 +114,19 @@ export function AccountOrderDetailPage() {
               key={item.name}
               className="flex gap-3 rounded-xl border border-rosver-line p-3"
             >
-              <img
-                src={item.imageUrl}
-                alt=""
-                width={80}
-                height={80}
-                className="size-20 rounded-xl object-cover"
-              />
+              {item.imageUrl ? (
+                <img
+                  src={item.imageUrl}
+                  alt=""
+                  width={80}
+                  height={80}
+                  className="size-20 rounded-xl object-cover"
+                />
+              ) : (
+                <span className="flex size-20 items-center justify-center rounded-xl bg-rosver-soft text-[10px] font-bold text-rosver-muted">
+                  N/A
+                </span>
+              )}
               <div className="min-w-0 flex-1">
                 <p className="font-semibold text-rosver-ink">{item.name}</p>
                 <p className="text-sm text-rosver-muted">Cantidad: {item.qty}</p>

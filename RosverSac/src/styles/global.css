@@ -93,10 +93,51 @@ a {
 
 .hide-scrollbar {
   scrollbar-width: none !important;
-  -ms-overflow-style: none;
+  -ms-overflow-style: none !important;
 }
 
 .hide-scrollbar::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+/* Nav del ERP: forzar ocultar barra (Windows/Chrome clásico). */
+.admin-sidebar-nav {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.admin-sidebar-nav::-webkit-scrollbar,
+.admin-sidebar-nav::-webkit-scrollbar-button,
+.admin-sidebar-nav::-webkit-scrollbar-thumb,
+.admin-sidebar-nav::-webkit-scrollbar-track,
+.admin-sidebar-nav::-webkit-scrollbar-corner {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+/*
+ * Login / registro / recuperar: sin scroll de página ni barra visible.
+ * El formulario puede hacer scroll interno con .hide-scrollbar.
+ */
+html.auth-lock-scroll,
+html.auth-lock-scroll body {
+  height: 100%;
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+html.auth-lock-scroll {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none;
+}
+
+html.auth-lock-scroll::-webkit-scrollbar {
   display: none !important;
   width: 0 !important;
   height: 0 !important;
@@ -151,3 +192,94 @@ button {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Google Places Autocomplete — encima de cards/modales Rosver */
+.pac-container {
+  z-index: 10000 !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 12px !important;
+  margin-top: 4px !important;
+  box-shadow: 0 16px 40px -24px rgba(17, 17, 17, 0.55) !important;
+  font-family: inherit !important;
+}
+.pac-item {
+  padding: 10px 14px !important;
+  cursor: pointer !important;
+  line-height: 1.35 !important;
+}
+.pac-item:hover,
+.pac-item-selected {
+  background: #f3f4f6 !important;
+}
+.pac-logo:after {
+  display: none !important;
+}
+
+/*
+ * Tablas estilo Bootstrap 5 (API de clases) con tokens Rosver.
+ * No importamos Bootstrap completo (rompe Tailwind); solo el patrón table-*.
+ */
+.table-responsive {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table {
+  width: 100%;
+  margin-bottom: 0;
+  vertical-align: middle;
+  border-color: var(--color-rosver-line);
+  caption-side: bottom;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  color: var(--color-rosver-ink);
+}
+
+.table > :not(caption) > * > * {
+  padding: 0.75rem 1rem;
+  background-color: var(--color-rosver-surface);
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: var(--color-rosver-line);
+}
+
+.table > thead {
+  vertical-align: bottom;
+}
+
+.table > thead > tr > th {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-rosver-muted);
+  background-color: color-mix(in srgb, var(--color-rosver-soft) 70%, white);
+  border-bottom-width: 2px;
+}
+
+.table-sm > :not(caption) > * > * {
+  padding: 0.4rem 0.65rem;
+}
+
+.table-bordered > :not(caption) > * {
+  border-width: 1px 0;
+  border-style: solid;
+  border-color: var(--color-rosver-line);
+}
+
+.table-bordered > :not(caption) > * > * {
+  border-width: 0 1px;
+  border-style: solid;
+  border-color: var(--color-rosver-line);
+}
+
+.table-striped > tbody > tr:nth-of-type(odd) > * {
+  background-color: color-mix(in srgb, var(--color-rosver-soft) 55%, white);
+}
+
+.table-hover > tbody > tr:hover > * {
+  background-color: color-mix(in srgb, var(--color-rosver-soft) 85%, white);
+}
+

@@ -1,9 +1,10 @@
 import type { Category } from '@/features/catalog/model/mocks'
 import { countProductsInCategoryTree } from '@/features/catalog/model/category-tree'
 import { cn } from '@/shared/lib'
+import { ArrowRight } from 'cssvg-icons'
 import { SlidersHorizontal, X } from 'lucide-react'
-import { useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 export type CatalogFilterState = {
   onSale: boolean
@@ -45,7 +46,9 @@ export function FiltersPanel({
   filters,
   onChange,
 }: Props) {
+  const navigate = useNavigate()
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
   const items = categories
     .filter((c) => c.visible !== false && !c.parentId)
@@ -64,6 +67,22 @@ export function FiltersPanel({
     return productCountBySlug?.[slug]
   }
 
+  const activeParentIds = useMemo(() => {
+    if (!activeSlug) return new Set<string>()
+    const active = categories.find((c) => c.slug === activeSlug)
+    if (!active) return new Set<string>()
+    if (!active.parentId) return new Set([active.id])
+    return new Set([active.parentId])
+  }, [activeSlug, categories])
+
+  useEffect(() => {
+    setExpanded((prev) => {
+      const next = { ...prev }
+      for (const id of activeParentIds) next[id] = true
+      return next
+    })
+  }, [activeParentIds])
+
   const toggleVendor = (vendor: string) => {
     const has = filters.vendors.includes(vendor)
     onChange({
@@ -72,6 +91,15 @@ export function FiltersPanel({
         ? filters.vendors.filter((v) => v !== vendor)
         : [...filters.vendors, vendor],
     })
+  }
+
+  function goCategory(slug: string | null) {
+    setMobileOpen(false)
+    navigate(slug ? `/catalogo/${slug}` : '/catalogo')
+  }
+
+  function toggleExpand(id: string) {
+    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }))
   }
 
   const panel = (
@@ -94,66 +122,121 @@ export function FiltersPanel({
         <FilterBlock title="Por categorías">
           <ul className="space-y-1 text-sm">
             <li>
-              <Link
-                to="/catalogo"
-                onClick={() => setMobileOpen(false)}
+              <label
                 className={cn(
-                  'flex items-center justify-between rounded-xl px-2.5 py-2 transition',
+                  'flex cursor-pointer items-center gap-2.5 rounded-xl px-2.5 py-2 transition',
                   !activeSlug
                     ? 'bg-rosver-red/10 font-semibold text-rosver-red'
                     : 'text-rosver-ink hover:bg-rosver-soft',
                 )}
               >
-                Todas
-              </Link>
+                <input
+                  type="checkbox"
+                  checked={!activeSlug}
+                  onChange={() => goCategory(null)}
+                  className="size-4 rounded border-rosver-line text-rosver-red accent-rosver-red"
+                />
+                <span className="min-w-0 flex-1 truncate">Todas</span>
+              </label>
             </li>
             {items.map((category) => {
               const count = countFor(category.slug)
               const active = activeSlug === category.slug
               const kids = childrenOf(category.id)
+              const isOpen = expanded[category.id] ?? false
               return (
                 <li key={category.id}>
-                  <Link
-                    to={`/catalogo/${category.slug}`}
-                    onClick={() => setMobileOpen(false)}
+                  <div
                     className={cn(
-                      'flex items-center justify-between gap-2 rounded-xl px-2.5 py-2 transition',
-                      active
-                        ? 'bg-rosver-red/10 font-semibold text-rosver-red'
-                        : 'text-rosver-muted hover:bg-rosver-soft hover:text-rosver-ink',
+                      'flex items-center gap-1 rounded-xl px-1.5 py-1 transition',
+                      active ? 'bg-rosver-red/10' : 'hover:bg-rosver-soft',
                     )}
                   >
-                    <span className="truncate">{category.name}</span>
-                    {typeof count === 'number' ? (
-                      <span className="rounded-full bg-rosver-soft px-1.5 py-0.5 text-[10px] font-bold text-rosver-muted">
-                        {count}
-                      </span>
-                    ) : null}
-                  </Link>
-                  {kids.length ? (
-                    <ul className="mt-0.5 space-y-0.5 border-l border-rosver-line pl-2 ml-2">
+                    {kids.length ? (
+                      <button
+                        type="button"
+                        aria-label={isOpen ? 'Ocultar subcategorías' : 'Ver subcategorías'}
+                        aria-expanded={isOpen}
+                        onClick={() => toggleExpand(category.id)}
+                        className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg text-rosver-muted hover:bg-white hover:text-rosver-ink"
+                      >
+                        <span
+                          className={cn(
+                            'inline-flex transition-transform',
+                            isOpen ? 'rotate-90' : 'rotate-0',
+                          )}
+                        >
+                          <ArrowRight size={14} color="currentColor" strokeWidth={2} />
+                        </span>
+                      </button>
+                    ) : (
+                      <span className="size-7 shrink-0" aria-hidden />
+                    )}
+                    <label
+                      className={cn(
+                        'flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 py-1 pr-1',
+                        active
+                          ? 'font-semibold text-rosver-red'
+                          : 'text-rosver-muted',
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={active}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            if (kids.length) {
+                              setExpanded((prev) => ({
+                                ...prev,
+                                [category.id]: true,
+                              }))
+                            }
+                            goCategory(category.slug)
+                          } else {
+                            goCategory(null)
+                          }
+                        }}
+                        className="size-4 shrink-0 rounded border-rosver-line text-rosver-red accent-rosver-red"
+                      />
+                      <span className="min-w-0 flex-1 truncate">{category.name}</span>
+                      {typeof count === 'number' ? (
+                        <span className="rounded-full bg-rosver-soft px-1.5 py-0.5 text-[10px] font-bold text-rosver-muted">
+                          {count}
+                        </span>
+                      ) : null}
+                    </label>
+                  </div>
+                  {kids.length && isOpen ? (
+                    <ul className="mt-0.5 space-y-0.5 border-l border-rosver-line pl-2 ml-5">
                       {kids.map((ch) => {
                         const chActive = activeSlug === ch.slug
                         const chCount = countFor(ch.slug)
                         return (
                           <li key={ch.id}>
-                            <Link
-                              to={`/catalogo/${ch.slug}`}
-                              onClick={() => setMobileOpen(false)}
+                            <label
                               className={cn(
-                                'flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-xs transition',
+                                'flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 text-xs transition',
                                 chActive
                                   ? 'bg-rosver-red/10 font-semibold text-rosver-red'
                                   : 'text-rosver-muted hover:bg-rosver-soft hover:text-rosver-ink',
                               )}
                             >
-                              <span className="truncate">{ch.name}</span>
+                              <input
+                                type="checkbox"
+                                checked={chActive}
+                                onChange={(e) => {
+                                  if (e.target.checked) goCategory(ch.slug)
+                                  else goCategory(null)
+                                }}
+                                className="size-3.5 shrink-0 rounded border-rosver-line text-rosver-red accent-rosver-red"
+                              />
+                              <span className="min-w-0 flex-1 truncate">{ch.name}</span>
                               {typeof chCount === 'number' ? (
                                 <span className="text-[10px] font-bold text-rosver-muted">
                                   {chCount}
                                 </span>
                               ) : null}
-                            </Link>
+                            </label>
                           </li>
                         )
                       })}

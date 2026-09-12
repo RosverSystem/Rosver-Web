@@ -2,6 +2,7 @@ import {
   HOME_HERO_SLIDES,
   type HomeHeroSlide,
 } from '@/features/catalog/model/home-hero-slides'
+import { api } from '@/shared/lib/api'
 import { cn } from '@/shared/lib'
 import { prefersReducedMotion } from '@/shared/lib/gsap'
 import { ArrowRight } from 'cssvg-icons'
@@ -10,17 +11,58 @@ import { Link } from 'react-router-dom'
 
 const AUTOPLAY_MS = 6500
 
+function mapCmsSlides(raw: unknown): HomeHeroSlide[] | null {
+  if (!raw || typeof raw !== 'object') return null
+  const slides = (raw as { slides?: unknown }).slides
+  if (!Array.isArray(slides) || slides.length === 0) return null
+  return slides.map((s, i) => {
+    const row = s as Record<string, unknown>
+    return {
+      id: String(row.id ?? `cms-${i}`),
+      eyebrow: row.tag ? String(row.tag) : row.eyebrow ? String(row.eyebrow) : undefined,
+      title: String(row.title ?? ''),
+      titleAccent: row.titleAccent ? String(row.titleAccent) : undefined,
+      subtitle: String(row.subtitle ?? ''),
+      ctaLabel: String(row.cta ?? row.ctaLabel ?? 'Ver catálogo'),
+      ctaTo: String(row.ctaLink ?? row.ctaTo ?? '/catalogo'),
+      imageUrl: String(row.imageUrl ?? HOME_HERO_SLIDES[i % HOME_HERO_SLIDES.length]?.imageUrl ?? ''),
+      visible: true,
+      sortOrder: i + 1,
+    }
+  })
+}
+
 /**
  * Hero full-bleed estilo referencia grocery: fondo marca, texto izq.,
  * producto a la derecha sin caja, ola blanca abajo (transición a marcas).
  */
 export function HeroWaveSlider() {
-  const slides = HOME_HERO_SLIDES.filter((s) => s.visible !== false)
-    .slice()
-    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-
+  const [slides, setSlides] = useState<HomeHeroSlide[]>(() =>
+    HOME_HERO_SLIDES.filter((s) => s.visible !== false)
+      .slice()
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
+  )
   const [index, setIndex] = useState(0)
   const reduceMotion = prefersReducedMotion()
+
+  useEffect(() => {
+    let cancelled = false
+    void api<{ value: unknown }>('/api/content/home_hero')
+      .then((res) => {
+        if (cancelled) return
+        const mapped = mapCmsSlides(res.value)
+        if (mapped?.length) {
+          setSlides(mapped)
+          setIndex(0)
+        }
+      })
+      .catch(() => {
+        /* fallback: constantes locales */
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     if (reduceMotion || slides.length < 2) return

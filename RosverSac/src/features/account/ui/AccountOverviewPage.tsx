@@ -1,22 +1,54 @@
+import { fetchMyOrders } from '@/features/account/model/api-orders'
+import { shortDisplayName, useAuth } from '@/features/auth'
+import { fetchMyQuotes } from '@/features/quotes'
 import {
-  ORDERS,
   ORDER_STATUS_LABEL,
   ORDER_STATUS_TONE,
+  type Order,
 } from '@/features/account/model/mocks'
-import { shortDisplayName, useAuth } from '@/features/auth'
 import {
-  QUOTES,
   QUOTE_STATUS_LABEL,
   QUOTE_STATUS_TONE,
+  type Quote,
 } from '@/features/quotes/model/mocks'
 import { Badge } from '@/shared/ui/badge'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 export function AccountOverviewPage() {
   const { user } = useAuth()
-  const lastOrder = ORDERS[0]
-  const lastQuote = QUOTES[0]
   const first = user ? shortDisplayName(user) : null
+  const [lastOrder, setLastOrder] = useState<Order | null>(null)
+  const [lastQuote, setLastQuote] = useState<Quote | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      if (!user) {
+        setLastOrder(null)
+        setLastQuote(null)
+        return
+      }
+      try {
+        const [orders, quotes] = await Promise.all([
+          fetchMyOrders(),
+          fetchMyQuotes(),
+        ])
+        if (cancelled) return
+        setLastOrder(orders[0] ?? null)
+        setLastQuote(quotes[0] ?? null)
+      } catch {
+        if (!cancelled) {
+          setLastOrder(null)
+          setLastQuote(null)
+        }
+      }
+    }
+    void load()
+    return () => {
+      cancelled = true
+    }
+  }, [user])
 
   return (
     <div className="flex flex-col gap-5">
@@ -50,7 +82,7 @@ export function AccountOverviewPage() {
         <section className="rounded-2xl border border-rosver-line bg-white p-4 shadow-sm sm:p-5">
           <div className="mb-3 flex items-center justify-between gap-2">
             <h2 className="text-xs font-bold tracking-widest text-rosver-muted uppercase">
-              Último pedido
+              Último pedido o compra
             </h2>
             {lastOrder ? (
               <Badge tone={ORDER_STATUS_TONE[lastOrder.status]}>
@@ -61,16 +93,18 @@ export function AccountOverviewPage() {
           {lastOrder ? (
             <>
               <div className="flex gap-2 overflow-x-auto pb-1">
-                {lastOrder.items.map((item) => (
-                  <img
-                    key={item.name}
-                    src={item.imageUrl}
-                    alt=""
-                    width={56}
-                    height={56}
-                    className="size-14 shrink-0 rounded-xl object-cover ring-1 ring-rosver-line"
-                  />
-                ))}
+                {lastOrder.items.map((item) =>
+                  item.imageUrl ? (
+                    <img
+                      key={item.name}
+                      src={item.imageUrl}
+                      alt=""
+                      width={56}
+                      height={56}
+                      className="size-14 shrink-0 rounded-xl object-cover ring-1 ring-rosver-line"
+                    />
+                  ) : null,
+                )}
               </div>
               <p className="mt-3 text-sm font-semibold text-rosver-ink">
                 {lastOrder.id}
@@ -87,7 +121,7 @@ export function AccountOverviewPage() {
             to="/cuenta/pedidos"
             className="mt-4 inline-block text-xs font-bold text-rosver-red uppercase"
           >
-            Ver pedidos →
+            Ver mis pedidos →
           </Link>
         </section>
 
@@ -105,16 +139,18 @@ export function AccountOverviewPage() {
           {lastQuote ? (
             <>
               <div className="flex gap-2 overflow-x-auto pb-1">
-                {lastQuote.items.map((item) => (
-                  <img
-                    key={item.name}
-                    src={item.imageUrl}
-                    alt=""
-                    width={56}
-                    height={56}
-                    className="size-14 shrink-0 rounded-xl object-cover ring-1 ring-rosver-line"
-                  />
-                ))}
+                {lastQuote.items.map((item) =>
+                  item.imageUrl ? (
+                    <img
+                      key={item.name}
+                      src={item.imageUrl}
+                      alt=""
+                      width={56}
+                      height={56}
+                      className="size-14 shrink-0 rounded-xl object-cover ring-1 ring-rosver-line"
+                    />
+                  ) : null,
+                )}
               </div>
               <p className="mt-3 text-sm font-semibold text-rosver-ink">
                 {lastQuote.id}

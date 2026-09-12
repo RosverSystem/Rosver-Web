@@ -1,0 +1,1541 @@
+{
+  "version": 1,
+  "format": "rosver-products-import",
+  "brandName": "ELFA",
+  "products": [
+    {
+      "sku": "ELFA-14M",
+      "name": "CINTA EMBALAJE TRANSPARENTE 14 mts",
+      "brandName": "ELFA",
+      "contentPerBox": 120,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 2,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "docena",
+          "contentQty": 12,
+          "label": "Docena",
+          "listAmount": 8,
+          "wholesaleAmount": 7
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 120,
+          "label": "Caja x120",
+          "listAmount": 65,
+          "wholesaleAmount": 60
+        }
+      ]
+    },
+    {
+      "sku": "ELFA-60M",
+      "name": "CINTA EMBALAJE TRANSPARENTE 60 mts",
+      "brandName": "ELFA",
+      "contentPerBox": 72,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 3,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "docena",
+          "contentQty": 12,
+          "label": "Docena",
+          "listAmount": 18,
+          "wholesaleAmount": 16
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 72,
+          "label": "Caja x72",
+          "listAmount": 80,
+          "wholesaleAmount": 75
+        }
+      ]
+    },
+    {
+      "sku": "ELFA-75M",
+      "name": "CINTA EMBALAJE TRANSPARENTE 75 mts",
+      "brandName": "ELFA",
+      "contentPerBox": 72,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 4,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "docena",
+          "contentQty": 12,
+          "label": "Docena",
+          "listAmount": 26,
+          "wholesaleAmount": 24
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 72,
+          "label": "Caja x72",
+          "listAmount": 105,
+          "wholesaleAmount": 100
+        }
+      ]
+    },
+    {
+      "sku": "ELFA-100M",
+      "name": "CINTA EMBALAJE TRANSPARENTE 100 mts",
+      "brandName": "ELFA",
+      "contentPerBox": 72,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 5,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "docena",
+          "contentQty": 12,
+          "label": "Docena",
+          "listAmount": 30,
+          "wholesaleAmount": 26
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 72,
+          "label": "Caja x72",
+          "listAmount": 135,
+          "wholesaleAmount": 120
+        }
+      ]
+    },
+    {
+      "sku": "ELFA-130M",
+      "name": "CINTA EMBALAJE TRANSPARENTE 130 mts",
+      "brandName": "ELFA",
+      "contentPerBox": 72,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 6,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "docena",
+          "contentQty": 12,
+          "label": "Docena",
+          "listAmount": 34,
+          "wholesaleAmount": 30
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 72,
+          "label": "Caja x72",
+          "listAmount": 160,
+          "wholesaleAmount": 150
+        }
+      ]
+    },
+    {
+      "sku": "ELFA-200M",
+      "name": "CINTA EMBALAJE TRANSPARENTE 200 mts",
+      "brandName": "ELFA",
+      "contentPerBox": 72,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 8,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "docena",
+          "contentQty": 12,
+          "label": "Docena",
+          "listAmount": 42,
+          "wholesaleAmount": 36
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 72,
+          "label": "Caja x72",
+          "listAmount": 190,
+          "wholesaleAmount": 180
+        }
+      ]
+    },
+    {
+      "sku": "ELFA-400M",
+      "name": "CINTA EMBALAJE TRANSPARENTE 400 mts",
+      "brandName": "ELFA",
+      "contentPerBox": 36,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 10,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "docena",
+          "contentQty": 12,
+          "label": "Docena",
+          "listAmount": 78,
+          "wholesaleAmount": 72
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 36,
+          "label": "Caja x36",
+          "listAmount": 190,
+          "wholesaleAmount": 180
+        }
+      ]
+    },
+    {
+      "sku": "ELFA-450M",
+      "name": "CINTA EMBALAJE TRANSPARENTE 450 mts",
+      "brandName": "ELFA",
+      "contentPerBox": 36,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 12,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "docena",
+          "contentQty": 12,
+          "label": "Docena",
+          "listAmount": 96,
+          "wholesaleAmount": 90
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 36,
+          "label": "Caja x36",
+          "listAmount": 250,
+          "wholesaleAmount": 235
+        }
+      ]
+    },
+    {
+      "sku": "ELFA-500M",
+      "name": "CINTA EMBALAJE TRANSPARENTE 500 mts",
+      "brandName": "ELFA",
+      "contentPerBox": 36,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 15,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "docena",
+          "contentQty": 12,
+          "label": "Docena",
+          "listAmount": 108,
+          "wholesaleAmount": 102
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 36,
+          "label": "Caja x36",
+          "listAmount": 280,
+          "wholesaleAmount": 270
+        }
+      ]
+    },
+    {
+      "sku": "ELFA-600M",
+      "name": "CINTA EMBALAJE TRANSPARENTE 600 mts",
+      "brandName": "ELFA",
+      "contentPerBox": 30,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 20,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "docena",
+          "contentQty": 12,
+          "label": "Docena",
+          "listAmount": 144,
+          "wholesaleAmount": 138
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 30,
+          "label": "Caja x30",
+          "listAmount": 310,
+          "wholesaleAmount": 300
+        }
+      ]
+    },
+    {
+      "sku": "ELFA-900M",
+      "name": "CINTA EMBALAJE TRANSPARENTE 900 mts",
+      "brandName": "ELFA",
+      "contentPerBox": 12,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 25,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "docena",
+          "contentQty": 12,
+          "label": "Docena",
+          "listAmount": 240,
+          "wholesaleAmount": 228
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 12,
+          "label": "Caja x12",
+          "listAmount": 220,
+          "wholesaleAmount": 210
+        }
+      ]
+    },
+    {
+      "sku": "ELFA-200MCOMP",
+      "name": "CINTA EMBALAJE TRANSPARENTE 200 mts (COMPLETO)",
+      "brandName": "ELFA",
+      "contentPerBox": 72,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 10,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "docena",
+          "contentQty": 12,
+          "label": "Docena",
+          "listAmount": 54,
+          "wholesaleAmount": 48
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 72,
+          "label": "Caja x72",
+          "listAmount": 235,
+          "wholesaleAmount": 225
+        }
+      ]
+    },
+    {
+      "sku": "ELFA-400MCOMP",
+      "name": "CINTA EMBALAJE TRANSPARENTE 400 mts (COMPLETO)",
+      "brandName": "ELFA",
+      "contentPerBox": 36,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 14,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "docena",
+          "contentQty": 12,
+          "label": "Docena",
+          "listAmount": 96,
+          "wholesaleAmount": 90
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 36,
+          "label": "Caja x36",
+          "listAmount": 235,
+          "wholesaleAmount": 225
+        }
+      ]
+    },
+    {
+      "sku": "ELFAFR-60M",
+      "name": "CINTA EMBALAJE 60 mts FRAGIL",
+      "brandName": "ELFA",
+      "contentPerBox": 72,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 4,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "docena",
+          "contentQty": 12,
+          "label": "Docena",
+          "listAmount": 26,
+          "wholesaleAmount": 24
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 72,
+          "label": "Caja x72",
+          "listAmount": 120,
+          "wholesaleAmount": 110
+        }
+      ]
+    },
+    {
+      "sku": "ELFAFR-100M",
+      "name": "CINTA EMBALAJE 100 mts FRAGIL",
+      "brandName": "ELFA",
+      "contentPerBox": 72,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 6,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "docena",
+          "contentQty": 12,
+          "label": "Docena",
+          "listAmount": 42,
+          "wholesaleAmount": 38
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 72,
+          "label": "Caja x72",
+          "listAmount": 200,
+          "wholesaleAmount": 190
+        }
+      ]
+    },
+    {
+      "sku": "ELFAFR-200M",
+      "name": "CINTA EMBALAJE 200mts FRAGIL",
+      "brandName": "ELFA",
+      "contentPerBox": 72,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 7,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "docena",
+          "contentQty": 12,
+          "label": "Docena",
+          "listAmount": 60,
+          "wholesaleAmount": 54
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 72,
+          "label": "Caja x72",
+          "listAmount": 260,
+          "wholesaleAmount": 250
+        }
+      ]
+    },
+    {
+      "sku": "ELFACO-60M",
+      "name": "CINTA EMBALAJE 60 mts COLORES",
+      "brandName": "ELFA",
+      "contentPerBox": 72,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 4,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "docena",
+          "contentQty": 12,
+          "label": "Docena",
+          "listAmount": 26,
+          "wholesaleAmount": 24
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 72,
+          "label": "Caja x72",
+          "listAmount": 120,
+          "wholesaleAmount": 110
+        }
+      ]
+    },
+    {
+      "sku": "ELFACO-200M",
+      "name": "CINTA EMBALAJE 200 mts COLORES",
+      "brandName": "ELFA",
+      "contentPerBox": 72,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 7,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "docena",
+          "contentQty": 12,
+          "label": "Docena",
+          "listAmount": 54,
+          "wholesaleAmount": 48
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 72,
+          "label": "Caja x72",
+          "listAmount": 250,
+          "wholesaleAmount": 240
+        }
+      ]
+    },
+    {
+      "sku": "FILT20-COM.",
+      "name": "Stretch Film 20\" Transparente Comercial",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 12,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 36,
+          "wholesaleAmount": 24
+        }
+      ]
+    },
+    {
+      "sku": "FILT20-1K",
+      "name": "STRETCH FILM 20\" TRANSP. 1KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 15,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 45,
+          "wholesaleAmount": 40
+        }
+      ]
+    },
+    {
+      "sku": "FILT20-1.2K",
+      "name": "STRETCH FILM 20\" TRANSP. 1.2KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 18,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 55,
+          "wholesaleAmount": 50
+        }
+      ]
+    },
+    {
+      "sku": "FILT20-1.6K",
+      "name": "STRETCH FILM 20\" TRANSP. 1.6KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 20,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 65,
+          "wholesaleAmount": 60
+        }
+      ]
+    },
+    {
+      "sku": "FILT20-2K",
+      "name": "STRETCH FILM 20\" TRANSP. 2KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 25,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 85,
+          "wholesaleAmount": 80
+        }
+      ]
+    },
+    {
+      "sku": "FILT20-2.2K",
+      "name": "STRETCH FILM 20\" TRANSP. 2.2KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 30,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 90,
+          "wholesaleAmount": 85
+        }
+      ]
+    },
+    {
+      "sku": "FILT20-2.5K",
+      "name": "STRETCH FILM 20\" TRANSP. 2.5KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 33,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 95,
+          "wholesaleAmount": 90
+        }
+      ]
+    },
+    {
+      "sku": "FILT20-2.8K",
+      "name": "STRETCH FILM 20\" TRANSP. 2.8KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 35,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 105,
+          "wholesaleAmount": 100
+        }
+      ]
+    },
+    {
+      "sku": "FILT20-3K",
+      "name": "STRETCH FILM 20\" TRANSP. 3KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 38,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 125,
+          "wholesaleAmount": 115
+        }
+      ]
+    },
+    {
+      "sku": "FILT20-3.3K",
+      "name": "STRETCH FILM 20\" TRANSP. 3.3KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 40,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 135,
+          "wholesaleAmount": 135
+        }
+      ]
+    },
+    {
+      "sku": "FILT20-3.8K",
+      "name": "STRETCH FILM 20\" TRANSP. 3.8KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 40,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 150,
+          "wholesaleAmount": 145
+        }
+      ]
+    },
+    {
+      "sku": "FILT20-4.5K",
+      "name": "STRETCH FILM 20\" TRANSP. 4.5KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 45,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 165,
+          "wholesaleAmount": 160
+        }
+      ]
+    },
+    {
+      "sku": "FILT20-5K",
+      "name": "STRETCH FILM 20\" TRANSP. 5KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 50,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 185,
+          "wholesaleAmount": 180
+        }
+      ]
+    },
+    {
+      "sku": "FILT20-6K",
+      "name": "STRETCH FILM 20\" TRANSP. 6KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 60,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 235,
+          "wholesaleAmount": 230
+        }
+      ]
+    },
+    {
+      "sku": "FILN20-COM.",
+      "name": "Stretch Film 20\" Negro Comercial",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 16,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 50,
+          "wholesaleAmount": 45
+        }
+      ]
+    },
+    {
+      "sku": "FILN20-2K",
+      "name": "STRETCH FILM 20\" NEGRO 2KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 25,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 90,
+          "wholesaleAmount": 85
+        }
+      ]
+    },
+    {
+      "sku": "FILN20-3.3K",
+      "name": "STRETCH FILM 20\" NEGRO 3.3KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 45,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 140,
+          "wholesaleAmount": 135
+        }
+      ]
+    },
+    {
+      "sku": "FILT18-COM.",
+      "name": "Stretch Film 18\" Transparente Comercial",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 10,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 36,
+          "wholesaleAmount": 34
+        }
+      ]
+    },
+    {
+      "sku": "FILT18-1K",
+      "name": "STRETCH FILM 18\" TRANSP. 1KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 15,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 45,
+          "wholesaleAmount": 40
+        }
+      ]
+    },
+    {
+      "sku": "FILT18-1.6K",
+      "name": "STRETCH FILM 18\" TRANSP. 1.6KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 20,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 65,
+          "wholesaleAmount": 60
+        }
+      ]
+    },
+    {
+      "sku": "FILT18-2K",
+      "name": "STRETCH FILM 18\" TRANSP. 2KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 25,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 85,
+          "wholesaleAmount": 80
+        }
+      ]
+    },
+    {
+      "sku": "FILT18-2.8K",
+      "name": "STRETCH FILM 18\" TRANSP. 2.8KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 35,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 105,
+          "wholesaleAmount": 100
+        }
+      ]
+    },
+    {
+      "sku": "FILT18-3K",
+      "name": "STRETCH FILM 18\" TRANSP. 3KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 40,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 125,
+          "wholesaleAmount": 115
+        }
+      ]
+    },
+    {
+      "sku": "FILT18-3.3K",
+      "name": "STRETCH FILM 18\" TRANSP. 3.3KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 40,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 135,
+          "wholesaleAmount": 130
+        }
+      ]
+    },
+    {
+      "sku": "FILT18-3.8K",
+      "name": "STRETCH FILM 18\" TRANSP. 3.8KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 45,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 150,
+          "wholesaleAmount": 145
+        }
+      ]
+    },
+    {
+      "sku": "FILT15-COM.",
+      "name": "Stretch Film 15\" Transparente Comercial",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 8,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 28,
+          "wholesaleAmount": 26
+        }
+      ]
+    },
+    {
+      "sku": "FILT15-1.3K",
+      "name": "STRETCH FILM 15\" TRANSP. 1.3 KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 20,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 60,
+          "wholesaleAmount": 55
+        }
+      ]
+    },
+    {
+      "sku": "FILT15-2K",
+      "name": "STRETCH FILM 15\" TRANSP. 2KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 20,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 90,
+          "wholesaleAmount": 85
+        }
+      ]
+    },
+    {
+      "sku": "FILN15-725G",
+      "name": "STRETCH FILM 15\" NEGRO 725G",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 10,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 34,
+          "wholesaleAmount": 30
+        }
+      ]
+    },
+    {
+      "sku": "FILN15-1.3K",
+      "name": "STRETCH FILM 15\" NEGRO 1.3KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 20,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 70,
+          "wholesaleAmount": 65
+        }
+      ]
+    },
+    {
+      "sku": "FILT12-COM.",
+      "name": "Stretch Film 12\" Transparente Comercial",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 8,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 28,
+          "wholesaleAmount": 26
+        }
+      ]
+    },
+    {
+      "sku": "FILT12-700G",
+      "name": "STRETCH FILM 12\" TRANSP. 700G",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 10,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 34,
+          "wholesaleAmount": 30
+        }
+      ]
+    },
+    {
+      "sku": "FILT12-1.3K",
+      "name": "STRETCH FILM 12\" TRANSP. 1.3KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 20,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 60,
+          "wholesaleAmount": 55
+        }
+      ]
+    },
+    {
+      "sku": "FILT12-2K",
+      "name": "STRETCH FILM 12\" TRANSP. 2KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 25,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 90,
+          "wholesaleAmount": 85
+        }
+      ]
+    },
+    {
+      "sku": "FILN12-700G",
+      "name": "STRETCH FILM 12\" NEGRO 700G",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 14,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 45,
+          "wholesaleAmount": 40
+        }
+      ]
+    },
+    {
+      "sku": "FILN12-1.3K",
+      "name": "STRETCH FILM 12\" NEGRO 1.3KG",
+      "brandName": "ELFA",
+      "contentPerBox": 4,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 20,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 4,
+          "label": "Caja x4",
+          "listAmount": 70,
+          "wholesaleAmount": 65
+        }
+      ]
+    },
+    {
+      "sku": "FILT9-COM.",
+      "name": "Stretch Film 9\" Transparente Comercial",
+      "brandName": "ELFA",
+      "contentPerBox": 8,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 8,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 8,
+          "label": "Caja x8",
+          "listAmount": 42,
+          "wholesaleAmount": 40
+        }
+      ]
+    },
+    {
+      "sku": "FILT9-550G",
+      "name": "STRETCH FILM 9\" TRANSP. 550G",
+      "brandName": "ELFA",
+      "contentPerBox": 8,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 8,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 8,
+          "label": "Caja x8",
+          "listAmount": 50,
+          "wholesaleAmount": 45
+        }
+      ]
+    },
+    {
+      "sku": "FILT9-950G",
+      "name": "STRETCH FILM 9\" TRANSP. 950G",
+      "brandName": "ELFA",
+      "contentPerBox": 8,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 14,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 8,
+          "label": "Caja x8",
+          "listAmount": 85,
+          "wholesaleAmount": 80
+        }
+      ]
+    },
+    {
+      "sku": "FILT9-1.3K",
+      "name": "STRETCH FILM 9\" TRANSP. 1.3KG",
+      "brandName": "ELFA",
+      "contentPerBox": 8,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 18,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 8,
+          "label": "Caja x8",
+          "listAmount": 100,
+          "wholesaleAmount": 95
+        }
+      ]
+    },
+    {
+      "sku": "FILT9-2K",
+      "name": "STRETCH FILM 9\" TRANSP. 2KG",
+      "brandName": "ELFA",
+      "contentPerBox": 8,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 25,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 8,
+          "label": "Caja x8",
+          "listAmount": 165,
+          "wholesaleAmount": 160
+        }
+      ]
+    },
+    {
+      "sku": "FILN9-550G",
+      "name": "STRETCH FILM 9\" NEGRO 550G",
+      "brandName": "ELFA",
+      "contentPerBox": 8,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 10,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 8,
+          "label": "Caja x8",
+          "listAmount": 60,
+          "wholesaleAmount": 65
+        }
+      ]
+    },
+    {
+      "sku": "FILT6-COM.",
+      "name": "Stretch Film 6\" Transparente Comercial",
+      "brandName": "ELFA",
+      "contentPerBox": 12,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 5,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 12,
+          "label": "Caja x12",
+          "listAmount": 42,
+          "wholesaleAmount": 40
+        }
+      ]
+    },
+    {
+      "sku": "FILT6-400G",
+      "name": "STRETCH FILM 6\" TRANSP. 400G",
+      "brandName": "ELFA",
+      "contentPerBox": 12,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 8,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 12,
+          "label": "Caja x12",
+          "listAmount": 70,
+          "wholesaleAmount": 65
+        }
+      ]
+    },
+    {
+      "sku": "FILT6-1K",
+      "name": "STRETCH FILM 6\" TRANSP. 1KG",
+      "brandName": "ELFA",
+      "contentPerBox": 12,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 12,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 12,
+          "label": "Caja x12",
+          "listAmount": 115,
+          "wholesaleAmount": 110
+        }
+      ]
+    },
+    {
+      "sku": "FILT3-400G",
+      "name": "STRETCH FILM 3\" TRANSP. 400G",
+      "brandName": "ELFA",
+      "contentPerBox": 24,
+      "prices": [
+        {
+          "unitCode": "unidad",
+          "contentQty": 1,
+          "label": "Unidad",
+          "listAmount": 8,
+          "wholesaleAmount": null
+        },
+        {
+          "unitCode": "caja",
+          "contentQty": 24,
+          "label": "Caja x24",
+          "listAmount": 125,
+          "wholesaleAmount": 120
+        }
+      ]
+    }
+  ]
+}

@@ -11,32 +11,23 @@ function AdminPageFallback() {
   )
 }
 
-const COLLAPSE_KEY = 'systemrsv.sidebar.collapsed'
-
 /**
- * Shell ERP: sidebar + topbar fijos; solo el main hace scroll.
+ * Shell ERP: sidebar fija expandida + topbar; solo el main hace scroll.
+ * Sin colapsar sidebar en desktop.
  */
 export function AdminShell() {
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [collapsed, setCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem(COLLAPSE_KEY) === '1'
-    } catch {
-      return false
-    }
-  })
 
   const closeMobile = useCallback(() => setMobileOpen(false), [])
   const openMobile = useCallback(() => setMobileOpen(true), [])
-  const toggleCollapsed = useCallback(() => setCollapsed((v) => !v), [])
 
   useEffect(() => {
     try {
-      localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0')
+      localStorage.removeItem('systemrsv.sidebar.collapsed')
     } catch {
       /* ignore */
     }
-  }, [collapsed])
+  }, [])
 
   useEffect(() => {
     const prev = document.body.style.overflow
@@ -48,12 +39,7 @@ export function AdminShell() {
 
   return (
     <div className="flex h-dvh max-h-dvh overflow-hidden bg-rosver-soft text-rosver-ink">
-      <AdminSidebar
-        mobileOpen={mobileOpen}
-        onCloseMobile={closeMobile}
-        collapsed={collapsed}
-        onToggleCollapsed={toggleCollapsed}
-      />
+      <AdminSidebar mobileOpen={mobileOpen} onCloseMobile={closeMobile} />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <AdminTopBar onOpenMobileNav={openMobile} />
         <main className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-4 py-5 sm:px-6 lg:px-8 lg:py-6">

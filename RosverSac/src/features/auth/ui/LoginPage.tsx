@@ -1,34 +1,79 @@
 import { useAuth } from '@/features/auth'
+import { AuthSplitShell } from '@/features/auth/ui/AuthSplitShell'
 import { OtpVerifyPanel } from '@/features/auth/ui/OtpVerifyPanel'
-import { isValidEmail } from '@/shared/lib'
+import { VerificationRequiredModal } from '@/features/auth/ui/VerificationRequiredModal'
+import { isValidEmail, cnField, normalizeOtpCode } from '@/shared/lib'
+import { BRAND_KEYS, brandMediaPath } from '@/shared/lib/brand-assets'
 import { prefersReducedMotion } from '@/shared/lib/gsap'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { cn } from '@/shared/lib/cn'
-import { cnField } from '@/shared/lib'
 import { ApiError } from '@/shared/lib/api'
 import { FloatingToasts } from '@/shared/ui/floating-toasts'
-import { IconFacebook } from '@/shared/ui/icons'
-import { motion } from 'motion/react'
-import { type FormEvent, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { type FormEvent, useEffect, useRef, useState } from 'react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
-type FieldKey = 'email' | 'password' | 'totp'
+type FieldKey = 'email' | 'password' | 'totp' | 'otp'
 type FieldErrors = Partial<Record<FieldKey, string>>
 
+type Step =
+  | 'form'
+  | 'totp'
+  | 'email_otp'
+  | 'verify_modal'
+
 /**
- * Login full-bleed: validación con toasts flotantes (sin bubbles nativos).
+ * Login: email+password; botón celular (junto a Google) = sin contraseña.
+ * Sin Facebook. Cuenta no verificada → modal obligatorio.
  */
+const GOOGLE_ERROR_MESSAGES: Record<string, string> = {
+  google_state: 'La sesión de Google expiró o fue interrumpida. Intenta de nuevo.',
+  google_token: 'No se pudo obtener el token de Google. Intenta de nuevo.',
+  google_not_configured: 'El inicio de sesión con Google no está configurado aún.',
+  google_denied: 'Cancelaste el inicio de sesión con Google.',
+  google_profile: 'No se pudo obtener el perfil de Google.',
+  google_email: 'Google no devolvió un correo válido.',
+  disabled: 'Tu cuenta está deshabilitada. Contacta a soporte.',
+}
+
 export function LoginPage() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const reduce = prefersReducedMotion()
   const { login, loginTotp, googleStartUrl } = useAuth()
-  const { toasts, showErrors, dismiss, clear } = useFormToasts()
+  const { toasts, showErrors, showWarning, showSuccess, dismiss, clear } = useFormToasts()
+
+  // Leer ?error= del callback de Google y mostrar toast
+  useEffect(() => {
+    const errorCode = searchParams.get('error')
+    if (!errorCode) return
+    // Limpia el param de la URL sin navegar
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev)
+      next.delete('error')
+      return next
+    }, { replace: true })
+    const msg = GOOGLE_ERROR_MESSAGES[errorCode] ??
+      `Error al continuar con Google (${errorCode}). Intenta de nuevo.`
+    // google_not_configured y disabled → warning; el resto → error
+    const isWarning = errorCode === 'google_not_configured' || errorCode === 'disabled'
+    if (isWarning) {
+      showWarning([msg])
+    } else {
+      showErrors({ google: msg }, ['google'])
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [errors, setErrors] = useState<FieldErrors>({})
   const [busy, setBusy] = useState(false)
-  const [pendingEmailVerify, setPendingEmailVerify] = useState<string | null>(null)
+  const [step, setStep] = useState<Step>('form')
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null)
+  const [otpMeta, setOtpMeta] = useState<{
+    mailDelivered?: boolean
+    retryAfterSec?: number
+  }>({})
   const [totpChallenge, setTotpChallenge] = useState<string | null>(null)
   const [totpCode, setTotpCode] = useState('')
 
@@ -36,20 +81,48 @@ export function LoginPage() {
   const passwordRef = useRef<HTMLInputElement>(null)
 
   function goAfterLogin(admin: boolean) {
+    showSuccess(['Sesión iniciada.'])
     navigate(admin ? '/admin' : '/cuenta', { replace: true })
   }
 
-  function validate(): FieldErrors {
-    const next: FieldErrors = {}
-    if (!email.trim()) next.email = 'Ingresa tu correo.'
-    else if (!isValidEmail(email)) next.email = 'El correo no es válido.'
-    if (!password) next.password = 'Ingresa tu contraseña.'
-    return next
+  async function applyLoginResult(result: Awaited<ReturnType<typeof login>>) {
+    if (result.ok) {
+      goAfterLogin(result.user.roleCode === 'admin')
+      return
+    }
+    if (result.requiresEmailVerification && result.email) {
+      setPendingEmail(result.email)
+      setOtpMeta({
+        mailDelivered: result.mailDelivered,
+        retryAfterSec: result.retryAfterSec,
+      })
+      setStep('verify_modal')
+      return
+    }
+    if (result.requiresTotp && result.challengeToken) {
+      setTotpChallenge(result.challengeToken)
+      setPendingEmail(result.email ?? email.trim())
+      setStep('totp')
+      return
+    }
+    if (result.requiresEmailOtp && result.email) {
+      setPendingEmail(result.email)
+      setOtpMeta({
+        mailDelivered: result.mailDelivered,
+        retryAfterSec: result.retryAfterSec,
+      })
+      setStep('email_otp')
+      return
+    }
+    showErrors({ email: result.message || 'No se pudo iniciar sesión.' }, ['email'])
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    const next = validate()
+    const next: FieldErrors = {}
+    if (!email.trim()) next.email = 'Ingresa tu correo.'
+    else if (!isValidEmail(email)) next.email = 'El correo no es válido.'
+    if (!password) next.password = 'Ingresa tu contraseña.'
     setErrors(next)
     if (Object.keys(next).length > 0) {
       showErrors(next, ['email', 'password'])
@@ -61,22 +134,30 @@ export function LoginPage() {
     setBusy(true)
     try {
       const result = await login(email.trim(), password)
-      if (result.ok) {
-        goAfterLogin(result.user.roleCode === 'admin')
-        return
-      }
-      if (result.requiresEmailVerification && result.email) {
-        setPendingEmailVerify(result.email)
-        return
-      }
-      if (result.requiresTotp && result.challengeToken) {
-        setTotpChallenge(result.challengeToken)
-        return
-      }
-      showErrors({ email: result.message || 'No se pudo iniciar sesión.' }, ['email'])
+      await applyLoginResult(result)
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : 'Error al iniciar sesión.'
       showErrors({ password: msg }, ['password'])
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handlePasswordless() {
+    if (!email.trim() || !isValidEmail(email)) {
+      setErrors({ email: 'Ingresa tu correo para entrar con código.' })
+      showErrors({ email: 'Ingresa tu correo para entrar con código.' }, ['email'])
+      emailRef.current?.focus()
+      return
+    }
+    clear()
+    setBusy(true)
+    try {
+      const result = await login(email.trim(), undefined, { passwordless: true })
+      await applyLoginResult(result)
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : 'Error al iniciar sesión.'
+      showErrors({ email: msg }, ['email'])
     } finally {
       setBusy(false)
     }
@@ -90,7 +171,7 @@ export function LoginPage() {
     }
     setBusy(true)
     try {
-      const user = await loginTotp(totpChallenge, totpCode.trim())
+      const user = await loginTotp(totpChallenge, normalizeOtpCode(totpCode, 8))
       goAfterLogin(user.roleCode === 'admin')
     } catch (err) {
       showErrors(
@@ -103,185 +184,208 @@ export function LoginPage() {
   }
 
   return (
-    <main className="grid min-h-dvh w-full grid-cols-1 lg:grid-cols-2">
-      <FloatingToasts
-        toasts={toasts}
-        onDismiss={dismiss}
-        reduceMotion={reduce}
-      />
-
-      <aside className="relative hidden overflow-hidden bg-rosver-soft lg:block">
-        <div
-          className="absolute inset-y-0 left-0 z-10 w-2 bg-rosver-red sm:w-2.5"
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute -top-24 -right-16 size-72 rounded-full bg-rosver-red/10 blur-3xl"
-          aria-hidden
-        />
-        <div
-          className="pointer-events-none absolute bottom-10 left-16 size-56 rounded-full bg-rosver-blue/15 blur-3xl"
-          aria-hidden
-        />
-
-        <div className="relative z-[1] flex h-full min-h-dvh flex-col justify-end px-8 pb-10 pt-20 xl:px-12">
-          <motion.img
-            src="/login-hero-rosver.webp"
-            alt=""
-            width={720}
-            height={960}
-            decoding="async"
-            fetchPriority="high"
-            className="mx-auto h-auto w-full max-w-md object-contain drop-shadow-[0_28px_48px_rgba(13,13,13,0.18)] xl:max-w-lg"
-            initial={reduce ? false : { opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, ease: 'easeOut' }}
+    <AuthSplitShell
+      heroSrc={brandMediaPath(BRAND_KEYS.loginHero)}
+      heroCaption="Herramientas y soluciones para profesionales."
+      floating={
+        <>
+          <FloatingToasts
+            toasts={toasts}
+            onDismiss={dismiss}
+            reduceMotion={reduce}
           />
-          <p className="mx-auto mt-6 max-w-sm text-center text-sm font-medium text-rosver-muted">
-            Herramientas y soluciones para profesionales.
-          </p>
-        </div>
-      </aside>
+          {step === 'verify_modal' && pendingEmail ? (
+            <VerificationRequiredModal
+              email={pendingEmail}
+              initialRetryAfterSec={otpMeta.retryAfterSec ?? 30}
+              initialMailDelivered={otpMeta.mailDelivered}
+              onVerified={(u) => goAfterLogin(u?.roleCode === 'admin')}
+              onClose={() => {
+                setStep('form')
+                setPendingEmail(null)
+              }}
+            />
+          ) : null}
+        </>
+      }
+    >
+      <p className="mb-3 text-[11px] font-bold tracking-[0.2em] text-rosver-muted uppercase lg:hidden">
+        ROS<span className="text-rosver-red">VER</span>
+      </p>
 
-      <section className="flex min-h-dvh flex-col justify-center bg-white px-6 py-16 sm:px-12 lg:px-16 xl:px-24">
-        <motion.div
-          className="mx-auto w-full max-w-md"
-          initial={reduce ? false : { opacity: 0, x: 12 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.4, delay: 0.08 }}
+      <h1 className="font-display text-3xl font-bold tracking-tight text-rosver-ink sm:text-4xl xl:text-5xl [@media(max-height:700px)]:text-3xl">
+        Ingresar
+      </h1>
+      <p className="mt-2 text-sm leading-relaxed text-rosver-muted sm:mt-3 sm:text-base">
+        Entra a tu cuenta para ver pedidos, cotizaciones y perfil.
+      </p>
+
+      {step === 'totp' && totpChallenge ? (
+        <form
+          noValidate
+          onSubmit={handleTotp}
+          className="mt-7 flex flex-col gap-3 sm:mt-9"
         >
-          <p className="mb-3 text-[11px] font-bold tracking-[0.2em] text-rosver-muted uppercase lg:hidden">
-            ROS<span className="text-rosver-red">VER</span>
+          <p className="text-sm text-rosver-muted">
+            Abre Google Authenticator o Microsoft Authenticator e ingresa el
+            código de 6 dígitos.
           </p>
-
-          <h1 className="font-display text-4xl font-bold tracking-tight text-rosver-ink sm:text-5xl">
-            Ingresar
-          </h1>
-          <p className="mt-3 text-sm leading-relaxed text-rosver-muted sm:text-base">
-            Entra a tu cuenta para ver pedidos, cotizaciones y perfil.
-          </p>
-
-          {pendingEmailVerify ? (
-            <div className="mt-9">
-              <OtpVerifyPanel
-                email={pendingEmailVerify}
-                onVerified={(u) => goAfterLogin(u?.roleCode === 'admin')}
-              />
-            </div>
-          ) : totpChallenge ? (
-            <form noValidate onSubmit={handleTotp} className="mt-9 flex flex-col gap-3">
-              <p className="text-sm text-rosver-muted">
-                Abre tu app autenticadora e ingresa el código de 6 dígitos.
-              </p>
-              <input
-                value={totpCode}
-                onChange={(e) => setTotpCode(e.target.value)}
-                inputMode="numeric"
-                placeholder="Código 2FA"
-                className={cnField(pillInputClass, Boolean(errors.totp))}
-              />
-              <button
-                type="submit"
-                disabled={busy}
-                className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-rosver-red px-6 text-sm font-bold text-white hover:bg-rosver-red-dark disabled:opacity-60"
-              >
-                {busy ? 'Validando…' : 'Confirmar 2FA'}
-              </button>
-            </form>
-          ) : (
-          <form
-            noValidate
-            onSubmit={handleSubmit}
-            className="mt-9 flex flex-col gap-3.5"
+          <input
+            value={totpCode}
+            onChange={(e) => setTotpCode(normalizeOtpCode(e.target.value, 8))}
+            onPaste={(e) => {
+              e.preventDefault()
+              setTotpCode(normalizeOtpCode(e.clipboardData.getData('text'), 8))
+            }}
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            placeholder="Código autenticador"
+            className={cnField(`${pillInputClass} text-center tracking-[0.35em]`, Boolean(errors.totp))}
+          />
+          <button
+            type="submit"
+            disabled={busy}
+            className="inline-flex min-h-12 w-full items-center justify-center rounded-full bg-rosver-red px-6 text-sm font-bold text-white hover:bg-rosver-red-dark disabled:opacity-60"
           >
-            <label className="sr-only" htmlFor="login-email">
-              Correo
+            {busy ? 'Validando…' : 'Confirmar autenticador'}
+          </button>
+          <button
+            type="button"
+            className="text-center text-sm font-semibold text-rosver-muted"
+            onClick={() => {
+              setStep('form')
+              setTotpChallenge(null)
+              setTotpCode('')
+            }}
+          >
+            Volver
+          </button>
+        </form>
+      ) : step === 'email_otp' && pendingEmail ? (
+        <div className="mt-7 sm:mt-9">
+          <OtpVerifyPanel
+            email={pendingEmail}
+            purpose="login"
+            initialRetryAfterSec={otpMeta.retryAfterSec ?? 30}
+            initialMailDelivered={otpMeta.mailDelivered}
+            onVerified={(u) => goAfterLogin(u?.roleCode === 'admin')}
+          />
+          <button
+            type="button"
+            className="mt-3 text-sm font-semibold text-rosver-muted"
+            onClick={() => {
+              setStep('form')
+              setPendingEmail(null)
+            }}
+          >
+            Volver
+          </button>
+        </div>
+      ) : (
+        <form
+          noValidate
+          onSubmit={handleSubmit}
+          className="mt-7 flex flex-col gap-3 sm:mt-9 sm:gap-3.5"
+        >
+          <label className="sr-only" htmlFor="login-email">
+            Correo
+          </label>
+          <input
+            ref={emailRef}
+            id="login-email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            placeholder="Correo"
+            value={email}
+            aria-invalid={Boolean(errors.email)}
+            onChange={(e) => {
+              setEmail(e.target.value)
+              setErrors((prev) => {
+                const { email: _, ...rest } = prev
+                return rest
+              })
+            }}
+            className={cnField(pillInputClass, Boolean(errors.email))}
+          />
+
+          <div className="relative">
+            <label className="sr-only" htmlFor="login-password">
+              Contraseña
             </label>
             <input
-              ref={emailRef}
-              id="login-email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              placeholder="Correo"
-              value={email}
-              aria-invalid={Boolean(errors.email)}
+              ref={passwordRef}
+              id="login-password"
+              name="password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete="current-password"
+              placeholder="Contraseña"
+              value={password}
+              aria-invalid={Boolean(errors.password)}
               onChange={(e) => {
-                setEmail(e.target.value)
+                setPassword(e.target.value)
                 setErrors((prev) => {
-                  const { email: _, ...rest } = prev
+                  const { password: _, ...rest } = prev
                   return rest
                 })
               }}
-              className={cnField(pillInputClass, Boolean(errors.email))}
+              className={cn(
+                cnField(pillInputClass, Boolean(errors.password)),
+                'pr-16',
+              )}
             />
-
-            <div className="relative">
-              <label className="sr-only" htmlFor="login-password">
-                Contraseña
-              </label>
-              <input
-                ref={passwordRef}
-                id="login-password"
-                name="password"
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="current-password"
-                placeholder="Contraseña"
-                value={password}
-                aria-invalid={Boolean(errors.password)}
-                onChange={(e) => {
-                  setPassword(e.target.value)
-                  setErrors((prev) => {
-                    const { password: _, ...rest } = prev
-                    return rest
-                  })
-                }}
-                className={cn(
-                  cnField(pillInputClass, Boolean(errors.password)),
-                  'pr-16',
-                )}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="absolute top-1/2 right-5 -translate-y-1/2 text-xs font-bold text-rosver-muted hover:text-rosver-ink"
-              >
-                {showPassword ? 'Ocultar' : 'Ver'}
-              </button>
-            </div>
-
-            <div className="flex items-center justify-between px-1 text-sm">
-              <label className="inline-flex items-center gap-2 text-rosver-muted">
-                <input
-                  type="checkbox"
-                  name="remember"
-                  className="size-4 rounded border-rosver-line accent-rosver-red"
-                />
-                Recordarme
-              </label>
-              <Link
-                to="/recuperar"
-                className="font-semibold text-rosver-blue hover:text-rosver-red"
-              >
-                ¿Olvidaste tu clave?
-              </Link>
-            </div>
-
             <button
-              type="submit"
-              disabled={busy}
-              className="mt-2 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-rosver-red px-6 text-sm font-bold text-white transition hover:bg-rosver-red-dark disabled:opacity-60"
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute top-1/2 right-5 -translate-y-1/2 text-xs font-bold text-rosver-muted hover:text-rosver-ink"
             >
-              {busy ? 'Entrando…' : 'Empezar'}
+              {showPassword ? 'Ocultar' : 'Ver'}
             </button>
-          </form>
-          )}
+          </div>
 
-          {!pendingEmailVerify && !totpChallenge ? (
-          <div className="mt-7 flex items-center justify-center gap-3">
-            <SocialButton label="Facebook (próximamente)">
-              <IconFacebook className="size-4 text-[#1877F2]" />
-            </SocialButton>
+          <div className="flex items-center justify-end px-1 text-sm">
+            <Link
+              to="/recuperar"
+              className="font-semibold text-rosver-blue hover:text-rosver-red"
+            >
+              ¿Olvidaste tu clave?
+            </Link>
+          </div>
+
+          <button
+            type="submit"
+            disabled={busy}
+            className="mt-2 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-rosver-red px-6 text-sm font-bold text-white transition hover:bg-rosver-red-dark disabled:opacity-60"
+          >
+            {busy ? 'Entrando…' : 'Empezar'}
+          </button>
+        </form>
+      )}
+
+      {step === 'form' ? (
+        <>
+          <div
+            className="mt-6 flex items-center gap-3 sm:mt-7"
+            aria-hidden={false}
+          >
+            <span className="h-px flex-1 bg-rosver-line" />
+            <span className="text-xs font-bold tracking-wide text-rosver-muted uppercase">
+              o
+            </span>
+            <span className="h-px flex-1 bg-rosver-line" />
+          </div>
+
+          <div className="mt-5 flex items-center justify-center gap-3">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void handlePasswordless()}
+              aria-label="Entrar con código OTP (sin contraseña)"
+              title="Entrar con código al correo"
+              className="inline-flex size-11 items-center justify-center rounded-full border border-rosver-line bg-white text-rosver-red transition hover:border-rosver-red/40 hover:bg-rosver-soft disabled:opacity-60"
+            >
+              <KeyMark />
+            </button>
             <a
               href={googleStartUrl}
               aria-label="Continuar con Google"
@@ -291,9 +395,7 @@ export function LoginPage() {
               <GoogleMark />
             </a>
           </div>
-          ) : null}
-
-          <p className="mt-8 text-center text-sm text-rosver-muted">
+          <p className="mt-6 text-center text-sm text-rosver-muted sm:mt-8">
             ¿No tienes cuenta?{' '}
             <Link
               to="/registro"
@@ -302,31 +404,33 @@ export function LoginPage() {
               Regístrate
             </Link>
           </p>
-        </motion.div>
-      </section>
-    </main>
+        </>
+      ) : null}
+    </AuthSplitShell>
   )
 }
 
 const pillInputClass =
   'min-h-12 w-full rounded-full border bg-rosver-soft px-5 text-sm text-rosver-ink outline-none transition placeholder:text-rosver-muted focus:bg-white border-transparent focus:ring-2 focus:ring-rosver-red/20'
 
-function SocialButton({
-  label,
-  children,
-}: {
-  label: string
-  children: React.ReactNode
-}) {
+function KeyMark() {
   return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      className="inline-flex size-11 items-center justify-center rounded-full border border-rosver-line bg-white transition hover:border-rosver-red/30 hover:bg-rosver-soft"
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
     >
-      {children}
-    </button>
+      <circle cx="8" cy="15" r="4" />
+      <path d="M12 15h9v-2.5a1.5 1.5 0 0 0-1.5-1.5H16" />
+      <path d="M17.5 11V9" />
+      <path d="M19.5 11V9" />
+    </svg>
   )
 }
 

@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { Clock, Menu, Search } from 'cssvg-icons'
 import { cn } from '@/shared/lib'
+import { attachNestedScrollWheel } from '@/shared/lib/nested-scroll-wheel'
 import { adminPageTitle, searchAdminModules, type AdminNavLeaf } from './admin-nav'
 
 type Props = {
@@ -34,6 +35,7 @@ export function AdminTopBar({ onOpenMobileNav }: Props) {
   const title = adminPageTitle(pathname)
   const listId = useId()
   const wrapRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const [mobileSearch, setMobileSearch] = useState(false)
@@ -63,6 +65,13 @@ export function AdminTopBar({ onOpenMobileNav }: Props) {
     document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
   }, [])
+
+  useEffect(() => {
+    if (!(open && query.trim())) return
+    const el = listRef.current
+    if (!el) return
+    return attachNestedScrollWheel(el)
+  }, [open, query, results.length])
 
   function go(item: AdminNavLeaf) {
     setQuery('')
@@ -103,9 +112,11 @@ export function AdminTopBar({ onOpenMobileNav }: Props) {
 
       {open && query.trim() ? (
         <div
+          ref={listRef}
           id={listId}
           role="listbox"
-          className="absolute top-[calc(100%+0.4rem)] left-0 z-40 max-h-72 w-full overflow-y-auto rounded-2xl border border-rosver-line bg-white py-1 shadow-lg"
+          data-lenis-prevent
+          className="absolute top-[calc(100%+0.4rem)] left-0 z-40 max-h-72 w-full overflow-y-auto overscroll-contain rounded-2xl border border-rosver-line bg-white py-1 shadow-lg"
         >
           {results.length === 0 ? (
             <p className="px-4 py-3 text-sm text-rosver-muted">Sin resultados</p>

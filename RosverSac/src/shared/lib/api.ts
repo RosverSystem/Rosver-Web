@@ -2,9 +2,11 @@ const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/
 
 export class ApiError extends Error {
   status: number
-  constructor(message: string, status: number) {
+  payload: unknown
+  constructor(message: string, status: number, payload?: unknown) {
     super(message)
     this.status = status
+    this.payload = payload
   }
 }
 
@@ -33,7 +35,11 @@ export async function api<T>(
   } & T
 
   if (!res.ok) {
-    throw new ApiError(data.error || data.message || 'Error de servidor', res.status)
+    throw new ApiError(
+      data.error || data.message || 'Error de servidor',
+      res.status,
+      data,
+    )
   }
   return data
 }

@@ -1,11 +1,12 @@
 import { useCatalog } from '@/features/catalog/model/catalog-store'
+import { compareTrendProducts } from '@/features/catalog/lib/product-analytics-client'
 import { ProductCarousel } from '@/features/catalog/ui/ProductCarousel'
 import { cn } from '@/shared/lib'
 import { useEffect, useMemo, useState } from 'react'
 
 /**
  * Productos en tendencia: pills por categoría + carrusel.
- * Prioriza `trending`; si no hay, ordena por rating / reseñas (mocks o DB).
+ * Prioriza `trending`; si no hay, score vistas/pedidos/cotizaciones/rating.
  */
 export function TrendingProducts() {
   const { products, categories, live } = useCatalog()
@@ -17,17 +18,9 @@ export function TrendingProducts() {
       ? marked.slice().sort(
           (a, b) =>
             (a.trendingSort ?? 0) - (b.trendingSort ?? 0) ||
-            b.rating - a.rating ||
-            (b.reviewCount ?? 0) - (a.reviewCount ?? 0),
+            compareTrendProducts(a, b),
         )
-      : visible
-          .slice()
-          .sort(
-            (a, b) =>
-              b.rating * Math.log((b.reviewCount ?? 0) + 1) -
-                a.rating * Math.log((a.reviewCount ?? 0) + 1) ||
-              b.rating - a.rating,
-          )
+      : visible.slice().sort(compareTrendProducts)
     return pool
   }, [products])
 
@@ -87,8 +80,9 @@ export function TrendingProducts() {
       <ProductCarousel
         products={list}
         title="Productos en tendencia"
-        subtitle="Lo que más rotan ferreterías y distribuidores."
-        actionTo={safeSlug ? `/catalogo/${safeSlug}` : '/catalogo'}
+        subtitle="Más vistos, pedidos, cotizados y mejor valorados."
+        actionTo="/ranking"
+        actionLabel="Ver ranking"
       />
     </section>
   )

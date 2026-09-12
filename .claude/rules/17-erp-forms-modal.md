@@ -28,21 +28,20 @@ La página muestra listado (cards/filas) + CTA («Nueva…»). El form **no** vi
 | --- | --- |
 | Búsqueda / filtros del listado | Input en página OK |
 | Confirmación destruir | `window.confirm` o modal de confirmación corto |
-| Wizard multipaso (productos) | **Dentro** de un `AdminModal` tamaño `xl`, no pantalla completa aparte |
-| Listado de precios (presentación → precios) | Crear/editar presentación y precios en **modales**; el listado de presentaciones/precios puede quedar en la página |
+| **Productos** (alta/edición) | Ficha de **página completa** CRM (`/admin/productos/nuevo`, `/admin/productos/:id`) — no modal |
+| Presentaciones (unidad → cantidades) | Alta/edición de tipos y cantidades en **modales** |
 | Preview / picker de medios | Modal o capa anidada (`layer` mayor) |
 
 ## Anti-patrones
 
 - Card «Nueva oferta / categoría / marca» siempre visible encima del grid.
 - Formulario de edición que empuja el listado hacia abajo.
-- Wizard de producto reemplazando toda la ruta sin modal.
-- Formularios inline «porque el form es largo» → usar `size="xl"` + scroll interno del modal.
+- Formularios inline de módulos cortos «porque el form es largo» → usar `AdminModal` `size="xl"` (excepto productos).
 
 ## Checklist
 
-- [ ] Alta/edición en `AdminModal`
+- [ ] Alta/edición en `AdminModal` (excepto Productos → ficha CRM)
 - [ ] Listado usable sin el form abierto
 - [ ] Toasts + AdminSelect
-- [ ] Responsive: modal bottom-sheet en móvil (ya en `AdminModal`)
+- [ ] Responsive: modal bottom-sheet en móvil (ya en `AdminModal`); ficha producto usable en móvil/tablet/desktop
 - [ ] No tocar formularios de la web pública con esta regla

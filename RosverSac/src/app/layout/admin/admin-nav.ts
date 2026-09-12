@@ -1,5 +1,5 @@
+import { Award, Camera, Caption, Check, Compass, Download, Gauge, Group, Hardrive, Home, Message, Settings, StarGrow, Verified } from 'cssvg-icons'
 import type { ComponentType } from 'react'
-import { Award, Compass, Group, Hardrive, Home, StarGrow } from 'cssvg-icons'
 
 type IconProps = { size?: number; color?: string; strokeWidth?: number }
 
@@ -22,7 +22,7 @@ export type AdminNavEntry =
   | ({ type: 'link' } & AdminNavLeaf)
   | ({ type: 'group' } & AdminNavGroup)
 
-/** Nav SystemRSV — productos, listado de precios, taxonomía. */
+/** Nav SystemRSV — productos, presentaciones, taxonomía. */
 export const ADMIN_NAV: AdminNavEntry[] = [
   {
     type: 'link',
@@ -31,6 +31,23 @@ export const ADMIN_NAV: AdminNavEntry[] = [
     link: '/admin',
     keywords: ['dashboard', 'home', 'resumen'],
     Icon: Home,
+  },
+  {
+    type: 'link',
+    id: 'analitica',
+    name: 'Analítica',
+    link: '/admin/analitica',
+    keywords: [
+      'analitica',
+      'analytics',
+      'tops',
+      'graficas',
+      'vistas',
+      'tendencia',
+      'ranking',
+      'kpi',
+    ],
+    Icon: Gauge,
   },
   {
     type: 'link',
@@ -53,25 +70,103 @@ export const ADMIN_NAV: AdminNavEntry[] = [
     id: 'usuarios',
     name: 'Usuarios',
     link: '/admin/usuarios',
-    keywords: ['usuarios', 'roles', 'permisos', 'equipo', 'cuentas', 'staff'],
+    keywords: ['usuarios', 'equipo', 'cuentas', 'staff'],
     Icon: Group,
   },
   {
+    type: 'link',
+    id: 'roles',
+    name: 'Roles',
+    link: '/admin/roles',
+    keywords: ['roles', 'permisos', 'accesos', 'rbac', 'autorización'],
+    Icon: Settings,
+  },
+  {
+    type: 'link',
+    id: 'clientes',
+    name: 'Clientes',
+    link: '/admin/clientes',
+    keywords: [
+      'clientes',
+      'customers',
+      'interes',
+      'vistas',
+      'ofertas',
+      'whatsapp',
+      'crm',
+    ],
+    Icon: Caption,
+  },
+  {
+    type: 'link',
+    id: 'cotizaciones',
+    name: 'Cotizaciones',
+    link: '/admin/cotizaciones',
+    keywords: [
+      'cotizaciones',
+      'quotes',
+      'cotizar',
+      'leads',
+      'whatsapp',
+      'pdf',
+    ],
+    Icon: StarGrow,
+  },
+  {
+    type: 'link',
+    id: 'pedidos',
+    name: 'Pedidos',
+    link: '/admin/pedidos',
+    keywords: ['pedidos', 'orders', 'carrito', 'pdf', 'whatsapp'],
+    Icon: Award,
+  },
+  {
+    type: 'link',
+    id: 'leads',
+    name: 'Contactos',
+    link: '/admin/leads',
+    keywords: ['contactos', 'leads', 'mensajes', 'formulario', 'bandeja'],
+    Icon: Message,
+  },
+  {
+    type: 'link',
+    id: 'contenido',
+    name: 'Contenido',
+    link: '/admin/contenido',
+    keywords: ['contenido', 'hero', 'home', 'cms', 'slides'],
+    Icon: Camera,
+  },
+  {
+    type: 'link',
+    id: 'reclamaciones',
+    name: 'Reclamaciones',
+    link: '/admin/reclamaciones',
+    keywords: [
+      'libro',
+      'reclamaciones',
+      'reclamo',
+      'queja',
+      'indecopi',
+      'consumidor',
+    ],
+    Icon: Message,
+  },
+  {
     type: 'group',
-    id: 'productos',
+    id: 'catalogo',
     name: 'Catálogo',
-    Icon: Hardrive,
+    Icon: Compass,
     children: [
       {
         id: 'productos',
         name: 'Productos',
         link: '/admin/productos',
         keywords: ['catalogo', 'sku', 'stock', 'productos', 'ficha'],
-        Icon: Hardrive,
+        Icon: Download,
       },
       {
         id: 'listado-precios',
-        name: 'Listado de precios',
+        name: 'Presentaciones',
         link: '/admin/listado-precios',
         keywords: [
           'precios',
@@ -86,7 +181,22 @@ export const ADMIN_NAV: AdminNavEntry[] = [
           'presentacion',
           'empaque',
         ],
-        Icon: Award,
+        Icon: Check,
+      },
+      {
+        id: 'especificaciones',
+        name: 'Especificaciones',
+        link: '/admin/especificaciones',
+        keywords: [
+          'specs',
+          'especificaciones',
+          'ficha tecnica',
+          'atributos',
+          'voltaje',
+          'material',
+          'medidas',
+        ],
+        Icon: Caption,
       },
       {
         id: 'categorias',
@@ -100,14 +210,14 @@ export const ADMIN_NAV: AdminNavEntry[] = [
         name: 'Marcas',
         link: '/admin/marcas',
         keywords: ['brand', 'proveedor', 'marca'],
-        Icon: StarGrow,
+        Icon: Camera,
       },
       {
         id: 'ofertas',
         name: 'Ofertas',
         link: '/admin/ofertas',
         keywords: ['promo', 'descuento', 'oferta'],
-        Icon: Award,
+        Icon: Verified,
       },
     ],
   },
@@ -131,6 +241,7 @@ export function isProductosGroupOpen(pathname: string) {
   return (
     pathname.startsWith('/admin/productos') ||
     pathname.startsWith('/admin/listado-precios') ||
+    pathname.startsWith('/admin/especificaciones') ||
     pathname.startsWith('/admin/categorias') ||
     pathname.startsWith('/admin/marcas') ||
     pathname.startsWith('/admin/ofertas')
@@ -147,13 +258,25 @@ export function searchAdminModules(query: string): AdminNavLeaf[] {
 }
 
 export function adminPageTitle(pathname: string): string {
+  if (pathname.startsWith('/admin/analitica')) return 'Analítica'
+  if (pathname.startsWith('/admin/clientes')) return 'Clientes'
   if (pathname.startsWith('/admin/usuarios')) return 'Usuarios'
+  if (pathname.startsWith('/admin/roles')) return 'Roles'
+  if (pathname.startsWith('/admin/leads')) return 'Contactos'
+  if (pathname.startsWith('/admin/contenido')) return 'Contenido web'
   if (pathname.startsWith('/admin/almacenamiento')) return 'Almacenamiento'
   if (pathname.startsWith('/admin/ofertas')) return 'Ofertas'
   if (pathname.startsWith('/admin/marcas')) return 'Marcas'
   if (pathname.startsWith('/admin/categorias')) return 'Categorías'
-  if (pathname.startsWith('/admin/listado-precios')) return 'Listado de precios'
-  if (pathname.startsWith('/admin/unidades')) return 'Listado de precios'
+  if (pathname.startsWith('/admin/especificaciones')) return 'Especificaciones'
+  if (pathname.startsWith('/admin/listado-precios')) return 'Presentaciones'
+  if (pathname.startsWith('/admin/unidades')) return 'Presentaciones'
+  if (pathname.startsWith('/admin/cotizaciones')) return 'Cotizaciones'
+  if (pathname.startsWith('/admin/pedidos')) return 'Pedidos'
+  if (pathname.startsWith('/admin/reclamaciones')) return 'Reclamaciones'
+  if (pathname === '/admin/productos/nuevo') return 'Nuevo producto'
+  if (pathname.startsWith('/admin/productos/') && pathname !== '/admin/productos')
+    return 'Producto'
   if (pathname.startsWith('/admin/productos')) return 'Productos'
   return 'Inicio'
 }

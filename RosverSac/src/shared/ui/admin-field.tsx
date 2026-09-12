@@ -1,4 +1,9 @@
 import { cn } from '@/shared/lib'
+import { AdminSelectCombobox } from '@/shared/ui/select-combobox'
+import {
+  AdminModuleBanner,
+  type AdminModuleStat,
+} from '@/shared/ui/admin-module-banner'
 import type { ReactNode, SelectHTMLAttributes, InputHTMLAttributes } from 'react'
 
 /** Estilo único de inputs/selects del ERP SystemRSV. */
@@ -26,33 +31,21 @@ export function AdminField({ label, htmlFor, hint, className, children }: FieldP
   )
 }
 
-type AdminSelectProps = SelectHTMLAttributes<HTMLSelectElement> & {
+type AdminSelectProps = Omit<SelectHTMLAttributes<HTMLSelectElement>, 'size'> & {
   invalid?: boolean
 }
 
+/** Select ERP con menú custom Rosver (sin azul nativo del browser). */
 export function AdminSelect({ className, invalid, children, ...props }: AdminSelectProps) {
   return (
-    <div className="relative">
-      <select
-        {...props}
-        className={cn(
-          adminControlClass,
-          'cursor-pointer pr-10',
-          invalid && adminControlInvalidClass,
-          className,
-        )}
-      >
-        {children}
-      </select>
-      <span
-        className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-rosver-muted"
-        aria-hidden
-      >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M6 9l6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-      </span>
-    </div>
+    <AdminSelectCombobox
+      {...props}
+      invalid={invalid}
+      className={className}
+      size="md"
+    >
+      {children}
+    </AdminSelectCombobox>
   )
 }
 
@@ -106,18 +99,28 @@ export function AdminCombobox({
 
 type PageHeaderProps = {
   title: string
+  eyebrow?: string
+  description?: string
+  stats?: AdminModuleStat[]
   actions?: ReactNode
 }
 
-/** Título de módulo ERP sin párrafos de ayuda. */
-export function AdminPageHeader({ title, actions }: PageHeaderProps) {
+/** Banner de módulo ERP con métricas (estilo área cliente). */
+export function AdminPageHeader({
+  title,
+  eyebrow,
+  description,
+  stats,
+  actions,
+}: PageHeaderProps) {
   return (
-    <header className="flex flex-wrap items-center justify-between gap-3">
-      <h2 className="text-xl font-semibold tracking-tight text-rosver-ink sm:text-2xl">
-        {title}
-      </h2>
-      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
-    </header>
+    <AdminModuleBanner
+      title={title}
+      eyebrow={eyebrow}
+      description={description}
+      stats={stats}
+      actions={actions}
+    />
   )
 }
 

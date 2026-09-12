@@ -1,37 +1,40 @@
 # Feature: Carrito
 
 **Slug:** `features/cart/`  
-**Estado:** activa (lógica cliente + UI)
+**Estado:** activa (lógica cliente + API pedido)
 
 ## Propósito
 
-Armar un carrito de productos para pasar a **cotización** o **pedido**.
+Armar un carrito de productos para pasar a **cotización** (`/cotizar`) o **pedido** (Continuar pedido).
 
 ## Alcance
 
-- Incluido: añadir/quitar/cantidad, presentación + precio congelado, `localStorage`, sync con catálogo vivo, `/carrito`, CTAs cotizar/pedir, modal Continuar pedido (PDF + WhatsApp).
-- Fuera: pagos, stock real, API pedido, adjunto PDF automático en WhatsApp (limitación de la plataforma).
+- Incluido: añadir/quitar/cantidad, presentación + precio, `localStorage`, sync catálogo, `/carrito`, modal Continuar pedido → destino + agencia + `order_requests` + PDF + link `/p/…` 15 días + WhatsApp corto.
+- Fuera: pagos, stock real, adjunto PDF automático en WhatsApp (limitación de plataforma).
+
+## Distinción
+
+| Flujo | Tabla | Link público |
+| --- | --- | --- |
+| Cotizar | `quote_requests` | `/c/:slug` |
+| Continuar pedido (carrito) | `order_requests` | `/p/:slug` |
 
 ## API pública
 
 | Export | Tipo | Descripción |
 | --- | --- | --- |
 | `CartProvider` | provider | Montar en `App` |
-| `useCart` | hook | `lines`, `itemCount`, `addItem`, `syncWithCatalog`, … |
-| `addInputFromProduct` | helper | Empaque default + precio al agregar |
-| `CartCatalogSync` | UI | Montar bajo `CatalogProvider` (layout público) |
-| `CartPage` | página | `/carrito` |
-| `CartLine` | tipo | Línea persistida |
+| `useCart` | hook | `lines`, `itemCount`, `addItem`, … |
+| `PublicOrderPage` | página | `/p/:slug` |
+| `ContinueOrderModal` | UI | Modal desde `/carrito` |
 
-## Flujos
+## Persistencia pedido
 
-Ver `docs/logica-y-flujos/07-carrito.md` y `03-vistas-y-flujos.md` → F4.
+- Migración `023_order_requests.sql`
+- `POST /api/orders`, `PUT /api/orders/:id/pdf`, `GET /api/orders/public/:slug`
 
 ## Verificación
 
-- [ ] Carrito vacío: banner sin “N unidades”; buscador agrega producto real
-- [ ] Agregar desde card/ficha/ofertas sube badge del navbar
-- [ ] Recargar página mantiene ítems (localStorage)
-- [ ] Productos borrados del catálogo desaparecen del carrito tras sync
-- [ ] Cantidad − hasta 0 quita la línea; Vaciar limpia todo
-- [ ] Cotizar precarga ítems del carrito
+- [x] Continuar pedido sin copy de ayuda ni ciudad/agencia
+- [x] Pedido en DB + link 15 días + WA abreviado
+- [ ] Listado cuenta `/cuenta/pedidos` desde API (aún local + P03)

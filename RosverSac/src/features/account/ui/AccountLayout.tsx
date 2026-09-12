@@ -4,9 +4,11 @@ import { NavLink, Outlet } from 'react-router-dom'
 
 const TABS = [
   { name: 'Resumen', link: '/cuenta' },
-  { name: 'Pedidos', link: '/cuenta/pedidos' },
+  { name: 'Mis pedidos', link: '/cuenta/pedidos' },
   { name: 'Cotizaciones', link: '/cuenta/cotizaciones' },
-  { name: 'Perfil', link: '/cuenta/perfil' },
+  { name: 'Mis reseñas', link: '/cuenta/resenas' },
+  { name: 'Mi perfil', link: '/cuenta/perfil' },
+  { name: 'Mi empresa', link: '/cuenta/empresa' },
 ]
 
 export function AccountLayout() {
@@ -82,10 +84,16 @@ export function AccountLayout() {
               </NavLink>
             ) : null}
             <NavLink
+              to="/cuenta/empresa"
+              className="rounded-full border border-white/30 bg-white/10 px-4 py-2.5 text-xs font-bold text-white uppercase hover:bg-white/20"
+            >
+              Mi empresa
+            </NavLink>
+            <NavLink
               to="/cuenta/perfil"
               className="rounded-full bg-rosver-red px-4 py-2.5 text-xs font-bold text-white uppercase hover:bg-rosver-red-dark"
             >
-              Editar perfil
+              Mi perfil
             </NavLink>
           </div>
         </div>

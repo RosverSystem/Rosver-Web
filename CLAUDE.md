@@ -64,7 +64,7 @@ npm run lint
 - **Paleta oficial:** solo tokens Rosver (`docs/architecture/06-paleta-colores.md`, `.claude/rules/09-paleta-colores.md`).
 - **Formularios / validación:** toasts flotantes (`FloatingToasts` + `useFormToasts`); nunca bubbles nativos ni errores inline que alarguen el form (`.claude/rules/10-form-toasts.md`).
 - **ERP selects / copy:** `AdminSelect` + lenguaje cotidiano; sin jerga ni textos de ayuda técnicos (`.claude/rules/14-erp-selects-copy.md`).
-- **ERP formularios:** alta/edición solo en `AdminModal` (`.claude/rules/17-erp-forms-modal.md`); no forms inline permanentes en `/admin`. No aplica a la web pública.
+- **ERP formularios:** alta/edición solo en `AdminModal` (`.claude/rules/17-erp-forms-modal.md`); excepción **Productos** → ficha CRM página completa. No forms inline permanentes en `/admin`. No aplica a la web pública.
 - **Despliegues / versiones:** documentar en `08` + `docs/changes/`. **Todo cambio cerrado → push GitHub `main` + deploy Railway** (`.claude/rules/11-despliegues-versiones.md`). Infra: Railway (web + Postgres), Cloudflare R2 (media).
 - **Base de datos continua:** si el cambio requiere persistencia → migración `RosverSac/server/sql/NNN_*.sql` en el mismo trabajo (`.claude/rules/15-database-migraciones.md`).
 - **CRUD completo:** al tocar una tabla/módulo de datos → Create + Read + Update + Delete (o soft-delete) en API y admin; vincular a la tienda si es público (`.claude/rules/16-crud-completo.md`).

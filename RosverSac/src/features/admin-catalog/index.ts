@@ -1,5 +1,7 @@
 export { AdminProductsPage } from './ui/AdminProductsPage'
+export { AdminProductWorkspacePage } from './ui/AdminProductWorkspacePage'
 export { AdminPriceListPage } from './ui/AdminPriceListPage'
+export { AdminSpecsPage } from './ui/AdminSpecsPage'
 export { AdminCategoriesPage } from './ui/AdminCategoriesPage'
 export { AdminBrandsPage } from './ui/AdminBrandsPage'
 export { AdminOffersPage } from './ui/AdminOffersPage'

@@ -1,29 +1,40 @@
 ---
-description: UI responsive obligatoria — móvil, tablet y desktop
+description: UI responsive obligatoria — todas las resoluciones (ancho y alto)
 alwaysApply: true
 ---
 
-# Responsive obligatorio (móvil / tablet / desktop)
+# Responsive obligatorio (todas las resoluciones)
 
-**Toda** UI, animación, sección, layout, componente, tipografía, espaciado, menú, modal, formulario o patrón visual se diseña y verifica para **tres breakpoints**:
+**Toda** UI, animación, sección, layout, componente, tipografía, espaciado, menú, modal, formulario o patrón visual se diseña y verifica para **móvil, tablet, laptop y desktop** — no solo “se ve bien en mi monitor”.
+
+## Breakpoints de ancho
 
 | Viewport | Guía aprox. | Enfoque |
 | --- | --- | --- |
 | **Móvil** | &lt; 768px | Primero: touch, una columna, menús colapsables |
 | **Tablet** | 768px – 1023px | Intermedio: no “desktop encogido” ni “móvil estirado” |
-| **Desktop / PC** | ≥ 1024px | Densidad y hover; no romper lo ya pensado en móvil |
+| **Laptop / Desktop** | ≥ 1024px | Densidad y hover; layouts fluidos hasta ultrawide |
+
+## Altura y densidad (obligatorio)
+
+No basta el ancho. Pantallas **bajas** (laptops 1366×768, ventanas con DevTools, zoom) y **altas** (1920×1080 / 1920×1200+) deben verse bien:
+
+- Preferir `dvh` / `min-h-0` / flex que **encaje en el viewport** antes que forzar scroll vacío.
+- Hero, split auth, modales y shells: **escalar** imagen/tipografía/padding con `max-height` cuando haga falta.
+- Evitar `min-h-screen` + padding fijo que generen scrollbar fantasma en auth o pantallas a viewport fijo.
+- En pantallas auth (login/registro/recuperar): sin scrollbar de página visible; scroll interno solo si el contenido no cabe.
 
 ## Reglas
 
-- No entregar solo desktop. Si algo “se ve bien en PC”, debe funcionar también en móvil y tablet.
-- Animaciones: respetar `prefers-reduced-motion`; en móvil evitar efectos pesados o que rompan el layout.
+- No entregar solo desktop widescreen. Verificar al menos: móvil, tablet y un laptop típico.
+- Animaciones: respetar `prefers-reduced-motion`; en móvil evitar efectos pesados.
 - Touch: targets ≥ ~44px; no depender solo de hover.
 - Tipografía e imágenes: escalables; sin overflow horizontal.
-- Probar mentalmente (y en DevTools) los tres anchos antes de cerrar la tarea.
-- En `docs/changes/` del cambio UI, incluir checklist de verificación móvil + tablet + desktop.
+- En `docs/changes/` del cambio UI: checklist **móvil + tablet + desktop** (y altura corta si es pantalla full-viewport).
 
 ## Anti-patrones
 
 - Navbar / hero / grids solo pensados para widescreen.
-- Modales o drawers que no caben en móvil.
+- Modales o drawers que no caben en móvil o en altura corta.
 - Texto o tablas que fuerzan scroll horizontal.
+- Scrollbar de página en login/registro por contenido `min-h-dvh` sobredimensionado.

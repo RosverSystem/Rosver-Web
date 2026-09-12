@@ -87,6 +87,34 @@ adminRoutes.post('/roles/:id/permissions', async (c) => {
   return c.json({ ok: true })
 })
 
+adminRoutes.delete('/roles/:id', validateUuidParams('id'), async (c) => {
+  const roleId = c.req.param('id')
+
+  const { rows } = await pool.query<{ is_system: boolean; code: string }>(
+    `SELECT is_system, code FROM roles WHERE id = $1`,
+    [roleId],
+  )
+  if (!rows[0]) return c.json({ error: 'Rol no encontrado.' }, 404)
+  if (rows[0].is_system) {
+    return c.json({ error: 'No se pueden eliminar roles del sistema.' }, 403)
+  }
+
+  // Re-assign users with this role to 'client' before deleting
+  const clientRole = await pool.query<{ id: string }>(
+    `SELECT id FROM roles WHERE code = 'client' LIMIT 1`,
+  )
+  if (clientRole.rows[0]) {
+    await pool.query(
+      `UPDATE users SET role_id = $1, updated_at = now() WHERE role_id = $2`,
+      [clientRole.rows[0].id, roleId],
+    )
+  }
+
+  await pool.query(`DELETE FROM role_permissions WHERE role_id = $1`, [roleId])
+  await pool.query(`DELETE FROM roles WHERE id = $1`, [roleId])
+  return c.json({ ok: true })
+})
+
 adminRoutes.post('/modules', async (c) => {
   const body = z
     .object({

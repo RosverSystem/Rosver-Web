@@ -26,32 +26,62 @@ export type AuthUser = {
   permissions: string[]
 }
 
-type LoginResult =
+export type OtpSendMeta = {
+  mailDelivered?: boolean
+  retryAfterSec?: number
+  sendsLeft?: number
+  message?: string
+}
+
+export type LoginResult =
   | { ok: true; user: AuthUser }
-  | {
+  | ({
       ok: false
       requiresEmailVerification?: boolean
+      requiresEmailOtp?: boolean
       requiresTotp?: boolean
       challengeToken?: string
       email?: string
       message?: string
-    }
+    } & OtpSendMeta)
 
 type AuthContextValue = {
   user: AuthUser | null
   loading: boolean
   refresh: () => Promise<void>
-  login: (email: string, password: string) => Promise<LoginResult>
+  login: (
+    email: string,
+    password?: string,
+    opts?: { passwordless?: boolean },
+  ) => Promise<LoginResult>
   loginTotp: (challengeToken: string, code: string) => Promise<AuthUser>
+  loginEmailOtp: (email: string, code: string) => Promise<AuthUser>
   register: (input: {
     fullName: string
     email: string
     phone: string
     password: string
-  }) => Promise<{ email: string }>
+  }) => Promise<{ email: string } & OtpSendMeta>
   verifyEmail: (email: string, code: string) => Promise<AuthUser>
-  resendOtp: (email: string, purpose: 'email_verify' | 'login' | 'reset_password') => Promise<void>
+  resendOtp: (
+    email: string,
+    purpose: 'email_verify' | 'login' | 'reset_password',
+  ) => Promise<OtpSendMeta & { ok?: boolean }>
+  resetPasswordStart: (email: string) => Promise<{
+    requiresTotp?: boolean
+    requiresEmailOtp?: boolean
+    challengeToken?: string
+    email: string
+    message?: string
+  } & OtpSendMeta>
+  resetPasswordTotp: (
+    challengeToken: string,
+    code: string,
+  ) => Promise<{ email: string; message?: string } & OtpSendMeta>
   resetPassword: (email: string, code: string, newPassword: string) => Promise<AuthUser>
+  setup2fa: () => Promise<{ secret: string; qrDataUrl: string; otpauthUrl: string }>
+  enable2fa: (code: string) => Promise<void>
+  disable2fa: (code: string) => Promise<void>
   logout: () => Promise<void>
   updateProfile: (patch: Record<string, unknown>) => Promise<AuthUser>
   uploadAvatar: (file: File) => Promise<AuthUser>
@@ -81,22 +111,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void refresh()
   }, [refresh])
 
-  const login = useCallback(async (email: string, password: string) => {
-    const data = await api<LoginResult & { user?: AuthUser }>('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    })
-    if ('ok' in data && data.ok && data.user) {
-      setUser(data.user)
-      return { ok: true as const, user: data.user }
-    }
-    return data as LoginResult
-  }, [])
+  const login = useCallback(
+    async (
+      email: string,
+      password?: string,
+      opts?: { passwordless?: boolean },
+    ) => {
+      const data = await api<LoginResult & { user?: AuthUser }>('/api/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({
+          email,
+          password: opts?.passwordless ? undefined : password,
+          passwordless: Boolean(opts?.passwordless),
+        }),
+      })
+      if ('ok' in data && data.ok && data.user) {
+        setUser(data.user)
+        return { ok: true as const, user: data.user }
+      }
+      return data as LoginResult
+    },
+    [],
+  )
 
   const loginTotp = useCallback(async (challengeToken: string, code: string) => {
     const data = await api<{ user: AuthUser }>('/api/auth/login/totp', {
       method: 'POST',
       body: JSON.stringify({ challengeToken, code }),
+    })
+    setUser(data.user)
+    return data.user
+  }, [])
+
+  const loginEmailOtp = useCallback(async (email: string, code: string) => {
+    const data = await api<{ user: AuthUser }>('/api/auth/login/otp', {
+      method: 'POST',
+      body: JSON.stringify({ email, code }),
     })
     setUser(data.user)
     return data.user
@@ -109,11 +159,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       phone: string
       password: string
     }) => {
-      const data = await api<{ email: string }>('/api/auth/register', {
+      const data = await api<{ email: string } & OtpSendMeta>('/api/auth/register', {
         method: 'POST',
         body: JSON.stringify(input),
       })
-      return { email: data.email }
+      return data
     },
     [],
   )
@@ -128,11 +178,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const resendOtp = useCallback(
-    async (email: string, purpose: 'email_verify' | 'login' | 'reset_password') => {
-      await api('/api/auth/otp/resend', {
+    async (
+      email: string,
+      purpose: 'email_verify' | 'login' | 'reset_password',
+    ) => {
+      return api<OtpSendMeta & { ok?: boolean }>('/api/auth/otp/resend', {
         method: 'POST',
         body: JSON.stringify({ email, purpose }),
       })
+    },
+    [],
+  )
+
+  const resetPasswordStart = useCallback(async (email: string) => {
+    return api<{
+      requiresTotp?: boolean
+      requiresEmailOtp?: boolean
+      challengeToken?: string
+      email: string
+      message?: string
+    } & OtpSendMeta>('/api/auth/reset-password/start', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    })
+  }, [])
+
+  const resetPasswordTotp = useCallback(
+    async (challengeToken: string, code: string) => {
+      return api<{ email: string; message?: string } & OtpSendMeta>(
+        '/api/auth/reset-password/totp',
+        {
+          method: 'POST',
+          body: JSON.stringify({ challengeToken, code }),
+        },
+      )
     },
     [],
   )
@@ -148,6 +227,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
     [],
   )
+
+  const setup2fa = useCallback(async () => {
+    return api<{ secret: string; qrDataUrl: string; otpauthUrl: string }>(
+      '/api/auth/2fa/setup',
+      { method: 'POST' },
+    )
+  }, [])
+
+  const enable2fa = useCallback(async (code: string) => {
+    await api('/api/auth/2fa/enable', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    })
+    await refresh()
+  }, [refresh])
+
+  const disable2fa = useCallback(async (code: string) => {
+    await api('/api/auth/2fa/disable', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    })
+    await refresh()
+  }, [refresh])
 
   const logout = useCallback(async () => {
     await api('/api/auth/logout', { method: 'POST' })
@@ -181,10 +283,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refresh,
       login,
       loginTotp,
+      loginEmailOtp,
       register,
       verifyEmail,
       resendOtp,
+      resetPasswordStart,
+      resetPasswordTotp,
       resetPassword,
+      setup2fa,
+      enable2fa,
+      disable2fa,
       logout,
       updateProfile,
       uploadAvatar,
@@ -198,10 +306,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refresh,
       login,
       loginTotp,
+      loginEmailOtp,
       register,
       verifyEmail,
       resendOtp,
+      resetPasswordStart,
+      resetPasswordTotp,
       resetPassword,
+      setup2fa,
+      enable2fa,
+      disable2fa,
       logout,
       updateProfile,
       uploadAvatar,

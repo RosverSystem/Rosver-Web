@@ -1,21 +1,35 @@
-# Formularios — toasts flotantes
+# Formularios y avisos — toasts tipados
 
-Toda validación, campo obligatorio o condición de envío usa **toasts flotantes**. No alargar el layout con mensajes bajo cada input.
+Toda validación, confirmación o fallo usa **toasts flotantes tipados**. No alargar el layout con mensajes bajo cada input.
 
-## Obligatorio
+## Tipos (obligatorio)
 
-- `noValidate` en `<form>` (o botones `type="button"` + validación manual).
-- **No** usar `required` / `minLength` HTML para disparar el bubble nativo del browser.
-- Errores con `useFormToasts` + `FloatingToasts` (`shared/hooks/use-form-toasts`, `shared/ui/floating-toasts`).
-- Marcar inputs inválidos solo con borde (`cnField` / `aria-invalid`), **sin** texto de error inline.
-- Helpers: `isValidEmail`, `isValidPhone`, `cnField` en `@/shared/lib`.
+| Tone | Uso | Color Rosver |
+| --- | --- | --- |
+| `success` | Guardado, enviado, creado, sesión OK | `rosver-success` |
+| `error` | Validación, API fallida, código incorrecto | `rosver-red` |
+| `info` | Neutro / informativo | `rosver-blue` |
+| `warning` | Correo no entregado, aviso no bloqueante | `rosver-yellow` + texto ink |
+
+API: `useFormToasts` → `showSuccess` / `showErrors` / `showInfo` / `showWarning`.
+
+UI: `FloatingToasts` (`shared/ui/floating-toasts`).
+
+## Obligatorio en forms
+
+- `noValidate` en `<form>`.
+- **No** `required` / bubbles nativos del browser.
+- Errores → `showErrors`. Éxitos → `showSuccess`.
+- Inputs inválidos solo con borde (`cnField` / `aria-invalid`), sin texto inline.
 
 ## Anti-patrones
 
-- Banner de errores dentro del flujo del form que empuja el contenido.
-- Dependender del tooltip «Completa este campo» del navegador.
-- Reimplementar toasts por feature: reutilizar `shared/`.
+- Todos los toasts rojos como si fueran error.
+- Banner de errores que empuja el layout.
+- Reimplementar toasts por feature.
 
 ## Alcance
 
-Login, registro, contacto, cotizar, cuenta, admin y **cualquier form nuevo**.
+Login, registro, OTP, contacto, cotizar, cuenta, admin y cualquier form o aviso nuevo.
+
+Paridad: `.cursor/rules/10-form-toasts.mdc`.

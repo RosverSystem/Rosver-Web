@@ -4,6 +4,7 @@ import { cn } from '@/shared/lib'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { FloatingToasts } from '@/shared/ui/floating-toasts'
 import { AdminEmptyState, AdminPageHeader, AdminSelect } from '@/shared/ui/admin-field'
+import { BootstrapTable } from '@/shared/ui/bootstrap-table'
 import { useEffect, useMemo, useState } from 'react'
 import { LoginAuditPanel } from './LoginAuditPanel'
 
@@ -74,6 +75,17 @@ export function AdminUsersPage() {
     )
   }, [users, query])
 
+  const stats = useMemo(() => {
+    const active = users.filter((u) => u.status === 'active').length
+    const verified = users.filter((u) => u.emailVerified).length
+    return {
+      total: users.length,
+      active,
+      inactive: users.length - active,
+      verified,
+    }
+  }, [users])
+
   async function changeRole(u: AdminUser, roleId: string) {
     clear()
     setSavingId(u.id)
@@ -83,6 +95,7 @@ export function AdminUsersPage() {
         body: JSON.stringify({ roleId }),
       })
       await load()
+      showMessages(['Rol actualizado'])
     } catch (err) {
       showMessages([
         err instanceof ApiError ? err.message : 'No se pudo cambiar el rol',
@@ -108,6 +121,9 @@ export function AdminUsersPage() {
         body: JSON.stringify({ status: nextStatus }),
       })
       await load()
+      showMessages([
+        nextStatus === 'active' ? 'Usuario activado' : 'Usuario desactivado',
+      ])
     } catch (err) {
       showMessages([
         err instanceof ApiError ? err.message : 'No se pudo actualizar el estado',
@@ -121,12 +137,15 @@ export function AdminUsersPage() {
     <div className="space-y-5">
       <FloatingToasts toasts={toasts} onDismiss={dismiss} />
       <AdminPageHeader
+        eyebrow="Sistema"
         title="Usuarios"
-        actions={
-          <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-rosver-muted ring-1 ring-rosver-line">
-            {users.length} usuarios
-          </span>
-        }
+        description="Cuentas, roles y estado de acceso."
+        stats={[
+          { label: 'Total', value: stats.total },
+          { label: 'Activos', value: stats.active, tone: 'success' },
+          { label: 'Inactivos', value: stats.inactive, tone: 'danger' },
+          { label: 'Verificados', value: stats.verified, tone: 'warning' },
+        ]}
       />
 
       <input
@@ -146,23 +165,23 @@ export function AdminUsersPage() {
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[640px] text-left text-sm">
+            <BootstrapTable responsive={false} className="min-w-[640px]">
               <thead>
-                <tr className="border-b border-rosver-line bg-rosver-soft/60 text-xs text-rosver-muted uppercase">
-                  <th className="px-4 py-3 font-semibold">Usuario</th>
-                  <th className="px-4 py-3 font-semibold">Rol</th>
-                  <th className="px-4 py-3 font-semibold">Estado</th>
-                  <th className="px-4 py-3 font-semibold">Registrado</th>
-                  <th className="px-4 py-3 font-semibold">Acciones</th>
+                <tr>
+                  <th>Usuario</th>
+                  <th>Rol</th>
+                  <th>Estado</th>
+                  <th>Registrado</th>
+                  <th>Acciones</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-rosver-line">
+              <tbody>
                 {filtered.map((u) => {
                   const isSelf = u.id === currentUser?.id
                   const busy = savingId === u.id
                   return (
-                    <tr key={u.id} className="align-middle">
-                      <td className="px-4 py-3">
+                    <tr key={u.id}>
+                      <td>
                         <div className="flex items-center gap-3">
                           <img
                             src={u.avatarUrl}
@@ -184,7 +203,7 @@ export function AdminUsersPage() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 min-w-[10rem]">
+                      <td className="min-w-[10rem]">
                         <AdminSelect
                           value={roles.find((r) => r.code === u.roleCode)?.id ?? ''}
                           onChange={(e) => void changeRole(u, e.target.value)}
@@ -198,7 +217,7 @@ export function AdminUsersPage() {
                           ))}
                         </AdminSelect>
                       </td>
-                      <td className="px-4 py-3">
+                      <td>
                         <span
                           className={cn(
                             'rounded-full px-2.5 py-1 text-[11px] font-bold',
@@ -215,10 +234,10 @@ export function AdminUsersPage() {
                           </span>
                         ) : null}
                       </td>
-                      <td className="px-4 py-3 text-rosver-muted">
+                      <td className="text-rosver-muted">
                         {DATE_FMT.format(new Date(u.createdAt))}
                       </td>
-                      <td className="px-4 py-3">
+                      <td>
                         <button
                           type="button"
                           onClick={() => void toggleStatus(u)}
@@ -232,7 +251,7 @@ export function AdminUsersPage() {
                   )
                 })}
               </tbody>
-            </table>
+            </BootstrapTable>
           </div>
         )}
       </div>

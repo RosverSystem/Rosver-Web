@@ -1,4 +1,5 @@
 import { pool } from '../db.js'
+import { TREND_SCORE_SQL } from './product-analytics.js'
 
 export type StorePackagingDto = {
   id: string
@@ -14,6 +15,10 @@ export type StorePackagingDto = {
 
 export type StoreProductDto = {
   id: string
+  /** Código interno del sistema (serial Postgres, numérico) */
+  code: number
+  /** Código interno en 8 dígitos (00000002) */
+  codeLabel: string
   slug: string
   name: string
   sku: string
@@ -29,6 +34,9 @@ export type StoreProductDto = {
   trendingSort: number
   rating: number
   reviewCount: number
+  viewCount: number
+  orderCount: number
+  quoteCount: number
   origin: string
   moq: number
   description: string
@@ -43,6 +51,7 @@ const PRODUCT_SELECT = `
   SELECT p.id, p.code, p.sku, p.slug, p.name, p.description, p.origin,
          p.moq, p.rating, p.review_count, p.featured, p.featured_sort,
          p.trending, p.trending_sort, p.visible,
+         p.view_count, p.order_count, p.quote_count,
          p.availability, p.image_url,
          b.name AS brand_name, b.sku AS brand_sku,
          c.slug AS category_slug, c.name AS category_name,
@@ -64,6 +73,8 @@ const PRODUCT_SELECT = `
            SELECT pr.amount FROM product_prices pr
            JOIN product_packagings pk ON pk.id = pr.packaging_id
            WHERE pr.product_id = p.id AND pr.is_active AND pr.price_kind = 'offer'
+             AND (pr.valid_from IS NULL OR pr.valid_from <= now())
+             AND (pr.valid_to IS NULL OR pr.valid_to >= now())
            ORDER BY pk.is_default DESC, pr.min_qty ASC
            LIMIT 1
          ) AS offer_price,
@@ -97,8 +108,11 @@ export function mapStoreProduct(r: Record<string, unknown>): StoreProductDto {
     }
   }
 
+  const code = Number(r.code ?? 0)
   return {
     id: String(r.id),
+    code,
+    codeLabel: String(Math.max(0, Math.floor(code))).padStart(8, '0'),
     slug: String(r.slug),
     name: String(r.name),
     sku: String(r.sku),
@@ -114,6 +128,9 @@ export function mapStoreProduct(r: Record<string, unknown>): StoreProductDto {
     trendingSort: Number(r.trending_sort ?? 0),
     rating: Number(r.rating),
     reviewCount: Number(r.review_count),
+    viewCount: Number(r.view_count ?? 0),
+    orderCount: Number(r.order_count ?? 0),
+    quoteCount: Number(r.quote_count ?? 0),
     origin: String(r.origin ?? ''),
     moq: Number(r.moq),
     description: String(r.description ?? ''),
@@ -137,6 +154,8 @@ async function attachPackagings(products: StoreProductDto[]): Promise<StoreProdu
             (
               SELECT pr.amount FROM product_prices pr
               WHERE pr.packaging_id = pk.id AND pr.is_active AND pr.price_kind = 'offer'
+                AND (pr.valid_from IS NULL OR pr.valid_from <= now())
+                AND (pr.valid_to IS NULL OR pr.valid_to >= now())
               ORDER BY pr.min_qty ASC LIMIT 1
             ) AS offer_price,
             (
@@ -190,11 +209,12 @@ async function attachSpecs(products: StoreProductDto[]): Promise<StoreProductDto
   const ids = products.map((p) => p.id)
   const { rows } = await pool.query(
     `SELECT v.product_id, a.key, a.name, a.unit_hint,
-            v.value_text, v.value_number, v.unit
+            v.value_text, v.value_number, v.unit, v.sort_order
      FROM product_spec_values v
      JOIN spec_attributes a ON a.id = v.attribute_id
      WHERE v.product_id = ANY($1::uuid[])
-     ORDER BY a.sort_order, a.name`,
+       AND COALESCE(a.is_catalog, true) = true
+     ORDER BY v.sort_order, a.sort_order, a.name`,
     [ids],
   )
   const byProduct = new Map<string, StoreProductDto['specs']>()
@@ -209,7 +229,7 @@ async function attachSpecs(products: StoreProductDto[]): Promise<StoreProductDto
       key: String(r.key),
       name: String(r.name),
       value,
-      unit: (r.unit as string | null) || (r.unit_hint as string | null),
+      unit: (r.unit as string | null) || null,
     })
     byProduct.set(pid, list)
   }
@@ -287,13 +307,28 @@ export async function queryTrendingProducts(opts?: {
     `${PRODUCT_SELECT}
      WHERE p.visible = true
      ${categoryFilter}
-     ORDER BY (p.rating * LN(p.review_count + 1)) DESC, p.updated_at DESC
+     ORDER BY
+       ((p.view_count + p.order_count + p.quote_count) > 0) DESC,
+       ${TREND_SCORE_SQL} DESC,
+       p.updated_at DESC
      LIMIT $1`,
     params,
   )
   return enrichStoreProducts(
     fallback.rows.map((r) => mapStoreProduct(r as Record<string, unknown>)),
   )
+}
+
+/** Ranking: mejores calificados (score = rating × ln(reseñas+1)). */
+export async function queryRankingProducts(limit = 24): Promise<StoreProductDto[]> {
+  const { rows } = await pool.query(
+    `${PRODUCT_SELECT}
+     WHERE p.visible = true AND p.review_count > 0
+     ORDER BY (p.rating * LN(p.review_count + 1)) DESC, p.rating DESC, p.review_count DESC
+     LIMIT $1`,
+    [Math.min(60, Math.max(1, limit))],
+  )
+  return enrichStoreProducts(rows.map((r) => mapStoreProduct(r as Record<string, unknown>)))
 }
 
 export async function queryTrendingTabs(): Promise<
@@ -328,6 +363,8 @@ export async function queryOfferProducts(limit = 200): Promise<StoreProductDto[]
          EXISTS (
            SELECT 1 FROM product_prices pr
            WHERE pr.product_id = p.id AND pr.is_active AND pr.price_kind = 'offer'
+             AND (pr.valid_from IS NULL OR pr.valid_from <= now())
+             AND (pr.valid_to IS NULL OR pr.valid_to >= now())
          )
          OR EXISTS (
            SELECT 1 FROM product_prices pr

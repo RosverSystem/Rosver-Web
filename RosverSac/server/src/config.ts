@@ -13,24 +13,52 @@ function req(name: string, fallback = '') {
   return process.env[name]?.trim() || fallback
 }
 
+/**
+ * Construye el conjunto de orígenes CORS permitidos.
+ * Prioridad:
+ *   1. CORS_ORIGINS (lista separada por comas)
+ *   2. CORS_ORIGIN (único origen legacy)
+ *   3. APP_URL como fallback
+ * Si APP_URL es rosversac.com o www.rosversac.com, ambas variantes se incluyen automáticamente.
+ */
+function buildCorsOrigins(): Set<string> {
+  const list = req('CORS_ORIGINS') || req('CORS_ORIGIN') || req('APP_URL', 'http://localhost:5173')
+  const origins = new Set<string>(
+    list.split(',').map((s) => s.trim()).filter(Boolean),
+  )
+  // Incluir www ↔ apex automáticamente para el dominio de producción
+  for (const o of [...origins]) {
+    if (o === 'https://rosversac.com') origins.add('https://www.rosversac.com')
+    if (o === 'https://www.rosversac.com') origins.add('https://rosversac.com')
+  }
+  const appUrl = req('APP_URL', 'http://localhost:5173')
+  if (appUrl === 'https://rosversac.com' || appUrl === 'https://www.rosversac.com') {
+    origins.add('https://rosversac.com')
+    origins.add('https://www.rosversac.com')
+  }
+  return origins
+}
+
 export const config = {
   port: Number(req('PORT') || req('API_PORT', '8787')),
   databaseUrl:
     req('DATABASE_PUBLIC_URL') ||
     req('DATABASE_URL') ||
     '',
-  corsOrigin: req(
-    'CORS_ORIGIN',
-    req('APP_URL', 'http://localhost:5173'),
-  ),
+  /** Conjunto de orígenes CORS permitidos (incluye www ↔ apex automáticamente). */
+  corsOrigins: buildCorsOrigins(),
+  /** Primer origen de la lista (compat. legacy para logs / redirects). */
+  corsOrigin: req('CORS_ORIGIN') || req('CORS_ORIGINS', '').split(',')[0]?.trim() || req('APP_URL', 'http://localhost:5173'),
   appUrl: req('APP_URL', 'http://localhost:5173'),
   apiUrl: req('API_URL', 'http://localhost:8787'),
   sessionCookie: req('SESSION_COOKIE', 'rosver_session'),
+  /** Dominio de la cookie (ej. .rosversac.com para subdominio). Solo si está en COOKIE_DOMAIN. */
+  cookieDomain: req('COOKIE_DOMAIN') || undefined,
   sessionDays: Number(req('SESSION_DAYS', '14')),
   smtp: {
     host: req('SMTP_HOST', 'smtp.hostinger.com'),
-    port: Number(req('SMTP_PORT', '465')),
-    secure: req('SMTP_SECURE', 'true') !== 'false',
+    port: Number(req('SMTP_PORT', '587')),
+    secure: req('SMTP_SECURE', 'false') === 'true',
     user: req('SMTP_USER', 'admin@multiserviciosmta.site'),
     pass: req('SMTP_PASS'),
     from: req('SMTP_FROM', 'Rosver SAC <admin@multiserviciosmta.site>'),
@@ -42,7 +70,11 @@ export const config = {
       'GOOGLE_REDIRECT_URI',
       'http://localhost:8787/api/auth/google/callback',
     ),
+    /** Places / Maps (autocomplete de dirección en cotizar). Opcional. */
+    mapsApiKey: req('GOOGLE_MAPS_API_KEY') || req('GOOGLE_PLACES_API_KEY'),
   },
+  /** Geoapify Autocomplete (freemium). Si se agota → Nominatim. */
+  geoapifyApiKey: req('GEOAPIFY_API_KEY'),
   seed: {
     adminEmail: req('SEED_ADMIN_EMAIL', 'admin@multiserviciosmta.site'),
     adminPassword: req('SEED_ADMIN_PASSWORD', 'RosverAdmin!2026'),
@@ -54,12 +86,21 @@ export const config = {
     accessKeyId: req('R2_ACCESS_KEY_ID'),
     secretAccessKey: req('R2_SECRET_ACCESS_KEY'),
     bucketPublic: req('R2_BUCKET_PUBLIC', 'rosver-public-media'),
+    /** Bucket sin CDN público (imports JSON, evidencias, docs). */
+    bucketPrivate: req('R2_BUCKET_PRIVATE', 'rosver-private-docs'),
     /** Si hay dominio/r2.dev público; si no, se sirve vía /api/media/… */
     publicBaseUrl: req('R2_PUBLIC_BASE_URL'),
   },
   /** Redis Railway — caché home/featured; opcional (degrada a Postgres) */
   redis: buildRedisConnection(),
+  /** Decolecta — consulta RUC/DNI (solo server) */
+  decolectaApiKey: req('DECOLECTA_API_KEY'),
   isProd: req('NODE_ENV') === 'production',
+  /** SHA del commit desplegado (Railway/CI → RAILWAY_GIT_COMMIT_SHA o GIT_COMMIT). */
+  commitSha:
+    req('RAILWAY_GIT_COMMIT_SHA') ||
+    req('GIT_COMMIT') ||
+    null as string | null,
 }
 
 export type RedisConnection = {
