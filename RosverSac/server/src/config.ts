@@ -71,7 +71,7 @@ export const config = {
   resendApiKey: req('RESEND_API_KEY'),
   resendFrom: req(
     'RESEND_FROM',
-    'Rosver SAC <onboarding@resend.dev>',
+    'Rosver SAC <noreply@rosversac.com>',
   ),
   /**
    * Buzón permitido por Resend Free sin dominio verificado.
