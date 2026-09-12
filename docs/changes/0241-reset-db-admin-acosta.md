@@ -27,7 +27,8 @@ Script `reset-production-data.ts --apply` vía TCP proxy Railway; seed local con
 
 ## Cómo verificar
 
-- [ ] Login en https://rosversac.com/login con el correo admin
-- [ ] `/admin` accesible
-- [ ] Catálogo vacío (0 productos / marcas / categorías de negocio)
-- [ ] Solo 1 usuario en `/admin/usuarios`
+- [x] Login en https://rosversac.com/login con el correo admin
+- [x] Solo 1 usuario `acosta.wp076@gmail.com` rol `admin`
+- [x] Catálogo vacío (0 products / brands / categories)
+- [x] `_schema_migrations` con 42 entradas (no re-siembra en boot)
+- [ ] Rosa confirma login en `/admin`
