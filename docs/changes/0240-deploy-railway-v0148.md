@@ -24,7 +24,10 @@ Pedido: subir a GitHub y desplegar en Railway para probar en línea el cierre de
 
 ## Cómo verificar
 
-- [ ] `https://rosver-web-production.up.railway.app/api/health` → `ok: true`
-- [ ] `commitSha` coherente con HEAD de `main`
-- [ ] SPA `/catalogo` y `/admin` sin 404
-- [ ] Migraciones 040–042 aplicadas en boot (leads/content/promos)
+- [x] `main` en GitHub al día (`c1792c8` + cierre previos)
+- [x] Deploy Railway **SUCCESS** (NIXPACKS + `boot.ts`; healthcheck OK)
+- [x] `https://rosversac.com/api/health` → `ok: true`
+- [x] Confirmar `commitSha` en health = `c1792c8…` (coincide con `main`)
+- [x] SPA `/catalogo` y `/admin` responden
+- [ ] Opcional prod: `npm run db:migrate-offers-to-combos -- --apply` (P130-ops)
+- [ ] BLOQUEADO EXTERNO: Google OAuth keys (P01)
