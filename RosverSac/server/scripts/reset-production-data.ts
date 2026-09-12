@@ -1,15 +1,15 @@
 /**
  * Vacía los datos de negocio de la base (Postgres) manteniendo intacto:
  *   - RBAC (modules, roles, permissions, role_permissions)
- *   - Ubigeo Perú (peru_departments/provinces/districts) — lo necesitan
- *     los formularios de /cotizar y /pedido para funcionar.
- *   - site_content — textos del home; sin esto la portada queda vacía.
- *   - users: NO se toca aquí. El admin pedido se crea vía `npm run db:seed`
- *     (o boot.ts) usando SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD.
+ *   - Ubigeo Perú (peru_departments/provinces/districts)
  *
- * Uso (con DATABASE_URL apuntando a la Postgres de Railway):
+ * También vacía `users` y `site_content` (arranque limpio).
+ * El admin se recrea después con `npm run db:seed`
+ * (SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD).
+ *
+ * Uso (con DATABASE_URL de Railway):
  *   npx tsx server/scripts/reset-production-data.ts
- *   npx tsx server/scripts/reset-production-data.ts --apply   (sin --apply = dry-run)
+ *   npx tsx server/scripts/reset-production-data.ts --apply
  */
 import { pool } from '../src/db.js'
 
@@ -40,33 +40,64 @@ const BUSINESS_TABLES = [
   'oauth_accounts',
   'login_challenges',
   'pending_registrations',
+  'site_content',
+  'users',
 ]
 
 const apply = process.argv.includes('--apply')
 
 async function main() {
-  console.log(apply ? '⚠️  APLICANDO (--apply): se borran datos de verdad' : 'Dry-run (sin --apply): solo cuenta filas')
+  console.log(
+    apply
+      ? 'APLICANDO (--apply): se borran datos de verdad'
+      : 'Dry-run (sin --apply): solo cuenta filas',
+  )
   console.log('Tablas a vaciar:', BUSINESS_TABLES.join(', '))
   console.log('')
 
   for (const t of BUSINESS_TABLES) {
-    const { rows } = await pool.query<{ n: string }>(`SELECT COUNT(*)::text AS n FROM ${t}`)
-    console.log(`  ${t}: ${rows[0]?.n ?? '?'} filas`)
+    try {
+      const { rows } = await pool.query<{ n: string }>(
+        `SELECT COUNT(*)::text AS n FROM ${t}`,
+      )
+      console.log(`  ${t}: ${rows[0]?.n ?? '?'} filas`)
+    } catch {
+      console.log(`  ${t}: (no existe, se omite)`)
+    }
   }
 
   if (apply) {
     console.log('\nBorrando...')
-    await pool.query(`TRUNCATE ${BUSINESS_TABLES.join(', ')} RESTART IDENTITY CASCADE`)
-    console.log('✓ Listo. RBAC, ubigeo y site_content quedaron intactos.')
-    console.log('  Corre ahora: npm run db:seed   (crea/actualiza el admin y el cliente demo)')
+    const existing: string[] = []
+    for (const t of BUSINESS_TABLES) {
+      const { rows } = await pool.query<{ exists: boolean }>(
+        `SELECT EXISTS (
+           SELECT 1 FROM information_schema.tables
+           WHERE table_schema = 'public' AND table_name = $1
+         ) AS exists`,
+        [t],
+      )
+      if (rows[0]?.exists) existing.push(t)
+    }
+    if (existing.length === 0) {
+      console.log('No hay tablas que vaciar.')
+    } else {
+      await pool.query(
+        `TRUNCATE ${existing.join(', ')} RESTART IDENTITY CASCADE`,
+      )
+      console.log('Listo. RBAC y ubigeo quedaron intactos.')
+      console.log('  Corre ahora: npm run db:seed   (crea el admin)')
+    }
   } else {
-    console.log('\nNada borrado. Vuelve a correr con --apply para ejecutar de verdad.')
+    console.log(
+      '\nNada borrado. Vuelve a correr con --apply para ejecutar de verdad.',
+    )
   }
 
   await pool.end()
 }
 
 main().catch((err) => {
-  console.error('reset-production-data falló:', err)
+  console.error('reset-production-data fallo:', err)
   process.exit(1)
 })

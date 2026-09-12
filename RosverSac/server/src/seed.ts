@@ -152,23 +152,30 @@ async function seed() {
     email: config.seed.adminEmail,
     password: config.seed.adminPassword,
     roleId: adminRoleId,
-    fullName: 'Admin Rosver',
+    fullName: 'Admin Acosta',
     phone: '+51999999999',
     avatarUrl: '/avatars/default-admin.svg',
   })
 
-  await upsertUser({
-    email: config.seed.clientEmail,
-    password: config.seed.clientPassword,
-    roleId: clientRoleId,
-    fullName: 'Andrés Acosta',
-    phone: '+51988888888',
-    avatarUrl: '/avatars/default-1.svg',
-  })
+  const skipClient = process.env.SEED_SKIP_CLIENT === '1'
+  if (!skipClient) {
+    await upsertUser({
+      email: config.seed.clientEmail,
+      password: config.seed.clientPassword,
+      roleId: clientRoleId,
+      fullName: 'Cliente demo',
+      phone: '+51988888888',
+      avatarUrl: '/avatars/default-1.svg',
+    })
+  }
 
   console.log('✓ Seed RBAC + usuarios listo')
   console.log(`  admin:  ${config.seed.adminEmail}`)
-  console.log(`  client: ${config.seed.clientEmail}`)
+  if (skipClient) {
+    console.log('  client: (omitido SEED_SKIP_CLIENT=1)')
+  } else {
+    console.log(`  client: ${config.seed.clientEmail}`)
+  }
   await pool.end()
 }
 
