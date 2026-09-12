@@ -1,6 +1,6 @@
 # Pendientes — Rosver Web
 
-Última actualización: 2026-09-12 (0240 auditoría técnica · v0.1.48)
+Última actualización: 2026-09-12 (0247 logo correo CDN Cloudflare · v0.1.49)
 
 ## Cómo leer esta tabla
 
@@ -31,6 +31,7 @@
 | Inicio ERP | 0236 |
 | Cierre pendientes prod | 0237 |
 | Auditoría técnica (IDOR PDF pedidos/cotizaciones + cortina de intro colgada) | 0240 |
+| Logo OTP roto en Gmail (APP_URL Railway 404) → CDN `rosversac.com/logo_*.png` | 0247 |
 
 ### Pendiente de auditoría 0240 (no crítico, para siguiente sesión)
 

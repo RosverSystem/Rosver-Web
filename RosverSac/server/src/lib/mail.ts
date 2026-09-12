@@ -1,6 +1,6 @@
 import nodemailer, { type Transporter } from 'nodemailer'
 import { config } from '../config.js'
-import { absoluteBrandUrl, BRAND_KEYS } from './brand-assets.js'
+import { absoluteBrandUrl, BRAND_KEYS, CANONICAL_SITE } from './brand-assets.js'
 
 let transporter: Transporter | null = null
 
@@ -109,7 +109,12 @@ async function sendViaResend(opts: {
 }
 
 function siteBaseUrl() {
-  return (config.appUrl || 'https://rosversac.com').replace(/\/$/, '')
+  const raw = (config.appUrl || CANONICAL_SITE).replace(/\/$/, '')
+  // Correos deben apuntar al dominio público (Cloudflare), no a .up.railway.app
+  if (/localhost|127\.0\.0\.1|\.up\.railway\.app/i.test(raw)) {
+    return CANONICAL_SITE
+  }
+  return raw
 }
 
 /** Estilos compartidos (plantilla clara tipo Miro + acento Rosver). */

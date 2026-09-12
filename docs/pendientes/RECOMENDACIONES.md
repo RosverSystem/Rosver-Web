@@ -36,6 +36,7 @@ Ideas útiles **no pedidas** aún. No implementar solas; esperar OK del usuario.
 | R32 | Cupones / stacking de varias promociones sobre combos | Pedido en plan combos (fuera de 0230) | baja |
 | R33 | Comentario escrito al calificar (opcional) o desde `/cuenta` | Voto 1–5 ya público (0232); texto sigue en P30 | baja |
 | R34 | Notas internas / historial de contactos en ficha cliente | CRM liviano (0235); útil para seguimiento comercial | baja |
+| R35 | Habilitar dominio público R2 (`r2.dev` o custom) y set `R2_PUBLIC_BASE_URL` | Hoy logos de mail usan CDN del sitio; media R2 seguiría vía `/api/media` | baja |
 
 
 
