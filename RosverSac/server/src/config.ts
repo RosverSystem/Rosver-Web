@@ -66,8 +66,13 @@ export const config = {
   /**
    * Resend (HTTPS). Obligatorio en Railway Trial/Hobby: SMTP sale bloqueado.
    * https://resend.com → API Key → RESEND_API_KEY
+   * Sin dominio verificado usar: Rosver SAC <onboarding@resend.dev>
    */
   resendApiKey: req('RESEND_API_KEY'),
+  resendFrom: req(
+    'RESEND_FROM',
+    'Rosver SAC <onboarding@resend.dev>',
+  ),
   google: {
     clientId: req('GOOGLE_CLIENT_ID'),
     clientSecret: req('GOOGLE_CLIENT_SECRET'),
