@@ -4,6 +4,9 @@ import { absoluteBrandUrl, BRAND_KEYS } from './brand-assets.js'
 
 let transporter: Transporter | null = null
 
+/** Hostinger/Railway: forzar IPv4 (evita ENETUNREACH en AAAA de Cloudflare). */
+const smtpSocket = { family: 4 as const }
+
 function getTransporter() {
   if (!config.smtp.pass) return null
   if (!transporter) {
@@ -17,6 +20,7 @@ function getTransporter() {
       connectionTimeout: 12_000,
       greetingTimeout: 12_000,
       socketTimeout: 20_000,
+      ...smtpSocket,
       auth: {
         user: config.smtp.user,
         pass: config.smtp.pass,
@@ -198,6 +202,7 @@ export async function sendOtpEmail(
           connectionTimeout: 12_000,
           greetingTimeout: 12_000,
           socketTimeout: 20_000,
+          ...smtpSocket,
           auth: {
             user: config.smtp.user,
             pass: config.smtp.pass,
@@ -255,6 +260,7 @@ async function sendMailSafe(opts: {
           connectionTimeout: 12_000,
           greetingTimeout: 12_000,
           socketTimeout: 20_000,
+          ...smtpSocket,
           auth: {
             user: config.smtp.user,
             pass: config.smtp.pass,
