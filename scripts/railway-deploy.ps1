@@ -1,6 +1,6 @@
 # Deploy RosverSac a Railway (PowerShell).
 # Uso: desde la raíz del monorepo, con RAILWAY_TOKEN en .env
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 $Root = Split-Path -Parent $PSScriptRoot
 $App = Join-Path $Root "RosverSac"
 
@@ -38,10 +38,10 @@ Write-Host "==> Commit SHA: $CommitSha"
 # Árbol de trabajo sucio (warn, no falla salvo --strict)
 $dirty = (git -C $Root status --porcelain 2>&1)
 if ($dirty) {
-  Write-Host "⚠️  Advertencia: hay cambios sin commitear. Railway desplegará el árbol actual, no exactamente SHA=$CommitSha"
+  Write-Host "WARN: hay cambios sin commitear. Railway desplegara el arbol actual, no exactamente SHA=$CommitSha"
   Write-Host $dirty
 } else {
-  Write-Host "✓  Árbol de trabajo limpio."
+  Write-Host "OK: arbol de trabajo limpio."
 }
 Write-Host ""
 
@@ -72,5 +72,5 @@ railway domain 2>&1 | Out-Host
 
 Write-Host ""
 Write-Host "Listo. Desplegado desde commit=$CommitSha"
-Write-Host "Verifica en Railway dashboard → Variables que RAILWAY_GIT_COMMIT_SHA coincida."
-Write-Host "En /api/health el campo 'commitSha' debe mostrar el mismo valor."
+Write-Host "Verifica en Railway dashboard Variables que RAILWAY_GIT_COMMIT_SHA coincida."
+Write-Host "En /api/health el campo commitSha debe mostrar el mismo valor."
