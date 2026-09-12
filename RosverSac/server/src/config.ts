@@ -63,6 +63,11 @@ export const config = {
     pass: req('SMTP_PASS'),
     from: req('SMTP_FROM', 'Rosver SAC <admin@multiserviciosmta.site>'),
   },
+  /**
+   * Resend (HTTPS). Obligatorio en Railway Trial/Hobby: SMTP sale bloqueado.
+   * https://resend.com → API Key → RESEND_API_KEY
+   */
+  resendApiKey: req('RESEND_API_KEY'),
   google: {
     clientId: req('GOOGLE_CLIENT_ID'),
     clientSecret: req('GOOGLE_CLIENT_SECRET'),

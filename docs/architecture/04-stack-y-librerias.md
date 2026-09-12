@@ -25,7 +25,7 @@ App: `RosverSac/` · Alias: `@` → `RosverSac/src`
 | Object storage | `@aws-sdk/client-s3` → Cloudflare R2 | Público (`rosver-public-media`) + privado (`rosver-private-docs`) |
 | Excel import | `xlsx` (parse) + `exceljs` (plantilla con estilos) | ELFA + plantilla Rosver admin |
 | Password | `argon2` | argon2id |
-| Mail | `nodemailer` | SMTP Hostinger |
+| Mail | `nodemailer` + **Resend HTTPS** (`RESEND_API_KEY`) | SMTP Hostinger OK en local; Railway Trial/Hobby **bloquea SMTP** → usar Resend |
 | 2FA | `otplib` + `qrcode` | TOTP autenticador |
 | Validación API | `zod` | Schemas en server |
 | PDF cotización / pedido | `jspdf` | Plantilla factura (carrito / cotizar) |

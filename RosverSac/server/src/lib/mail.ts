@@ -34,6 +34,42 @@ export function resetMailTransporter() {
   transporter = null
 }
 
+async function sendViaResend(opts: {
+  to: string
+  subject: string
+  text: string
+  html: string
+}): Promise<boolean> {
+  const key = config.resendApiKey
+  if (!key) return false
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: config.smtp.from,
+        to: [opts.to],
+        subject: opts.subject,
+        text: opts.text,
+        html: opts.html,
+      }),
+    })
+    if (!res.ok) {
+      const body = await res.text().catch(() => '')
+      console.error('[mail] Resend HTTP', res.status, body.slice(0, 400))
+      return false
+    }
+    console.info('[mail] enviado vía Resend HTTPS')
+    return true
+  } catch (err) {
+    console.error('[mail] Resend falló:', err)
+    return false
+  }
+}
+
 const PURPOSE_LABEL: Record<string, string> = {
   email_verify: 'verificar tu correo',
   login: 'iniciar sesión',
@@ -174,6 +210,11 @@ export async function sendOtpEmail(
   const text = `Tu código para ${label} es: ${code}\n\nVálido 5 minutos. Si no pediste esto, ignora el mensaje.`
   const html = buildOtpHtml(code, purpose)
 
+  // Preferir Resend (HTTPS): Railway Trial/Hobby bloquea SMTP outbound.
+  if (await sendViaResend({ to, subject, text, html })) {
+    return { delivered: true, mode: 'smtp' as const }
+  }
+
   const primary = getTransporter()
   if (!primary) {
     console.info(`[mail:dev] → ${to} | ${purpose} | OTP ${code}`)
@@ -234,6 +275,9 @@ async function sendMailSafe(opts: {
   html: string
   logTag: string
 }) {
+  if (await sendViaResend(opts)) {
+    return { delivered: true, mode: 'smtp' as const }
+  }
   const primary = getTransporter()
   if (!primary) {
     console.info(`[mail:dev] → ${opts.to} | ${opts.logTag} | ${opts.subject}`)
