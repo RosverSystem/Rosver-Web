@@ -2,6 +2,7 @@ import { api, ApiError } from '@/shared/lib/api'
 import { cn } from '@/shared/lib'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { FloatingToasts } from '@/shared/ui/floating-toasts'
+import { useAdminConfirm } from '@/shared/ui/admin-confirm-modal'
 import {
   AdminEmptyState,
   AdminField,
@@ -31,6 +32,7 @@ type VisibleFilter = 'all' | 'visible' | 'hidden'
 
 export function AdminBrandsPage() {
   const { toasts, showMessages, dismiss, clear } = useFormToasts()
+  const { confirm, confirmModal } = useAdminConfirm()
   const [brands, setBrands] = useState<Brand[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
@@ -175,7 +177,13 @@ export function AdminBrandsPage() {
   }
 
   async function onDelete(id: string, brandName: string) {
-    if (!window.confirm(`¿Eliminar la marca «${brandName}»?`)) return
+    const ok = await confirm({
+      title: 'Eliminar marca',
+      message: `¿Eliminar la marca «${brandName}»? Dejará de mostrarse en la tienda.`,
+      confirmLabel: 'Eliminar',
+      tone: 'danger',
+    })
+    if (!ok) return
     clear()
     try {
       await api(`/api/admin/brands/${id}`, { method: 'DELETE' })
@@ -192,6 +200,7 @@ export function AdminBrandsPage() {
   return (
     <div className="flex flex-col gap-4">
       <FloatingToasts toasts={toasts} onDismiss={dismiss} />
+      {confirmModal}
       <AdminPageHeader
         eyebrow="Catálogo"
         title="Marcas"

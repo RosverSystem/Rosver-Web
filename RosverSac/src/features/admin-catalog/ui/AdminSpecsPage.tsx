@@ -2,6 +2,7 @@ import { api, ApiError } from '@/shared/lib/api'
 import { cn, formatInternalCode } from '@/shared/lib'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { FloatingToasts } from '@/shared/ui/floating-toasts'
+import { useAdminConfirm } from '@/shared/ui/admin-confirm-modal'
 import {
   AdminEmptyState,
   AdminField,
@@ -57,6 +58,7 @@ function IconAction({
  */
 export function AdminSpecsPage() {
   const { toasts, showMessages, dismiss, clear } = useFormToasts()
+  const { confirm, confirmModal } = useAdminConfirm()
   const [rows, setRows] = useState<SpecAttr[]>([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -186,7 +188,13 @@ export function AdminSpecsPage() {
       showMessages(['Las especificaciones del sistema no se eliminan'])
       return
     }
-    if (!window.confirm(`¿Eliminar «${r.name}»?`)) return
+    const ok = await confirm({
+      title: 'Eliminar especificación',
+      message: `¿Eliminar «${r.name}»?`,
+      confirmLabel: 'Eliminar',
+      tone: 'danger',
+    })
+    if (!ok) return
     clear()
     setBusy(true)
     try {
@@ -207,6 +215,7 @@ export function AdminSpecsPage() {
   return (
     <div className="flex flex-col gap-4">
       <FloatingToasts toasts={toasts} onDismiss={dismiss} />
+      {confirmModal}
       <AdminPageHeader
         eyebrow="Catálogo"
         title="Especificaciones"

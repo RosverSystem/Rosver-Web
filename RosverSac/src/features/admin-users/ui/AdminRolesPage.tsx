@@ -2,6 +2,7 @@ import { api, ApiError } from '@/shared/lib/api'
 import { cn } from '@/shared/lib'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { FloatingToasts } from '@/shared/ui/floating-toasts'
+import { useAdminConfirm } from '@/shared/ui/admin-confirm-modal'
 import {
   AdminEmptyState,
   AdminField,
@@ -57,6 +58,7 @@ function roleBadge(role: Role) {
 
 export function AdminRolesPage() {
   const { toasts, showMessages, showSuccess, dismiss, clear } = useFormToasts()
+  const { confirm, confirmModal } = useAdminConfirm()
 
   const [roles, setRoles] = useState<Role[]>([])
   const [allPerms, setAllPerms] = useState<Permission[]>([])
@@ -195,7 +197,13 @@ export function AdminRolesPage() {
       showMessages(['No se pueden eliminar roles del sistema.'])
       return
     }
-    if (!window.confirm(`¿Eliminar el rol «${role.name}»? Los usuarios con este rol pasarán a «cliente».`)) return
+    const ok = await confirm({
+      title: 'Eliminar rol',
+      message: `¿Eliminar el rol «${role.name}»? Los usuarios con este rol pasarán a «cliente».`,
+      confirmLabel: 'Eliminar',
+      tone: 'danger',
+    })
+    if (!ok) return
     clear()
     try {
       await api(`/api/admin/roles/${role.id}`, { method: 'DELETE' })
@@ -211,6 +219,7 @@ export function AdminRolesPage() {
   return (
     <div className="flex flex-col gap-5">
       <FloatingToasts toasts={toasts} onDismiss={dismiss} />
+      {confirmModal}
 
       <AdminPageHeader
         title="Roles y permisos"

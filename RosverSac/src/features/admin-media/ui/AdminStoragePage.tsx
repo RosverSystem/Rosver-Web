@@ -2,6 +2,7 @@ import { api, ApiError } from '@/shared/lib/api'
 import { cn } from '@/shared/lib'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { FloatingToasts } from '@/shared/ui/floating-toasts'
+import { useAdminConfirm } from '@/shared/ui/admin-confirm-modal'
 import {
   AdminEmptyState,
   AdminInput,
@@ -65,6 +66,7 @@ function formatDate(iso: string | null) {
  */
 export function AdminStoragePage() {
   const { toasts, showMessages, dismiss, clear } = useFormToasts()
+  const { confirm, confirmModal } = useAdminConfirm()
   const inputRef = useRef<HTMLInputElement>(null)
   const [folderId, setFolderId] = useState('all')
   const [query, setQuery] = useState('')
@@ -171,7 +173,13 @@ export function AdminStoragePage() {
 
   async function onDelete(obj: StorageObject) {
     clear()
-    if (!window.confirm(`¿Eliminar «${fileName(obj.key)}» de R2?`)) return
+    const ok = await confirm({
+      title: 'Eliminar archivo',
+      message: `¿Eliminar «${fileName(obj.key)}» del almacenamiento?`,
+      confirmLabel: 'Eliminar',
+      tone: 'danger',
+    })
+    if (!ok) return
     setBusy(true)
     try {
       await api('/api/admin/storage', {
@@ -204,6 +212,7 @@ export function AdminStoragePage() {
   return (
     <div className="space-y-5">
       <FloatingToasts toasts={toasts} onDismiss={dismiss} />
+      {confirmModal}
       <AdminPageHeader
         eyebrow="Medios"
         title="Almacenamiento"

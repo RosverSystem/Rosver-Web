@@ -1,6 +1,7 @@
 import { api, ApiError } from '@/shared/lib/api'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { FloatingToasts } from '@/shared/ui/floating-toasts'
+import { useAdminConfirm } from '@/shared/ui/admin-confirm-modal'
 import {
   AdminEmptyState,
   AdminField,
@@ -44,6 +45,7 @@ const emptyForm = () => ({
 
 export function AdminCategoriesPage() {
   const { toasts, showMessages, dismiss, clear } = useFormToasts()
+  const { confirm, confirmModal } = useAdminConfirm()
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
@@ -219,7 +221,13 @@ export function AdminCategoriesPage() {
   }
 
   async function onDelete(id: string, name: string) {
-    if (!window.confirm(`¿Eliminar la categoría «${name}»?`)) return
+    const ok = await confirm({
+      title: 'Eliminar categoría',
+      message: `¿Eliminar la categoría «${name}»? Dejará de mostrarse en la tienda.`,
+      confirmLabel: 'Eliminar',
+      tone: 'danger',
+    })
+    if (!ok) return
     clear()
     try {
       await api(`/api/admin/categories/${id}`, { method: 'DELETE' })
@@ -244,6 +252,7 @@ export function AdminCategoriesPage() {
   return (
     <div className="space-y-5">
       <FloatingToasts toasts={toasts} onDismiss={dismiss} />
+      {confirmModal}
       <AdminPageHeader
         eyebrow="Catálogo"
         title="Categorías"

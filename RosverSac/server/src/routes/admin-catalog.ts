@@ -1391,6 +1391,19 @@ adminCatalogRoutes.patch('/products/:id', async (c) => {
 
 adminCatalogRoutes.delete('/products/:id', async (c) => {
   const id = c.req.param('id')
+  const permanent =
+    c.req.query('permanent') === '1' || c.req.query('permanent') === 'true'
+
+  if (permanent) {
+    const { rows } = await pool.query(
+      `DELETE FROM products WHERE id = $1 RETURNING id`,
+      [id],
+    )
+    if (!rows[0]) return c.json({ error: 'Producto no encontrado' }, 404)
+    await invalidateCatalogHomeCaches()
+    return c.json({ ok: true, permanent: true })
+  }
+
   const { rows } = await pool.query(
     `UPDATE products SET visible = false, featured = false, trending = false, updated_at = now()
      WHERE id = $1 RETURNING id`,

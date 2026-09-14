@@ -2,12 +2,14 @@ import { api, ApiError } from '@/shared/lib/api'
 import { cn, formatInternalCode } from '@/shared/lib'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { FloatingToasts } from '@/shared/ui/floating-toasts'
+import { useAdminConfirm } from '@/shared/ui/admin-confirm-modal'
 import {
   AdminEmptyState,
   AdminPageHeader,
   AdminSelect,
 } from '@/shared/ui/admin-field'
 import { BootstrapTable } from '@/shared/ui/bootstrap-table'
+import { IconEye, IconEyeOff } from '@/shared/ui/icons'
 import { Pen, Search, Trash } from 'cssvg-icons'
 import {
   useDeferredValue,
@@ -63,7 +65,8 @@ function IconAction({
 /** Listado de productos — alta/edición en ficha CRM. */
 export function AdminProductsPage() {
   const navigate = useNavigate()
-  const { toasts, showMessages, dismiss } = useFormToasts()
+  const { toasts, showMessages, showSuccess, dismiss } = useFormToasts()
+  const { confirm, confirmModal } = useAdminConfirm()
   const [products, setProducts] = useState<ProductRow[]>([])
   const [loading, setLoading] = useState(true)
   const [listQuery, setListQuery] = useState('')
@@ -132,12 +135,54 @@ export function AdminProductsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  async function softDelete(id: string, productName: string) {
-    if (!window.confirm(`¿Ocultar el producto «${productName}»?`)) return
+  async function setVisible(id: string, productName: string, next: boolean) {
+    const ok = await confirm({
+      title: next ? 'Habilitar producto' : 'Ocultar producto',
+      message: next
+        ? `¿Mostrar «${productName}» otra vez en la tienda?`
+        : `¿Ocultar «${productName}» de la tienda? Podrás habilitarlo después.`,
+      confirmLabel: next ? 'Habilitar' : 'Ocultar',
+      tone: next ? 'success' : 'warning',
+    })
+    if (!ok) return
     try {
-      await api(`/api/admin/products/${id}`, { method: 'DELETE' })
+      await api(`/api/admin/products/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ visible: next }),
+      })
       await loadList()
-      showMessages(['Producto ocultado'])
+      showSuccess([next ? 'Producto habilitado' : 'Producto ocultado'])
+    } catch (err) {
+      showMessages([
+        err instanceof ApiError
+          ? err.message
+          : 'No se pudo actualizar la visibilidad',
+      ])
+    }
+  }
+
+  async function hardDelete(id: string, productName: string) {
+    const ok = await confirm({
+      title: 'Eliminar producto',
+      message: (
+        <>
+          <p className="font-semibold text-rosver-ink">
+            ¿Eliminar permanentemente «{productName}»?
+          </p>
+          <p className="mt-2 text-rosver-muted">
+            Se borra del catálogo y no se puede deshacer. Si solo quieres
+            sacarlo de la tienda, usa «Ocultar».
+          </p>
+        </>
+      ),
+      confirmLabel: 'Eliminar',
+      tone: 'danger',
+    })
+    if (!ok) return
+    try {
+      await api(`/api/admin/products/${id}?permanent=1`, { method: 'DELETE' })
+      await loadList()
+      showSuccess(['Producto eliminado'])
     } catch (err) {
       showMessages([
         err instanceof ApiError ? err.message : 'No se pudo eliminar',
@@ -148,6 +193,7 @@ export function AdminProductsPage() {
   return (
     <div className="flex flex-col gap-4">
       <FloatingToasts toasts={toasts} onDismiss={dismiss} />
+      {confirmModal}
       <ProductImportModal
         open={importOpen}
         onClose={() => setImportOpen(false)}
@@ -311,15 +357,32 @@ export function AdminProductsPage() {
                         >
                           <Pen size={16} color="currentColor" strokeWidth={2} />
                         </IconAction>
+                        {p.visible ? (
+                          <IconAction
+                            label="Ocultar"
+                            onClick={() => void setVisible(p.id, p.name, false)}
+                            className="border border-rosver-line bg-white text-rosver-ink shadow-sm hover:bg-rosver-soft"
+                          >
+                            <IconEyeOff className="size-4" />
+                          </IconAction>
+                        ) : (
+                          <IconAction
+                            label="Habilitar"
+                            onClick={() => void setVisible(p.id, p.name, true)}
+                            className="bg-rosver-success text-white shadow-sm shadow-rosver-success/30 hover:brightness-95"
+                          >
+                            <IconEye className="size-4 text-white" />
+                          </IconAction>
+                        )}
                         <IconAction
-                          label="Ocultar"
-                          onClick={() => void softDelete(p.id, p.name)}
+                          label="Eliminar"
+                          onClick={() => void hardDelete(p.id, p.name)}
                           className="bg-rosver-red text-white shadow-sm shadow-rosver-red/25 hover:bg-rosver-red-dark"
                         >
                           <Trash
                             size={16}
-                            color="currentColor"
-                            strokeWidth={2}
+                            color="#FFFFFF"
+                            strokeWidth={2.25}
                           />
                         </IconAction>
                       </div>

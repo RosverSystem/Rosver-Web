@@ -1,6 +1,7 @@
 import { useCatalog, type Product } from '@/features/catalog'
 import { prefersReducedMotion } from '@/shared/lib/gsap'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
+import { useAdminConfirm } from '@/shared/ui/admin-confirm-modal'
 import { ProductImagePlaceholder } from '@/shared/ui/product-image-placeholder'
 import { cn } from '@/shared/lib'
 import { attachNestedScrollWheel } from '@/shared/lib/nested-scroll-wheel'
@@ -83,6 +84,7 @@ export function CartPage() {
   const { lines, addItem, updateQuantity, removeLine, clear, lineKey } =
     useCart()
   const { showSuccess } = useFormToasts()
+  const { confirm, confirmModal } = useAdminConfirm()
   const [orderModalOpen, setOrderModalOpen] = useState(false)
   const { items: promos } = useCartPromos()
   const promoMap = promosBySlug(promos)
@@ -110,6 +112,7 @@ export function CartPage() {
 
   return (
     <main className="mx-auto flex w-full min-w-0 max-w-4xl flex-col gap-6 overflow-x-hidden px-4 pb-28 lg:px-6">
+      {confirmModal}
       <div className="pt-4 sm:pt-6">
         <CartBanner reduce={reduce} itemCount={visibleCount} />
       </div>
@@ -376,7 +379,15 @@ export function CartPage() {
           <button
             type="button"
             onClick={() => {
-              if (window.confirm('¿Vaciar todo el carrito?')) clear()
+              void (async () => {
+                const ok = await confirm({
+                  title: 'Vaciar carrito',
+                  message: '¿Vaciar todo el carrito?',
+                  confirmLabel: 'Vaciar',
+                  tone: 'warning',
+                })
+                if (ok) clear()
+              })()
             }}
             className="inline-flex min-h-11 items-center justify-center gap-1 px-2 text-sm font-bold text-rosver-muted transition hover:text-rosver-red"
           >

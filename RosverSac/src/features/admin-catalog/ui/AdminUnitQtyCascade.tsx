@@ -8,6 +8,7 @@ import {
 } from '@/shared/ui/admin-field'
 import { AdminModal } from '@/shared/ui/admin-modal'
 import { FloatingToasts } from '@/shared/ui/floating-toasts'
+import { useAdminConfirm } from '@/shared/ui/admin-confirm-modal'
 import { Pen, Plus, Trash } from 'cssvg-icons'
 import { useEffect, useState } from 'react'
 
@@ -41,6 +42,7 @@ function qtyLabel(q: UnitQty) {
  */
 export function AdminUnitQtyCascade() {
   const { toasts, showMessages, dismiss, clear } = useFormToasts()
+  const { confirm, confirmModal } = useAdminConfirm()
   const [units, setUnits] = useState<UnitType[]>([])
   const [quantities, setQuantities] = useState<UnitQty[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -185,7 +187,13 @@ export function AdminUnitQtyCascade() {
   }
 
   async function deleteUnit(u: UnitType) {
-    if (!window.confirm(`¿Eliminar el tipo «${u.name}»?`)) return
+    const ok = await confirm({
+      title: 'Eliminar tipo de unidad',
+      message: `¿Eliminar el tipo «${u.name}»?`,
+      confirmLabel: 'Eliminar',
+      tone: 'danger',
+    })
+    if (!ok) return
     clear()
     try {
       await api(`/api/admin/unit-types/${u.id}`, { method: 'DELETE' })
@@ -272,7 +280,13 @@ export function AdminUnitQtyCascade() {
   }
 
   async function deleteQty(q: UnitQty) {
-    if (!window.confirm(`¿Eliminar «${qtyLabel(q)}»?`)) return
+    const ok = await confirm({
+      title: 'Eliminar cantidad',
+      message: `¿Eliminar «${qtyLabel(q)}»?`,
+      confirmLabel: 'Eliminar',
+      tone: 'danger',
+    })
+    if (!ok) return
     clear()
     try {
       await api(`/api/admin/unit-type-quantities/${q.id}`, { method: 'DELETE' })
@@ -288,6 +302,7 @@ export function AdminUnitQtyCascade() {
   return (
     <div className="space-y-3">
       <FloatingToasts toasts={toasts} onDismiss={dismiss} />
+      {confirmModal}
 
       <div className="grid gap-3 lg:grid-cols-2">
         <section className="overflow-hidden rounded-2xl border border-rosver-line bg-white shadow-sm">

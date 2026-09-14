@@ -1,6 +1,7 @@
 import { api, ApiError } from '@/shared/lib/api'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { FloatingToasts } from '@/shared/ui/floating-toasts'
+import { useAdminConfirm } from '@/shared/ui/admin-confirm-modal'
 import { AdminEmptyState, AdminField, AdminPageHeader, AdminSelect } from '@/shared/ui/admin-field'
 import { AdminModal } from '@/shared/ui/admin-modal'
 import { Trash } from 'cssvg-icons'
@@ -60,6 +61,7 @@ function fmtDate(iso: string) {
 
 export function AdminLeadsPage() {
   const { toasts, showMessages, showSuccess, dismiss, clear } = useFormToasts()
+  const { confirm, confirmModal } = useAdminConfirm()
 
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
@@ -129,7 +131,13 @@ export function AdminLeadsPage() {
   // ── Delete ────────────────────────────────────────────────────────────────
 
   async function onDelete(lead: Lead) {
-    if (!window.confirm(`¿Eliminar el mensaje de «${lead.fullName}» (${lead.code})?`)) return
+    const ok = await confirm({
+      title: 'Eliminar contacto',
+      message: `¿Eliminar el mensaje de «${lead.fullName}» (${lead.code})?`,
+      confirmLabel: 'Eliminar',
+      tone: 'danger',
+    })
+    if (!ok) return
     clear()
     try {
       await api(`/api/admin/leads/${lead.id}`, { method: 'DELETE' })
@@ -146,6 +154,7 @@ export function AdminLeadsPage() {
   return (
     <div className="flex flex-col gap-5">
       <FloatingToasts toasts={toasts} onDismiss={dismiss} />
+      {confirmModal}
 
       <AdminPageHeader
         title="Contactos"

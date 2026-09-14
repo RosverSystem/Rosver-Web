@@ -75,7 +75,7 @@ export function Footer() {
                         }
                       : undefined
                   }
-                  className="inline-flex size-9 items-center justify-center rounded-full bg-white ring-2 ring-transparent transition duration-300 hover:-translate-y-0.5 hover:ring-rosver-red hover:shadow-[0_6px_16px_rgba(227,6,19,0.35)]"
+                  className="inline-flex size-9 items-center justify-center rounded-full bg-white text-rosver-ink ring-2 ring-transparent transition duration-300 hover:-translate-y-0.5 hover:ring-rosver-red hover:shadow-[0_6px_16px_rgba(227,6,19,0.35)]"
                 >
                   <item.Icon />
                 </a>

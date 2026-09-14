@@ -1,6 +1,6 @@
 # Pendientes — Rosver Web
 
-Última actualización: 2026-09-14 (0264 corazón favorito visual · v0.1.67)
+Última actualización: 2026-09-14 (0265 habilitar productos + modales · v0.1.68)
 
 ## Cómo leer esta tabla
 
@@ -49,6 +49,7 @@
 | PDF Chromium Railway + home más aireado | 0262 |
 | Favoritos producto (API + cuenta + admin clientes) | 0263 |
 | Corazón favorito: relleno rojo vs outline | 0264 |
+| Habilitar/ocultar/eliminar + modales aviso ERP | 0265 |
 
 ### Pendiente de auditoría 0240 (no crítico, para siguiente sesión)
 

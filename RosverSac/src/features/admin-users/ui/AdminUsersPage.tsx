@@ -3,6 +3,7 @@ import { api, ApiError } from '@/shared/lib/api'
 import { cn } from '@/shared/lib'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { FloatingToasts } from '@/shared/ui/floating-toasts'
+import { useAdminConfirm } from '@/shared/ui/admin-confirm-modal'
 import { AdminEmptyState, AdminPageHeader, AdminSelect } from '@/shared/ui/admin-field'
 import { BootstrapTable } from '@/shared/ui/bootstrap-table'
 import { useEffect, useMemo, useState } from 'react'
@@ -36,6 +37,7 @@ const DATE_FMT = new Intl.DateTimeFormat('es-PE', {
 export function AdminUsersPage() {
   const { user: currentUser } = useAuth()
   const { toasts, showMessages, dismiss, clear } = useFormToasts()
+  const { confirm, confirmModal } = useAdminConfirm()
   const [users, setUsers] = useState<AdminUser[]>([])
   const [roles, setRoles] = useState<Role[]>([])
   const [loading, setLoading] = useState(true)
@@ -107,11 +109,14 @@ export function AdminUsersPage() {
 
   async function toggleStatus(u: AdminUser) {
     const nextStatus = u.status === 'active' ? 'disabled' : 'active'
-    if (
-      nextStatus === 'disabled' &&
-      !window.confirm(`¿Desactivar a «${u.fullName ?? u.email}»? No podrá iniciar sesión.`)
-    ) {
-      return
+    if (nextStatus === 'disabled') {
+      const ok = await confirm({
+        title: 'Desactivar usuario',
+        message: `¿Desactivar a «${u.fullName ?? u.email}»? No podrá iniciar sesión.`,
+        confirmLabel: 'Desactivar',
+        tone: 'warning',
+      })
+      if (!ok) return
     }
     clear()
     setSavingId(u.id)
@@ -136,6 +141,7 @@ export function AdminUsersPage() {
   return (
     <div className="space-y-5">
       <FloatingToasts toasts={toasts} onDismiss={dismiss} />
+      {confirmModal}
       <AdminPageHeader
         eyebrow="Sistema"
         title="Usuarios"

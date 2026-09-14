@@ -230,7 +230,7 @@ export function PublicNavOverlay({
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={label}
-                      className="flex size-10 items-center justify-center rounded-full border border-white/30 text-white transition hover:border-rosver-red hover:bg-rosver-red"
+                      className="flex size-10 items-center justify-center rounded-full bg-white text-rosver-ink shadow-sm transition hover:-translate-y-0.5 hover:ring-2 hover:ring-rosver-red"
                     >
                       <Icon className="size-4" />
                     </a>

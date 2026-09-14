@@ -2,6 +2,7 @@ import { api, ApiError } from '@/shared/lib/api'
 import { cn, formatInternalCode } from '@/shared/lib'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { FloatingToasts } from '@/shared/ui/floating-toasts'
+import { useAdminConfirm } from '@/shared/ui/admin-confirm-modal'
 import {
   AdminEmptyState,
   AdminField,
@@ -187,7 +188,8 @@ export function AdminProductWorkspacePage() {
   const { id: routeId } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const isCreate = !routeId || routeId === 'nuevo'
-  const { toasts, showMessages, dismiss, clear } = useFormToasts()
+  const { toasts, showMessages, showSuccess, dismiss, clear } = useFormToasts()
+  const { confirm, confirmModal } = useAdminConfirm()
   const [products, setProducts] = useState<ProductRow[]>([])
   const [brands, setBrands] = useState<Brand[]>([])
   const [categories, setCategories] = useState<Category[]>([])
@@ -986,7 +988,13 @@ export function AdminProductWorkspacePage() {
 
   async function removePackaging(id: string) {
     if (!selectedId) return
-    if (!window.confirm('¿Eliminar esta presentación y sus precios?')) return
+    const ok = await confirm({
+      title: 'Eliminar presentación',
+      message: '¿Eliminar esta presentación y sus precios?',
+      confirmLabel: 'Eliminar',
+      tone: 'danger',
+    })
+    if (!ok) return
     clear()
     setBusy(true)
     try {
@@ -994,7 +1002,7 @@ export function AdminProductWorkspacePage() {
         method: 'DELETE',
       })
       await loadDetail(selectedId)
-      showMessages(['Presentación eliminada'])
+      showSuccess(['Presentación eliminada'])
     } catch (err) {
       showMessages([
         err instanceof ApiError
@@ -1006,11 +1014,51 @@ export function AdminProductWorkspacePage() {
     }
   }
 
-  async function softDelete(id: string, productName: string) {
-    if (!window.confirm(`¿Ocultar el producto «${productName}»?`)) return
+  async function setProductVisible(id: string, productName: string, next: boolean) {
+    const ok = await confirm({
+      title: next ? 'Habilitar producto' : 'Ocultar producto',
+      message: next
+        ? `¿Mostrar «${productName}» otra vez en la tienda?`
+        : `¿Ocultar «${productName}» de la tienda? Podrás habilitarlo después.`,
+      confirmLabel: next ? 'Habilitar' : 'Ocultar',
+      tone: next ? 'success' : 'warning',
+    })
+    if (!ok) return
     try {
-      await api(`/api/admin/products/${id}`, { method: 'DELETE' })
-      showMessages(['Producto ocultado'])
+      await api(`/api/admin/products/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ visible: next }),
+      })
+      showSuccess([next ? 'Producto habilitado' : 'Producto ocultado'])
+      await loadList()
+      if (selectedId === id) await loadDetail(id)
+    } catch (err) {
+      showMessages([
+        err instanceof ApiError
+          ? err.message
+          : 'No se pudo actualizar la visibilidad',
+      ])
+    }
+  }
+
+  async function hardDeleteProduct(id: string, productName: string) {
+    const ok = await confirm({
+      title: 'Eliminar producto',
+      message: (
+        <>
+          <p className="font-semibold">¿Eliminar permanentemente «{productName}»?</p>
+          <p className="mt-2 text-rosver-muted">
+            No se puede deshacer. Si solo quieres sacarlo de la tienda, usa «Ocultar».
+          </p>
+        </>
+      ),
+      confirmLabel: 'Eliminar',
+      tone: 'danger',
+    })
+    if (!ok) return
+    try {
+      await api(`/api/admin/products/${id}?permanent=1`, { method: 'DELETE' })
+      showSuccess(['Producto eliminado'])
       navigate('/admin/productos')
     } catch (err) {
       showMessages([
@@ -1150,6 +1198,7 @@ export function AdminProductWorkspacePage() {
   return (
     <div className="flex flex-col gap-4">
       <FloatingToasts toasts={toasts} onDismiss={dismiss} />
+      {confirmModal}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
@@ -1160,16 +1209,40 @@ export function AdminProductWorkspacePage() {
         </Link>
         <div className="flex flex-wrap gap-2">
           {selectedId ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() =>
-                void softDelete(selectedId, name.trim() || 'producto')
-              }
-              className="h-10 rounded-xl border border-rosver-line px-4 text-sm font-semibold text-rosver-muted hover:border-rosver-red/40 hover:text-rosver-red disabled:opacity-60"
-            >
-              Ocultar
-            </button>
+            <>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() =>
+                  void setProductVisible(
+                    selectedId,
+                    name.trim() || 'producto',
+                    !(visibleRow?.visible ?? true),
+                  )
+                }
+                className={cn(
+                  'h-10 rounded-xl border px-4 text-sm font-semibold disabled:opacity-60',
+                  visibleRow?.visible
+                    ? 'border-rosver-line text-rosver-muted hover:border-rosver-ink/30 hover:text-rosver-ink'
+                    : 'border-rosver-success/40 bg-rosver-success/10 text-rosver-success hover:bg-rosver-success/15',
+                )}
+              >
+                {visibleRow?.visible ? 'Ocultar' : 'Habilitar'}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() =>
+                  void hardDeleteProduct(
+                    selectedId,
+                    name.trim() || 'producto',
+                  )
+                }
+                className="h-10 rounded-xl border border-rosver-red/30 px-4 text-sm font-semibold text-rosver-red hover:bg-rosver-red/10 disabled:opacity-60"
+              >
+                Eliminar
+              </button>
+            </>
           ) : null}
           <button
             type="button"

@@ -1,6 +1,7 @@
 import { api, ApiError } from '@/shared/lib/api'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { FloatingToasts } from '@/shared/ui/floating-toasts'
+import { useAdminConfirm } from '@/shared/ui/admin-confirm-modal'
 import {
   AdminEmptyState,
   AdminField,
@@ -20,6 +21,7 @@ type UnitType = {
 
 export function AdminUnitTypesPage() {
   const { toasts, showMessages, dismiss, clear } = useFormToasts()
+  const { confirm, confirmModal } = useAdminConfirm()
   const [units, setUnits] = useState<UnitType[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
@@ -107,7 +109,13 @@ export function AdminUnitTypesPage() {
   }
 
   async function onDelete(u: UnitType) {
-    if (!window.confirm(`¿Eliminar la unidad «${u.name}»?`)) return
+    const ok = await confirm({
+      title: 'Eliminar unidad',
+      message: `¿Eliminar la unidad «${u.name}»?`,
+      confirmLabel: 'Eliminar',
+      tone: 'danger',
+    })
+    if (!ok) return
     clear()
     try {
       await api(`/api/admin/unit-types/${u.id}`, { method: 'DELETE' })
@@ -132,6 +140,7 @@ export function AdminUnitTypesPage() {
   return (
     <div className="space-y-5">
       <FloatingToasts toasts={toasts} onDismiss={dismiss} />
+      {confirmModal}
       <AdminPageHeader
         eyebrow="Catálogo"
         title="Tipos de unidad"

@@ -1,6 +1,7 @@
 import { api, ApiError } from '@/shared/lib/api'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { FloatingToasts } from '@/shared/ui/floating-toasts'
+import { useAdminConfirm } from '@/shared/ui/admin-confirm-modal'
 import {
   AdminEmptyState,
   AdminField,
@@ -45,6 +46,7 @@ type PromoItem = {
  */
 export function AdminOffersPage() {
   const { toasts, showMessages, showSuccess, dismiss, clear } = useFormToasts()
+  const { confirm, confirmModal } = useAdminConfirm()
   const [products, setProducts] = useState<OfferProduct[]>([])
   const [allProducts, setAllProducts] = useState<CatalogOption[]>([])
   const [brands, setBrands] = useState<CatalogOption[]>([])
@@ -187,7 +189,13 @@ export function AdminOffersPage() {
   }
 
   async function removeOffer(id: string, productName: string) {
-    if (!window.confirm(`¿Quitar la oferta de «${productName}»?`)) return
+    const ok = await confirm({
+      title: 'Quitar oferta',
+      message: `¿Quitar la oferta de «${productName}»?`,
+      confirmLabel: 'Quitar oferta',
+      tone: 'warning',
+    })
+    if (!ok) return
     clear()
     try {
       await api(`/api/admin/offers/${id}`, { method: 'DELETE' })
@@ -254,7 +262,13 @@ export function AdminOffersPage() {
   }
 
   async function removePromo(id: string, label: string) {
-    if (!window.confirm(`¿Eliminar la promo de «${label}»?`)) return
+    const ok = await confirm({
+      title: 'Eliminar promo',
+      message: `¿Eliminar la promo de «${label}»?`,
+      confirmLabel: 'Eliminar',
+      tone: 'danger',
+    })
+    if (!ok) return
     try {
       await api(`/api/admin/promos/${id}`, { method: 'DELETE' })
       showSuccess(['Promo eliminada'])
@@ -269,6 +283,7 @@ export function AdminOffersPage() {
   return (
     <div className="space-y-5">
       <FloatingToasts toasts={toasts} onDismiss={dismiss} />
+      {confirmModal}
       <AdminPageHeader
         title="Ofertas"
         actions={

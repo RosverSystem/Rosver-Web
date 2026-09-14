@@ -401,7 +401,7 @@ export function IconTikTok({ className, ...props }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" className={cn('size-4', className)} aria-hidden {...props}>
       <path
-        fill="#111"
+        fill="currentColor"
         d="M16.5 4c.6 1.7 1.9 3 3.5 3.5V10a7.2 7.2 0 0 1-3.5-1v5.4A5.4 5.4 0 1 1 11 9.1v2.2a3.2 3.2 0 1 0 2.3 3.1V4h3.2Z"
       />
     </svg>
@@ -431,6 +431,59 @@ export function IconWhatsApp({ className, ...props }: IconProps) {
       <path
         fill="currentColor"
         d="M12 3.2A8.3 8.3 0 0 0 4.4 15l-1 3.7 3.8-1A8.3 8.3 0 1 0 12 3.2Zm4.7 11.8c-.2.6-1.1 1-1.6 1.1-.4.1-.9.2-2.9-.6-2.5-1-4.1-3.5-4.2-3.7-.1-.2-1-1.3-1-2.5s.6-1.8.9-2c.2-.2.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 1.9c.1.2 0 .4-.1.5l-.3.4c-.2.2-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.2 1.3 2.5 1.4.3.1.5.1.7-.1l.9-1.1c.2-.2.4-.2.6-.1l1.8.9c.2.1.4.2.4.4 0 .2 0 1.1-.5 1.7Z"
+      />
+    </svg>
+  )
+}
+
+/** Visibilidad en listados ERP (habilitar / ocultar). */
+export function IconEye({ className, ...props }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      className={cn('size-4', className)}
+      aria-hidden
+      {...props}
+    >
+      <path
+        d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12s-3.5 6.5-9.5 6.5S2.5 12 2.5 12Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="12" r="2.75" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  )
+}
+
+export function IconEyeOff({ className, ...props }: IconProps) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      className={cn('size-4', className)}
+      aria-hidden
+      {...props}
+    >
+      <path
+        d="M3 3l18 18"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M10.5 6.3A10.4 10.4 0 0 1 12 6c6 0 9.5 6 9.5 6a16 16 0 0 1-3.2 3.6M7.1 7.2A15.5 15.5 0 0 0 2.5 12s3.5 6.5 9.5 6.5c1.3 0 2.5-.2 3.6-.6"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M10.2 10.3a2.75 2.75 0 0 0 3.5 3.5"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
       />
     </svg>
   )
