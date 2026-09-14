@@ -1,6 +1,6 @@
 # Pendientes — Rosver Web
 
-Última actualización: 2026-09-12 (0247 logo correo CDN Cloudflare · v0.1.49)
+Última actualización: 2026-09-13 (0248 hero multipanel · v0.1.50)
 
 ## Cómo leer esta tabla
 
@@ -32,6 +32,7 @@
 | Cierre pendientes prod | 0237 |
 | Auditoría técnica (IDOR PDF pedidos/cotizaciones + cortina de intro colgada) | 0240 |
 | Logo OTP roto en Gmail (APP_URL Railway 404) → CDN `rosversac.com/logo_*.png` | 0247 |
+| Hero multipanel estilo Katrina + paleta Rosver + specs diseñador 800×1200 | 0248 |
 
 ### Pendiente de auditoría 0240 (no crítico, para siguiente sesión)
 
@@ -39,7 +40,7 @@
 | --- | --- | --- | --- | --- |
 | P131 | Code-split real de `quotes`/`complaints-book` (hoy importados estático + dinámico a la vez, el lazy no separa el chunk) | Auditoría 0240 (`INEFFECTIVE_DYNAMIC_IMPORT` en build) | pendiente | Bundle principal 634 KB; decidir si quitar el import estático en `App.tsx` |
 | P132 | Validar magic bytes reales (no solo MIME del cliente) en subida de avatar (`profile.ts`) y evidencias de pedido | Auditoría 0240 | pendiente | Riesgo bajo, mismo patrón que se corrigió en PDFs de pedidos/cotizaciones |
-| P133 | Tests E2E nuevos (Playwright) + `npm audit` de dependencias | Pedido original de auditoría completa | pendiente | Fuera del alcance del pase priorizado elegido en 0240 |
+| P134 | Entregar 5 fotos hero 800×1200 WebP y subir a R2 | Pedido banner 0248 | pendiente | Specs en `06-banners-hero-y-assets.md` §0 |
 
 | ID | Ítem | Origen | Estado | Notas / bloqueo |
 | --- | --- | --- | --- | --- |

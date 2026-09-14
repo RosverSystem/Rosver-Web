@@ -11,7 +11,7 @@ Fuente de verdad para el agente al implementar UI y, después, lógica.
 
 | Ruta | Vista | Feature |
 | --- | --- | --- |
-| `/` | Home (hero, destacados, categorías, CTA contacto/cotizar) | `catalog` + `admin-content` (datos) |
+| `/` | Home (hero **multipanel**, destacados, categorías, CTA) | `catalog` + `admin-content` (datos) |
 | `/catalogo` | Listado con filtros / búsqueda | `catalog` |
 | `/catalogo/:categorySlug` | Listado filtrado por categoría | `catalog` |
 | `/ofertas` | Ofertas — **implementado:** cards horizontales + volumen (`OffersPage`) | `catalog` |

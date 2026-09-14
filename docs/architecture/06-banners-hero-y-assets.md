@@ -1,106 +1,90 @@
-# Banner hero y assets de imagen — medidas para Canva
+# Banner hero y assets de imagen — medidas para diseñador / Canva
 
-Especificación para diseñar en Canva el banner/hero de Home a partir de las referencias enviadas por el cliente (Grupo Shinán, Chamo Import). Se diseñan **3 versiones** (móvil / tablet / desktop) porque un banner fotográfico no se recorta bien solo con CSS — cada tamaño necesita su propia composición.
+Especificación viva del hero de Home. **Modelo actual (2026-09-13):** carrusel **multipanel** tipo Katrina Imports, paleta Rosver.
 
-Cumple `06-performance` (rendimiento): el hero es la imagen más pesada del critical path, así que formato y peso están acotados abajo.
+Cumple `06-performance`: paneles livianos; solo el primero va `eager`.
 
 ---
 
-## 1. Referencia y qué tomamos de cada una
+## 0. Modelo actual — paneles verticales (prioridad diseñador)
+
+El hero es un **strip** de columnas: 1 panel CTA (solo tipografía CSS, sin foto) + **5 paneles con foto vertical**.
+
+| Asset | Tamaño canvas | Ratio | Cantidad | Peso |
+| --- | --- | --- | --- | --- |
+| **Panel foto** | **800 × 1200 px** | **2:3** vertical | **5** | WebP ≤ ~180 KB c/u |
+| Master layout (opcional) | 1920 × 720 px | ~8:3 | 1 | Solo referencia de composición |
+
+### Qué va en la imagen vs en HTML
+
+| En la foto | En HTML (no quemar) |
+| --- | --- |
+| Escena / producto / almacén / gente | Título del panel (mayúsculas) |
+| Ambiente visual | Pill partido rojo/gris |
+| — | CTA «Descargar PDF» del panel oscuro |
+
+### Zona segura
+
+- Sujeto principal en el **75% superior**.
+- El **25% inferior** se oscurece con degradado y lleva título + pill.
+- Sin texto quemado en la imagen.
+
+### Colores del pill (referencia)
+
+| Mitad | Hex | Token |
+| --- | --- | --- |
+| Izquierda | `#E30613` texto blanco | `rosver-red` |
+| Derecha | `#F3F4F6` texto `#0D0D0D` | `rosver-soft` / `rosver-ink` |
+
+### Nombres sugeridos de archivo
+
+`hero-panel-01.webp` … `hero-panel-05.webp`
+
+Código: `HeroWaveSlider` + `HERO_PANEL_DESIGNER_SPECS` en `home-hero-slides.ts`. Change: `0248`.
+
+---
+
+## 1. Referencias históricas
 
 | Referencia | Qué tiene | Qué tomamos |
 | --- | --- | --- |
-| **Grupo Shinán** | Todo el texto (titular, bullets, badges) quemado dentro de la imagen, estilo flyer | Nada del texto — se ve recargado y no es editable ni accesible ni animable |
-| **Chamo Import** | Foto de producto de impacto (herramientas) + botones reales en HTML sobre la imagen + fila de logos de marcas debajo | **Este es el patrón a seguir**: imagen para impacto visual, texto/CTA como HTML real encima (así seguimos usando el reveal animado de `Hero.tsx` y no perdemos accesibilidad/SEO) |
-
-**Recomendación:** la imagen no lleva el titular ni el CTA quemados — esos siguen siendo el `<h1>` y los botones reales que ya existen en `features/catalog/ui/Hero.tsx` (con su animación GSAP). La imagen aporta el impacto visual (producto, contenedores, importación) y dejamos una zona con menos detalle (o un degradado sutil) del lado donde va el texto, para que siga siendo legible.
-
-Pendiente de confirmar con el cliente: si "marcas relacionadas" son marcas/distribuidoras reales que Rosver maneja (como Truper, Stanley, etc. en el ejemplo de Chamo) o si se adapta a "categorías que manejamos" — la sección de abajo (`§4`) sirve para ambos casos, solo cambia si son logos de terceros o íconos propios.
+| **Katrina Imports** | Strip multipanel + pills bicolor + barra negra | **Modelo UI actual** (colores → Rosver) |
+| **Grupo Shinán** | Texto quemado en flyer | Evitar texto quemado |
+| **Chamo Import** | Foto + CTA HTML | Texto/CTA en HTML |
 
 ---
 
-## 2. Medidas del banner (Canva)
+## 2. Medidas legacy (banner panorámico único — archivado)
 
-| Breakpoint | Canvas a crear en Canva | Aspecto | Se usa en |
-| --- | --- | --- | --- |
-| **Móvil** (&lt;768px) | **750 × 1000 px** | 3:4 (vertical) | `<768px` — pantalla angosta, composición más vertical |
-| **Tablet** (768–1023px) | **1024 × 768 px** | 4:3 | 768–1023px |
-| **Desktop** (≥1024px) | **1920 × 600 px** | ~3.2:1 (panorámico) | ≥1024px — banner ancho tipo Chamo Import |
+Si en el futuro se vuelve a un banner full-bleed único por breakpoint:
 
-### Zona segura ("safe zone")
-
-- Dejar **mínimo 7% de margen** desde cada borde libre de elementos importantes (logo, producto principal) — `object-fit: cover` puede recortar distinto según el ancho exacto del visitante dentro de cada rango.
-- Si el texto/CTA va como HTML real encima (recomendado, ver §1): reservar una franja con menos detalle o un degradado oscuro —
-  - Desktop: franja izquierda (~40% del ancho) para que el `<h1>` sea legible.
-  - Tablet: franja inferior o izquierda (~45%).
-  - Móvil: franja superior o inferior (~35% de la altura) — en vertical el texto suele ir arriba o abajo, no al costado.
-
-### Exportar
-
-| Breakpoint | Formato | Peso objetivo |
+| Breakpoint | Canvas | Aspecto |
 | --- | --- | --- |
-| Móvil | WebP (JPG como fallback si Canva no exporta WebP) | ≤ 120 KB |
-| Tablet | WebP | ≤ 180 KB |
-| Desktop | WebP | ≤ 280 KB |
-
-Si Canva no exporta a WebP directamente: exportar en JPG calidad ~80% y convertir a WebP aparte (o decírmelo, lo convierto yo al recibir los archivos).
+| Móvil | 750 × 1000 px | 3:4 |
+| Tablet | 1024 × 768 px | 4:3 |
+| Desktop | 1920 × 600 px | ~3.2:1 |
 
 ---
 
-## 3. Cómo se implementa después (referencia técnica, no bloquea el diseño)
+## 3. Implementación técnica
 
-Cuando lleguen los 3 archivos:
+- `HeroWaveSlider`: paneles visibles 1 / 2 / 4 / 6 según ancho; flechas; PDF vía `/api/catalog/pdf`.
+- Datos: `HomeHeroPanel` en `home-hero-slides.ts`; CMS `home_hero` se mapea con `panelsFromCmsSlides`.
+- Debajo: barra negra de valor + `BrandCarousel`.
 
-- Se sirven con `<picture>` + `srcset`/`media` (uno por breakpoint), no un solo `<img>` escalado — evita servir el banner de 1920px a un celular.
-- `loading="eager"` + `fetchpriority="high"` en el hero (es contenido crítico, no lazy).
-- Reemplaza el `WireImage` actual en `features/catalog/ui/Hero.tsx`; el layout pasa de "texto + imagen en columnas" a **banner full-bleed** (ancho completo de la pantalla, no limitado al contenedor `max-w-7xl`) con el texto/CTA superpuestos.
-- Se define `width`/`height` (o `aspect-ratio`) explícito por breakpoint para evitar CLS, según regla de rendimiento.
+### Histórico
 
-## 4. Fila de marcas/categorías debajo del banner (patrón Chamo Import)
+- `HeroWaveSlider` ola grocery (rojo full-bleed) — reemplazado 2026-09-13 (0248).
+- `HeroBannerGrid` / `HeroCarousel` — retirados antes.
 
-No es un banner de Canva — es una fila de logos individuales:
+## 4. Fila de marcas (`BrandCarousel`)
 
-- Cada logo: archivo aparte, **PNG con fondo transparente o SVG**, alto objetivo ~40–56px en desktop (se escala proporcional en móvil/tablet), ancho libre según el logo.
-- Fondo neutro detrás de la fila (blanco o `rosver-soft`), logos en escala de grises u opacidad reducida con `hover` a color completo (patrón común, opcional).
-- Si son categorías propias en vez de marcas de terceros: mismo formato, ícono + nombre corto.
+Logos individuales PNG/SVG, alto ~40–56px. No forman parte del strip del hero.
 
----
+## 5. Checklist diseñador (modelo multipanel)
 
-## 5. Implementado: HeroWaveSlider (2026-09-07)
-
-Home usa **`HeroWaveSlider`** (reemplaza `HeroBannerGrid` / grilla de 4 tiles):
-
-Layout full-bleed estilo referencia grocery (adaptado a Rosver):
-
-| Zona | Contenido |
-| --- | --- |
-| Fondo | Rojo marca (`bg-rosver-red`), full-bleed |
-| Izquierda | Eyebrow + título + subtítulo + CTA pill |
-| Derecha | Imagen de producto **sin caja** (object-contain + sombra), solapa la ola |
-| Inferior | SVG ola blanca → transición a `BrandCarousel` |
-
-- Datos: `features/catalog/model/home-hero-slides.ts` (`HomeHeroSlide`: `id`, textos, `ctaTo`, `imageUrl`, `visible`, `sortOrder`).
-- Autoplay suave entre slides; dots; respeta `prefers-reduced-motion`.
-- Responsive: columna única en móvil; 2 columnas desde `lg`.
-- Fase lógica: slides desde `admin-content` / ERP.
-
-### Histórico (retirado)
-
-- `HeroBannerGrid` + `HOME_BANNERS` (grilla 1+1+2) — retirado 2026-09-07.
-- `HeroCarousel` + campañas Canva navideñas — obsoletas (0027 / 0032). Conservar medidas Canva de §2 si en el futuro se diseñan artes full-bleed por breakpoint.
-
-## 5.1 Implementado: BrandCarousel (2026-09-07)
-
-Debajo del hero:
-
-- Franja full-width con bordes superior/inferior (sin tarjeta ni cajas por logo).
-- Label fijo a la izquierda + marquee CSS; pausa en hover / reduced-motion.
-- Datos: `features/catalog/model/brands.ts`. Sin `logoUrl` → wordmark tipográfico.
-
-## 6. Checklist antes de mandar los diseños
-
-- [ ] 3 archivos (750×1000, 1024×768, 1920×600), nombrados `hero-movil`, `hero-tablet`, `hero-desktop`
-- [ ] Ninguno lleva el titular/CTA principal quemado en la imagen (va como HTML)
-- [ ] Zona segura respetada (7% de margen, franja para el texto según §2)
-- [ ] Exportados en WebP (o JPG si no hay otra opción) dentro del peso objetivo de la tabla
-- [ ] Logos de marcas/categorías (si aplica) como archivos individuales, no parte del banner
+- [ ] 5 archivos **800 × 1200** WebP (`hero-panel-01` … `05`)
+- [ ] Sin título ni pill quemados en la foto
+- [ ] Sujeto en 75% superior; inferior libre/oscuro
+- [ ] ≤ ~180 KB por archivo
+- [ ] Temática Rosver (herramientas / almacén / despacho / catálogo)
