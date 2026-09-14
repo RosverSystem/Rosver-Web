@@ -1,6 +1,6 @@
 # Pendientes — Rosver Web
 
-Última actualización: 2026-09-13 (0250 pill Mi carrito · v0.1.52)
+Última actualización: 2026-09-13 (0251 home Katrina/campaña · v0.1.53)
 
 ## Cómo leer esta tabla
 
@@ -35,6 +35,7 @@
 | Hero multipanel estilo Katrina + paleta Rosver + specs diseñador 800×1200 | 0248 |
 | Menú overlay oscuro (hamburguesa) con animaciones abrir/cerrar | 0249 |
 | Pill header «Mi carrito» una línea + badge | 0250 |
+| Home Katrina: categorías lifestyle + mayoristas + lo último de campaña | 0251 |
 
 ### Pendiente de auditoría 0240 (no crítico, para siguiente sesión)
 

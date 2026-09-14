@@ -11,7 +11,7 @@ Fuente de verdad para el agente al implementar UI y, después, lógica.
 
 | Ruta | Vista | Feature |
 | --- | --- | --- |
-| `/` | Home (hero **multipanel**, destacados, categorías, CTA) | `catalog` + `admin-content` (datos) |
+| `/` | Home (hero multipanel + categorías lifestyle + mayoristas + campaña) | `catalog` + `admin-content` |
 | `/catalogo` | Listado con filtros / búsqueda | `catalog` |
 | `/catalogo/:categorySlug` | Listado filtrado por categoría | `catalog` |
 | `/ofertas` | Ofertas — **implementado:** cards horizontales + volumen (`OffersPage`) | `catalog` |
@@ -126,17 +126,13 @@ Cada vista debe construirse con estos bloques (aunque el dato sea mock).
 
 ### Home
 
-- Header (logo, nav, carrito, login) — **implementado:** `PublicNavbar` (marketplace 3 niveles)
-- Hero — **implementado:** `HeroWaveSlider` (full-bleed rojo + producto sin caja + ola blanca; datos `HOME_HERO_SLIDES`)
-- Marcas — **implementado:** `BrandCarousel` (franja sin cajas)
-- Cinta de valor — **implementado:** `ValueRibbon`
-- Categorías — **implementado:** `CategoryCarousel` (cards suaves + flechas + autoplay)
-- Destacados / tendencia — **implementado:** `ProductCarousel` (+ tabs en `TrendingProducts`)
-- Promo — **implementado:** `PromoBanners` (banner oferta ancho)
-- Cómo comprar / industrias / CTA — círculos y cards suaves estilo landing
-- Productos destacados
-- CTA contacto / cotizar
+- Header — **implementado:** `PublicNavbar` + overlay menú oscuro + pill Mi carrito
+- Hero multipanel — **implementado:** `HeroWaveSlider` (CTA + paneles + barra valor)
+- Categorías lifestyle — **implementado:** `CategoryCarousel` / `CategoryHomeCard` («Busca por categoría.»)
+- Más cotizados mayoristas — **implementado:** `TrendingProducts` (cards TOP + precio x mayor)
+- Lo último de campaña — **implementado:** `CampaignLatestSection` (grid bento + Ver todo)
 - Footer (datos empresa, links)
+- _Retirados del home (0251):_ BrandCarousel, ValueRibbon, PromoBanners, HowToBuy, IndustrySolutions, CtaBand, Destacados genéricos
 
 ### Listado ofertas
 

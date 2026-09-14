@@ -4,12 +4,10 @@ import { prefersReducedMotion } from '@/shared/lib/gsap'
 import { ArrowRight } from 'cssvg-icons'
 import { useEffect, useRef, useState } from 'react'
 
-const AUTOPLAY_MS = 5000
+const AUTOPLAY_MS = 5200
 
 /**
- * Categorías tipo landing: cards suaves, CTA rojo uniforme,
- * carrusel con flechas (sin barra de scroll visible).
- * Datos: categorías principales con showOnHome (DB o mocks).
+ * «Busca por categoría» — carrusel lifestyle (referencia Katrina → Rosver).
  */
 export function CategoryCarousel({ categories }: { categories: Category[] }) {
   const items = categories
@@ -21,6 +19,7 @@ export function CategoryCarousel({ categories }: { categories: Category[] }) {
 
   const scrollerRef = useRef<HTMLDivElement>(null)
   const [paused, setPaused] = useState(false)
+  const [active, setActive] = useState(0)
   const reduceMotion = prefersReducedMotion()
 
   const scrollByCard = (dir: 1 | -1) => {
@@ -29,13 +28,18 @@ export function CategoryCarousel({ categories }: { categories: Category[] }) {
     const card = el.querySelector<HTMLElement>('[data-cat-card]')
     if (!card) return
     const styles = getComputedStyle(el)
-    const gap = Number.parseFloat(styles.columnGap || styles.gap || '20') || 20
+    const gap = Number.parseFloat(styles.columnGap || styles.gap || '16') || 16
     const step = card.offsetWidth + gap
     const max = el.scrollWidth - el.clientWidth
     let next = el.scrollLeft + dir * step
     if (next > max - 4) next = 0
     if (next < 0) next = max
     el.scrollTo({ left: next, behavior: 'smooth' })
+    setActive((i) => {
+      const n = items.length
+      if (!n) return 0
+      return (i + dir + n) % n
+    })
   }
 
   useEffect(() => {
@@ -47,70 +51,60 @@ export function CategoryCarousel({ categories }: { categories: Category[] }) {
   if (!items.length) return null
 
   return (
-    <section aria-label="Categorías destacadas" className="relative min-w-0 overflow-x-hidden">
-      <div className="mb-6 flex items-end justify-between gap-3 sm:mb-8">
-        <div>
-          <p className="text-xs font-bold tracking-[0.16em] text-rosver-red uppercase">
-            Catálogo
-          </p>
-          <h2 className="mt-1 font-display text-2xl font-bold tracking-tight text-rosver-ink sm:text-3xl">
-            Explora por categoría
-          </h2>
-          <p className="mt-2 max-w-lg text-sm text-rosver-muted">
-            Rubros de importación con stock para ferreterías, distribuidores y proyectos.
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <CarouselNavButton
-            label="Anterior"
-            onClick={() => scrollByCard(-1)}
-            flip
-          />
-          <CarouselNavButton label="Siguiente" onClick={() => scrollByCard(1)} />
-        </div>
+    <section
+      aria-label="Busca por categoría"
+      className="relative min-w-0 overflow-x-hidden"
+    >
+      <div className="mb-6 text-center sm:mb-8">
+        <h2 className="font-display text-3xl font-bold tracking-tight text-rosver-ink sm:text-4xl">
+          Busca por categoría
+          <span className="text-rosver-red">.</span>
+        </h2>
+        <p className="mx-auto mt-2 max-w-lg text-sm text-rosver-muted sm:text-base">
+          Encuentra rápido lo que buscas, organizado para tu negocio.
+        </p>
       </div>
 
-      <div
-        ref={scrollerRef}
-        onMouseEnter={() => setPaused(true)}
-        onMouseLeave={() => setPaused(false)}
-        className="hide-scrollbar flex gap-5 overflow-x-auto pb-1 snap-x snap-mandatory sm:gap-6"
-      >
-        {items.map((category, i) => (
-          <CategoryHomeCard
-            key={category.id}
-            category={category}
-            toneIndex={i}
-            className="w-[min(85vw,18.5rem)] shrink-0 snap-start sm:w-[22rem] sm:max-w-none"
+      <div className="relative">
+        <button
+          type="button"
+          aria-label="Anterior"
+          onClick={() => scrollByCard(-1)}
+          className="absolute top-1/2 left-0 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full border border-rosver-line bg-white/95 text-rosver-ink shadow-md transition hover:border-rosver-red hover:text-rosver-red sm:-left-2 sm:size-11 lg:-left-3"
+        >
+          <ArrowRight
+            size={18}
+            color="currentColor"
+            strokeWidth={2}
+            className="rotate-180"
           />
-        ))}
+        </button>
+        <button
+          type="button"
+          aria-label="Siguiente"
+          onClick={() => scrollByCard(1)}
+          className="absolute top-1/2 right-0 z-10 flex size-10 -translate-y-1/2 items-center justify-center rounded-full border border-rosver-line bg-white/95 text-rosver-ink shadow-md transition hover:border-rosver-red hover:text-rosver-red sm:-right-2 sm:size-11 lg:-right-3"
+        >
+          <ArrowRight size={18} color="currentColor" strokeWidth={2} />
+        </button>
+
+        <div
+          ref={scrollerRef}
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+          className="hide-scrollbar flex gap-4 overflow-x-auto px-1 pb-2 snap-x snap-mandatory sm:gap-5"
+        >
+          {items.map((category, i) => (
+            <CategoryHomeCard
+              key={category.id}
+              category={category}
+              toneIndex={i}
+              highlighted={i === active}
+              className="w-[min(72vw,15rem)] shrink-0 snap-start sm:w-[16.5rem] lg:w-[17.5rem]"
+            />
+          ))}
+        </div>
       </div>
     </section>
-  )
-}
-
-function CarouselNavButton({
-  label,
-  onClick,
-  flip,
-}: {
-  label: string
-  onClick: () => void
-  flip?: boolean
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      onClick={onClick}
-      className="inline-flex size-10 items-center justify-center rounded-full border border-rosver-line bg-white text-rosver-ink shadow-sm transition hover:border-rosver-red hover:text-rosver-red"
-    >
-      <ArrowRight
-        size={18}
-        color="currentColor"
-        strokeWidth={2}
-        className={flip ? 'rotate-180' : undefined}
-      />
-    </button>
   )
 }
