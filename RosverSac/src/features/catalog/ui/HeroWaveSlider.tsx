@@ -76,8 +76,11 @@ export function HeroWaveSlider() {
   }, [])
 
   const items = panels
-  const total = 1 + items.length // CTA + paneles
-  const scrollMax = Math.max(0, total - visible)
+  const hasPanels = items.length > 0
+  // Sin paneles de imagen: CTA a ancho completo (no una franja estrecha).
+  const total = hasPanels ? 1 + items.length : 1
+  const effectiveVisible = hasPanels ? visible : 1
+  const scrollMax = Math.max(0, total - effectiveVisible)
 
   useEffect(() => {
     setIndex((i) => Math.min(i, scrollMax))
@@ -135,7 +138,7 @@ export function HeroWaveSlider() {
     }
   }
 
-  const trackWidthPct = (total / visible) * 100
+  const trackWidthPct = (total / effectiveVisible) * 100
   const itemWidthPct = 100 / total
   const translatePct = (index / total) * 100
 
@@ -168,7 +171,7 @@ export function HeroWaveSlider() {
         <div className="overflow-hidden">
           <div
             className={cn(
-              'flex h-[min(62dvh,520px)] sm:h-[min(66dvh,600px)] lg:h-[min(70dvh,680px)]',
+              'flex h-[min(58dvh,480px)] sm:h-[min(62dvh,560px)] lg:h-[min(68dvh,640px)]',
               reduceMotion ? '' : 'transition-transform duration-500 ease-out',
             )}
             style={{
@@ -176,40 +179,18 @@ export function HeroWaveSlider() {
               transform: `translateX(-${translatePct}%)`,
             }}
           >
-            <div
-              className="relative flex h-full shrink-0 flex-col justify-end bg-rosver-ink px-6 py-8 sm:px-8 sm:py-10"
-              style={{ width: `${itemWidthPct}%` }}
-            >
-              <div
-                className="pointer-events-none absolute inset-0 opacity-50"
-                style={{
-                  background:
-                    'radial-gradient(ellipse at 30% 20%, rgba(227,6,19,0.5), transparent 55%), linear-gradient(160deg, #0D0D0D 0%, #1a1a1a 100%)',
-                }}
-                aria-hidden
-              />
-              <div className="relative z-[1] max-w-[16rem] sm:max-w-[18rem]">
-                <p className="font-display text-2xl leading-[1.05] font-bold tracking-tight text-balance uppercase sm:text-3xl lg:text-[2rem]">
-                  {HOME_HERO_CTA.title}
-                </p>
-                <button
-                  type="button"
-                  disabled={pdfBusy}
-                  onClick={() => void downloadPdf()}
-                  className="mt-6 inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-5 py-2.5 text-xs font-extrabold tracking-wide text-rosver-ink uppercase transition hover:bg-rosver-soft disabled:opacity-70 sm:text-sm"
-                >
-                  <Download size={16} color="currentColor" strokeWidth={2} />
-                  {pdfBusy ? 'Generando…' : HOME_HERO_CTA.ctaLabel}
-                  <span aria-hidden>›</span>
-                </button>
-              </div>
-            </div>
+            <HeroCtaPanel
+              widthPct={itemWidthPct}
+              fullBleed={!hasPanels}
+              pdfBusy={pdfBusy}
+              onDownload={() => void downloadPdf()}
+            />
 
             {items.map((panel, i) => (
               <HeroImagePanel
                 key={panel.id}
                 panel={panel}
-                eager={i < visible}
+                eager={i < effectiveVisible}
                 widthPct={itemWidthPct}
               />
             ))}
@@ -255,6 +236,137 @@ export function HeroWaveSlider() {
         </ul>
       </div>
     </section>
+  )
+}
+
+function HeroCtaPanel({
+  widthPct,
+  fullBleed,
+  pdfBusy,
+  onDownload,
+}: {
+  widthPct: number
+  fullBleed: boolean
+  pdfBusy: boolean
+  onDownload: () => void
+}) {
+  return (
+    <div
+      className={cn(
+        'relative flex h-full shrink-0 flex-col justify-center overflow-hidden bg-rosver-ink',
+        fullBleed
+          ? 'px-6 py-10 sm:px-10 sm:py-12 lg:px-16 lg:py-14'
+          : 'justify-end px-5 py-8 sm:px-7 sm:py-10',
+      )}
+      style={{ width: `${widthPct}%` }}
+    >
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: fullBleed
+            ? 'radial-gradient(ellipse 80% 70% at 18% 28%, rgba(227,6,19,0.42), transparent 58%), radial-gradient(ellipse 50% 40% at 85% 80%, rgba(30,58,95,0.35), transparent 55%), linear-gradient(165deg, #0D0D0D 0%, #161616 55%, #0D0D0D 100%)'
+            : 'radial-gradient(ellipse at 25% 15%, rgba(227,6,19,0.48), transparent 58%), linear-gradient(160deg, #0D0D0D 0%, #1a1a1a 100%)',
+        }}
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute top-0 left-0 h-full w-1 bg-rosver-red sm:w-1.5"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.07]"
+        style={{
+          backgroundImage:
+            'linear-gradient(rgba(255,255,255,0.35) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.35) 1px, transparent 1px)',
+          backgroundSize: '28px 28px',
+        }}
+        aria-hidden
+      />
+
+      <div
+        className={cn(
+          'relative z-[1]',
+          fullBleed
+            ? 'mx-auto w-full max-w-3xl sm:mx-0'
+            : 'max-w-[15.5rem] sm:max-w-[17rem]',
+        )}
+      >
+        <p className="mb-3 text-[10px] font-bold tracking-[0.22em] text-rosver-red uppercase sm:mb-4 sm:text-[11px]">
+          Rosver SAC
+        </p>
+
+        <h2
+          className={cn(
+            'font-display font-bold tracking-tight text-white uppercase',
+            fullBleed
+              ? 'text-3xl leading-[1.08] sm:text-4xl md:text-5xl lg:text-[3.25rem]'
+              : 'text-xl leading-[1.1] sm:text-2xl lg:text-[1.65rem]',
+          )}
+        >
+          {fullBleed ? (
+            <>
+              Despachos
+              <br />
+              <span className="text-white/90">y catálogo</span>
+              <br />
+              <span className="text-rosver-red">oficial</span>
+            </>
+          ) : (
+            HOME_HERO_CTA.title
+          )}
+        </h2>
+
+        {fullBleed ? (
+          <p className="mt-4 max-w-md text-sm leading-relaxed text-white/70 sm:mt-5 sm:text-base">
+            Precios desde unidad, envíos a todo el Perú y el listado completo
+            listo para cotizar.
+          </p>
+        ) : null}
+
+        <div
+          className={cn(
+            'flex flex-wrap items-center gap-3',
+            fullBleed ? 'mt-7 sm:mt-8' : 'mt-5 sm:mt-6',
+          )}
+        >
+          <button
+            type="button"
+            disabled={pdfBusy}
+            onClick={onDownload}
+            className={cn(
+              'inline-flex items-center justify-center gap-2.5 rounded-full bg-white font-extrabold tracking-wide text-rosver-ink uppercase whitespace-nowrap transition',
+              'hover:bg-rosver-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white',
+              'disabled:opacity-70',
+              fullBleed
+                ? 'min-h-12 px-6 py-3 text-sm sm:px-7 sm:text-[0.95rem]'
+                : 'min-h-11 px-4 py-2.5 text-[11px] sm:px-5 sm:text-xs',
+            )}
+          >
+            <Download
+              size={fullBleed ? 18 : 15}
+              color="currentColor"
+              strokeWidth={2}
+            />
+            <span>{pdfBusy ? 'Generando…' : HOME_HERO_CTA.ctaLabel}</span>
+            <ArrowRight
+              size={fullBleed ? 18 : 15}
+              color="currentColor"
+              strokeWidth={2}
+            />
+          </button>
+
+          {fullBleed ? (
+            <Link
+              to="/catalogo"
+              className="inline-flex min-h-12 items-center gap-2 rounded-full border border-white/35 px-5 py-3 text-sm font-bold tracking-wide text-white uppercase transition hover:border-white hover:bg-white/10 sm:px-6"
+            >
+              Ver catálogo
+              <ArrowRight size={16} color="currentColor" strokeWidth={2} />
+            </Link>
+          ) : null}
+        </div>
+      </div>
+    </div>
   )
 }
 

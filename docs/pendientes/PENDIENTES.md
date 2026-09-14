@@ -1,6 +1,6 @@
 # Pendientes — Rosver Web
 
-Última actualización: 2026-09-13 (0256 categoría carousel UX · v0.1.59)
+Última actualización: 2026-09-13 (0257 hero CTA full-bleed · v0.1.60)
 
 ## Cómo leer esta tabla
 
@@ -41,6 +41,7 @@
 | Cookie consent con librería **sileo** (action toast) | 0254 |
 | Sileo cookies: bajar offset bottom 88→24 | 0255 |
 | Fix carrusel categorías (recorte / flechas / fallback home) | 0256 |
+| Hero CTA full-bleed (despachos / PDF) | 0257 |
 
 ### Pendiente de auditoría 0240 (no crítico, para siguiente sesión)
 
