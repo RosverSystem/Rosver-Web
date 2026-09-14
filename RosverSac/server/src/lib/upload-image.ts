@@ -10,10 +10,15 @@ const ALLOWED_TYPES = new Set([
 
 const MAX_BYTES = 2.5 * 1024 * 1024
 
-export type UploadFolder = 'categories' | 'brands' | 'products'
+export type UploadFolder = 'categories' | 'brands' | 'products' | 'slider'
 
 export function isUploadFolder(v: string): v is UploadFolder {
-  return v === 'categories' || v === 'brands' || v === 'products'
+  return (
+    v === 'categories' ||
+    v === 'brands' ||
+    v === 'products' ||
+    v === 'slider'
+  )
 }
 
 function slugFileBase(name: string) {

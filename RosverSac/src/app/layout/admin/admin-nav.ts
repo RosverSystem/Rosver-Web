@@ -130,10 +130,10 @@ export const ADMIN_NAV: AdminNavEntry[] = [
   },
   {
     type: 'link',
-    id: 'contenido',
-    name: 'Contenido',
-    link: '/admin/contenido',
-    keywords: ['contenido', 'hero', 'home', 'cms', 'slides'],
+    id: 'slider',
+    name: 'Slider',
+    link: '/admin/slider',
+    keywords: ['slider', 'contenido', 'hero', 'home', 'cms', 'slides', 'banner'],
     Icon: Camera,
   },
   {
@@ -263,7 +263,8 @@ export function adminPageTitle(pathname: string): string {
   if (pathname.startsWith('/admin/usuarios')) return 'Usuarios'
   if (pathname.startsWith('/admin/roles')) return 'Roles'
   if (pathname.startsWith('/admin/leads')) return 'Contactos'
-  if (pathname.startsWith('/admin/contenido')) return 'Contenido web'
+  if (pathname.startsWith('/admin/slider') || pathname.startsWith('/admin/contenido'))
+    return 'Slider'
   if (pathname.startsWith('/admin/almacenamiento')) return 'Almacenamiento'
   if (pathname.startsWith('/admin/ofertas')) return 'Ofertas'
   if (pathname.startsWith('/admin/marcas')) return 'Marcas'

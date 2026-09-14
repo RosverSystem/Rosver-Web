@@ -1,6 +1,6 @@
 # Pendientes — Rosver Web
 
-Última actualización: 2026-09-14 (0266 fix presentación precio · v0.1.69)
+Última actualización: 2026-09-14 (0267 módulo Slider hero · v0.1.70)
 
 ## Cómo leer esta tabla
 
@@ -51,6 +51,7 @@
 | Corazón favorito: relleno rojo vs outline | 0264 |
 | Habilitar/ocultar/eliminar + modales aviso ERP | 0265 |
 | Fix agregar presentación/precio (label null) | 0266 |
+| Módulo Contenido → Slider (CMS hero + vínculos) | 0267 |
 
 ### Pendiente de auditoría 0240 (no crítico, para siguiente sesión)
 

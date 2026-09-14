@@ -5,7 +5,7 @@ import { AdminField, AdminInput, AdminSelect } from '@/shared/ui/admin-field'
 import { AdminModal } from '@/shared/ui/admin-modal'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-type Folder = 'categories' | 'brands' | 'products' | 'all'
+type Folder = 'categories' | 'brands' | 'products' | 'slider' | 'all'
 
 type StorageObject = {
   key: string
@@ -210,6 +210,7 @@ export function AdminMediaPicker({
                   <option value="brands">Marcas</option>
                   <option value="products">Productos</option>
                   <option value="categories">Categorías</option>
+                  <option value="slider">Slider</option>
                 </AdminSelect>
               </AdminField>
             </div>
@@ -237,6 +238,7 @@ export function AdminMediaPicker({
                   <option value="brands">Marcas</option>
                   <option value="products">Productos</option>
                   <option value="categories">Categorías</option>
+                  <option value="slider">Slider</option>
                 </AdminSelect>
               </AdminField>
               <input

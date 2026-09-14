@@ -3,7 +3,7 @@ import { cn } from '@/shared/lib'
 import { AdminMediaPicker } from '@/shared/ui/admin-media-picker'
 import { useRef, useState, type DragEvent } from 'react'
 
-type Folder = 'categories' | 'brands' | 'products'
+type Folder = 'categories' | 'brands' | 'products' | 'slider'
 
 type Props = {
   folder: Folder

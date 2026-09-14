@@ -252,7 +252,11 @@ export function App() {
                   <Route path="ofertas" element={<AdminOffersPage />} />
                   <Route path="roles" element={<AdminRolesPage />} />
                   <Route path="leads" element={<AdminLeadsPage />} />
-                  <Route path="contenido" element={<AdminContentPage />} />
+                  <Route path="slider" element={<AdminContentPage />} />
+                  <Route
+                    path="contenido"
+                    element={<Navigate to="/admin/slider" replace />}
+                  />
                   <Route path="cotizaciones" element={<AdminQuotesPage />} />
                   <Route path="pedidos" element={<AdminOrdersPage />} />
                   <Route path="reclamaciones" element={<AdminComplaintsPage />} />

@@ -6,7 +6,7 @@ import {
   publicUrlForKey,
   r2Enabled,
 } from '../lib/r2.js'
-import { isUploadFolder, uploadPublicImage } from '../lib/upload-image.js'
+import { isUploadFolder, uploadPublicImage, type UploadFolder } from '../lib/upload-image.js'
 import {
   requireAuth,
   requireRole,
@@ -21,6 +21,7 @@ const FOLDER_LABELS: Record<string, string> = {
   products: 'Productos',
   categories: 'Categorías',
   brands: 'Marcas',
+  slider: 'Slider',
   avatars: 'Avatares',
 }
 
@@ -57,7 +58,7 @@ adminStorageRoutes.get('/storage', async (c) => {
       : listed.objects
 
     // Carpetas conocidas para UI (el front ya tiene chips; esto ayuda a otros clientes).
-    const known = ['products/', 'categories/', 'brands/', 'avatars/']
+    const known = ['products/', 'categories/', 'brands/', 'slider/', 'avatars/']
     const folders = (prefix
       ? []
       : known.map((p) => {
@@ -120,19 +121,25 @@ adminStorageRoutes.post('/storage/upload', async (c) => {
   }
   if (!isUploadFolder(folderRaw) && folderRaw !== 'avatars') {
     return c.json(
-      { error: 'Carpeta inválida. Usa products, categories, brands o avatars.' },
+      {
+        error:
+          'Carpeta inválida. Usa products, categories, brands, slider o avatars.',
+      },
       400,
     )
   }
   if (folderRaw === 'avatars') {
     return c.json(
-      { error: 'Los avatares se suben desde el perfil. Usa products, categories o brands.' },
+      {
+        error:
+          'Los avatares se suben desde el perfil. Usa products, categories, brands o slider.',
+      },
       400,
     )
   }
   const result = await uploadPublicImage({
     file,
-    folder: folderRaw as 'products' | 'categories' | 'brands',
+    folder: folderRaw as UploadFolder,
     displayName: displayName?.trim() || undefined,
   })
   if (!result.ok) {

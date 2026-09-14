@@ -2,8 +2,8 @@
  * Paneles del hero multipanel (referencia Katrina → Rosver).
  * Medidas: HERO_PANEL_DESIGNER_SPECS + docs/architecture/06-banners-hero-y-assets.md
  *
- * Demo local: 4 paneles con foto hasta que CMS / R2 tenga assets finales.
- * CMS real: `panelsFromCmsSlides` solo acepta imageUrl no-Unsplash.
+ * Fuente de verdad en prod: CMS `/api/content/home_hero` (módulo Slider).
+ * Fallback local: HOME_HERO_PANELS si la API no responde.
  */
 
 export const HERO_PANEL_DESIGNER_SPECS = {
@@ -24,6 +24,18 @@ export type HomeHeroPanel = {
   href?: string
   visible?: boolean
   sortOrder?: number
+  linkType?: 'none' | 'category' | 'product' | 'custom'
+  categoryId?: string | null
+  subcategoryId?: string | null
+  productId?: string | null
+  customHref?: string | null
+}
+
+export type HomeHeroCms = {
+  ctaTitle: string
+  ctaLabel: string
+  autoplayMs: number
+  panels: HomeHeroPanel[]
 }
 
 export const HOME_HERO_CTA = {
@@ -47,7 +59,7 @@ export type HomeHeroSlide = {
 
 /**
  * Demo visual (estructura del ejemplo Katrina, paleta Rosver).
- * Sustituir por fotos propias 800×1200 en CMS / R2 (P134).
+ * Se usa solo si no hay CMS o falla la red.
  */
 export const HOME_HERO_PANELS: HomeHeroPanel[] = [
   {
@@ -99,32 +111,70 @@ export const HOME_HERO_PANELS: HomeHeroPanel[] = [
 export const HOME_HERO_SLIDES: HomeHeroSlide[] = []
 
 /**
- * Slides CMS con imagen real. Si el CMS trae Unsplash, se ignora esa fila
- * (el demo local cubre hasta tener assets R2).
+ * Parsea el valor CMS `home_hero` → paneles + meta CTA / autoplay.
  */
-export function panelsFromCmsSlides(raw: unknown): HomeHeroPanel[] | null {
+export function homeHeroFromCms(raw: unknown): HomeHeroCms | null {
   if (!raw || typeof raw !== 'object') return null
-  const slides = (raw as { slides?: unknown }).slides
-  if (!Array.isArray(slides) || slides.length === 0) return null
+  const obj = raw as Record<string, unknown>
+  const slides = obj.slides
+  if (!Array.isArray(slides)) return null
 
-  const mapped: HomeHeroPanel[] = []
+  const panels: HomeHeroPanel[] = []
   for (let i = 0; i < slides.length; i++) {
     const row = slides[i] as Record<string, unknown>
     const imageUrl = String(row.imageUrl ?? '').trim()
     if (!imageUrl) continue
-    if (/unsplash\.com/i.test(imageUrl)) continue
+    const visible = row.visible !== false
+    if (!visible) continue
 
-    mapped.push({
+    const hrefRaw = String(row.href ?? row.ctaLink ?? row.customHref ?? '').trim()
+    panels.push({
       id: String(row.id ?? `cms-${i}`),
       title: String(row.title ?? 'Rosver').toUpperCase(),
-      badgeLeft: row.badgeLeft ? String(row.badgeLeft) : 'Rosver\nSAC',
+      badgeLeft: row.badgeLeft
+        ? String(row.badgeLeft)
+        : row.cta
+          ? String(row.cta)
+          : 'Rosver\nSAC',
       badgeRight: row.badgeRight ? String(row.badgeRight) : 'Ver\nmás',
       imageUrl,
-      href: String(row.ctaLink ?? row.href ?? '/catalogo'),
+      href: hrefRaw || undefined,
       visible: true,
-      sortOrder: i + 1,
+      sortOrder:
+        typeof row.sortOrder === 'number' ? row.sortOrder : i + 1,
+      linkType:
+        row.linkType === 'category' ||
+        row.linkType === 'product' ||
+        row.linkType === 'custom' ||
+        row.linkType === 'none'
+          ? row.linkType
+          : hrefRaw
+            ? 'custom'
+            : 'none',
+      categoryId: row.categoryId ? String(row.categoryId) : null,
+      subcategoryId: row.subcategoryId ? String(row.subcategoryId) : null,
+      productId: row.productId ? String(row.productId) : null,
+      customHref: row.customHref ? String(row.customHref) : null,
     })
   }
 
-  return mapped.length ? mapped : null
+  panels.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+
+  const autoplayMs =
+    typeof obj.autoplayMs === 'number' && obj.autoplayMs >= 0
+      ? obj.autoplayMs
+      : 5000
+
+  return {
+    ctaTitle: String(obj.ctaTitle ?? HOME_HERO_CTA.title),
+    ctaLabel: String(obj.ctaLabel ?? HOME_HERO_CTA.ctaLabel),
+    autoplayMs,
+    panels,
+  }
+}
+
+/** @deprecated Usar homeHeroFromCms. */
+export function panelsFromCmsSlides(raw: unknown): HomeHeroPanel[] | null {
+  const cms = homeHeroFromCms(raw)
+  return cms?.panels.length ? cms.panels : null
 }

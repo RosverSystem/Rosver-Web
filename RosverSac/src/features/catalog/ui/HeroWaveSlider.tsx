@@ -1,7 +1,7 @@
 import {
   HOME_HERO_CTA,
   HOME_HERO_PANELS,
-  panelsFromCmsSlides,
+  homeHeroFromCms,
   type HomeHeroPanel,
 } from '@/features/catalog/model/home-hero-slides'
 import { api } from '@/shared/lib/api'
@@ -14,7 +14,7 @@ import {
   Compass,
   Verified,
 } from 'cssvg-icons'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 const TRUST = [
@@ -41,7 +41,8 @@ function useVisiblePanels() {
 
 /**
  * Hero multipanel estilo Katrina → Rosver.
- * CTA oscuro + 4 paneles foto + pills partido rojo/blanco + trust bar.
+ * CTA oscuro + paneles foto + pills partido rojo/blanco + trust bar.
+ * Autoplay + flechas; contenido desde CMS `/api/content/home_hero`.
  */
 export function HeroWaveSlider() {
   const toasts = useOptionalToasts()
@@ -52,17 +53,25 @@ export function HeroWaveSlider() {
       .slice()
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
   )
+  const [ctaTitle, setCtaTitle] = useState<string>(HOME_HERO_CTA.title)
+  const [ctaLabel, setCtaLabel] = useState<string>(HOME_HERO_CTA.ctaLabel)
+  const [autoplayMs, setAutoplayMs] = useState(5000)
   const [index, setIndex] = useState(0)
   const [pdfBusy, setPdfBusy] = useState(false)
+  const [paused, setPaused] = useState(false)
+  const hoverRef = useRef(false)
 
   useEffect(() => {
     let cancelled = false
     void api<{ value: unknown }>('/api/content/home_hero')
       .then((res) => {
         if (cancelled) return
-        const mapped = panelsFromCmsSlides(res.value)
-        if (mapped?.length) {
-          setPanels(mapped)
+        const cms = homeHeroFromCms(res.value)
+        if (cms?.panels.length) {
+          setPanels(cms.panels)
+          setCtaTitle(cms.ctaTitle)
+          setCtaLabel(cms.ctaLabel)
+          setAutoplayMs(cms.autoplayMs)
           setIndex(0)
         }
       })
@@ -90,6 +99,15 @@ export function HeroWaveSlider() {
       return next
     })
   }
+
+  useEffect(() => {
+    if (reduceMotion || autoplayMs <= 0 || scrollMax <= 0 || paused) return
+    const id = window.setInterval(() => {
+      if (hoverRef.current) return
+      setIndex((i) => (i >= scrollMax ? 0 : i + 1))
+    }, autoplayMs)
+    return () => window.clearInterval(id)
+  }, [autoplayMs, scrollMax, reduceMotion, paused])
 
   async function downloadPdf() {
     if (pdfBusy) return
@@ -138,9 +156,39 @@ export function HeroWaveSlider() {
   const itemWidthPct = 100 / total
   const translatePct = (index / total) * 100
 
+  const titleLines = (() => {
+    const raw = ctaTitle.trim()
+    if (!raw) return ['DESPACHOS Y', 'CATÁLOGO', 'OFICIAL']
+    if (raw.includes('\n')) {
+      return raw.split(/\n+/).map((l) => l.trim()).filter(Boolean)
+    }
+    const words = raw.split(/\s+/).filter(Boolean)
+    const lines: string[] = []
+    for (let i = 0; i < words.length; i += 2) {
+      lines.push(words.slice(i, i + 2).join(' '))
+    }
+    return lines.length ? lines : ['DESPACHOS Y', 'CATÁLOGO', 'OFICIAL']
+  })()
+
   return (
     <section className="relative isolate bg-[#1a1224] text-white">
-      <div className="relative">
+      <div
+        className="relative"
+        onMouseEnter={() => {
+          hoverRef.current = true
+          setPaused(true)
+        }}
+        onMouseLeave={() => {
+          hoverRef.current = false
+          setPaused(false)
+        }}
+        onFocusCapture={() => setPaused(true)}
+        onBlurCapture={(e) => {
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+            setPaused(false)
+          }
+        }}
+      >
         {scrollMax > 0 ? (
           <>
             <button
@@ -177,6 +225,8 @@ export function HeroWaveSlider() {
           >
             <HeroCtaPanel
               widthPct={itemWidthPct}
+              titleLines={titleLines}
+              ctaLabel={ctaLabel}
               pdfBusy={pdfBusy}
               onDownload={() => void downloadPdf()}
             />
@@ -232,13 +282,17 @@ export function HeroWaveSlider() {
   )
 }
 
-/** Panel CTA — como el ejemplo: tipografía blanca + pill PDF. */
+/** Panel CTA — tipografía blanca + pill PDF (textos desde CMS). */
 function HeroCtaPanel({
   widthPct,
+  titleLines,
+  ctaLabel,
   pdfBusy,
   onDownload,
 }: {
   widthPct: number
+  titleLines: string[]
+  ctaLabel: string
   pdfBusy: boolean
   onDownload: () => void
 }) {
@@ -249,11 +303,12 @@ function HeroCtaPanel({
     >
       <div className="relative z-[1] max-w-[13.5rem] sm:max-w-[15rem]">
         <h2 className="font-display text-[1.35rem] leading-[1.05] font-bold tracking-tight text-white uppercase sm:text-2xl lg:text-[1.75rem]">
-          Despachos
-          <br />
-          y catálogo
-          <br />
-          oficial
+          {titleLines.map((line, i) => (
+            <span key={`${line}-${i}`}>
+              {i > 0 ? <br /> : null}
+              {line}
+            </span>
+          ))}
         </h2>
         <button
           type="button"
@@ -261,7 +316,7 @@ function HeroCtaPanel({
           onClick={onDownload}
           className="mt-6 inline-flex min-h-10 items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[11px] font-extrabold tracking-wide text-rosver-ink uppercase whitespace-nowrap transition hover:bg-rosver-soft disabled:opacity-70 sm:mt-7 sm:min-h-11 sm:text-xs"
         >
-          {pdfBusy ? 'Generando…' : HOME_HERO_CTA.ctaLabel}
+          {pdfBusy ? 'Generando…' : ctaLabel}
           <span aria-hidden className="text-base leading-none">
             ›
           </span>
@@ -327,7 +382,7 @@ function HeroImagePanel({
   )
 }
 
-/** Pill partido rojo | blanco (en el ejemplo era rosa Katrina). */
+/** Pill partido rojo | blanco. */
 function SplitPill({ left, right }: { left: string; right: string }) {
   return (
     <span className="inline-flex max-w-full overflow-hidden rounded-full text-[8px] leading-[1.2] font-extrabold tracking-wide uppercase sm:text-[9px]">

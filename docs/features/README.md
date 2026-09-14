@@ -13,7 +13,7 @@
 | [account](./account.md) | Área cliente | activa (wireframe) |
 | [admin-catalog](./admin-catalog.md) | Productos, precios, marcas, categorías ERP | activa (v1 API+UI) |
 | [admin-media](./admin-media.md) | Almacenamiento R2 (grid + modal) | activa |
-| [admin-content](./admin-content.md) | Contenido de la web | activa (wireframe) |
+| [admin-content](./admin-content.md) | Slider del inicio (hero CMS) | activa |
 | [admin-leads](./admin-leads.md) | Bandeja de leads | activa (wireframe) |
 | [admin-orders](./admin-orders.md) | Pedidos en backoffice | activa (API `order_requests`) |
 | [admin-users](./admin-users.md) | Usuarios y roles | activa (wireframe) |
