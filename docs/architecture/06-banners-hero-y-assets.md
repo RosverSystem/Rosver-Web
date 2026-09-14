@@ -8,11 +8,11 @@ Cumple `06-performance`: paneles livianos; solo el primero va `eager`.
 
 ## 0. Modelo actual — paneles verticales (prioridad diseñador)
 
-El hero es un **strip** de columnas: 1 panel CTA (solo tipografía CSS, sin foto) + **5 paneles con foto vertical**.
+El hero es un **strip** de columnas: 1 panel CTA (solo tipografía CSS, sin foto) + **4 paneles con foto vertical**.
 
 | Asset | Tamaño canvas | Ratio | Cantidad | Peso |
 | --- | --- | --- | --- | --- |
-| **Panel foto** | **800 × 1200 px** | **2:3** vertical | **5** | WebP ≤ ~180 KB c/u |
+| **Panel foto** | **800 × 1200 px** | **2:3** vertical | **4** | WebP ≤ ~180 KB c/u |
 | Master layout (opcional) | 1920 × 720 px | ~8:3 | 1 | Solo referencia de composición |
 
 ### Qué va en la imagen vs en HTML
@@ -38,9 +38,9 @@ El hero es un **strip** de columnas: 1 panel CTA (solo tipografía CSS, sin foto
 
 ### Nombres sugeridos de archivo
 
-`hero-panel-01.webp` … `hero-panel-05.webp`
+`hero-panel-01.webp` … `hero-panel-04.webp`
 
-Código: `HeroWaveSlider` + `HERO_PANEL_DESIGNER_SPECS` en `home-hero-slides.ts`. Change: `0248`.
+Código: `HeroWaveSlider` + `HERO_PANEL_DESIGNER_SPECS` en `home-hero-slides.ts`. Change: `0248` / `0259`.
 
 ---
 
@@ -68,7 +68,7 @@ Si en el futuro se vuelve a un banner full-bleed único por breakpoint:
 
 ## 3. Implementación técnica
 
-- `HeroWaveSlider`: paneles visibles 1 / 2 / 4 / 6 según ancho; flechas; PDF vía `/api/catalog/pdf`.
+- `HeroWaveSlider`: paneles visibles 1 / 2 / 4 / 5 según ancho (CTA + 4 fotos); flechas; PDF vía `/api/catalog/pdf`.
 - Datos: `HomeHeroPanel` en `home-hero-slides.ts`; CMS `home_hero` se mapea con `panelsFromCmsSlides`.
 - Debajo: barra negra de valor + `BrandCarousel`.
 

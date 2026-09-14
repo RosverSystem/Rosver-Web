@@ -20,8 +20,8 @@ import {
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
-/** Slots de imagen del strip (diseñador: 5 paneles 800×1200). */
-const PLACEHOLDER_SLOTS = 5
+/** Slots de imagen del strip (diseñador: 4 paneles 800×1200). */
+const PLACEHOLDER_SLOTS = 4
 
 const TRUST = [
   { icon: Verified, label: 'El mejor precio desde unidad' },
@@ -33,7 +33,8 @@ function useVisiblePanels() {
   const [visible, setVisible] = useState(1)
   useEffect(() => {
     const update = () => {
-      if (window.matchMedia('(min-width: 1280px)').matches) setVisible(6)
+      // CTA + 4 paneles = 5 columnas a pantallas grandes
+      if (window.matchMedia('(min-width: 1280px)').matches) setVisible(5)
       else if (window.matchMedia('(min-width: 1024px)').matches) setVisible(4)
       else if (window.matchMedia('(min-width: 768px)').matches) setVisible(2)
       else setVisible(1)
