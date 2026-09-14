@@ -15,6 +15,7 @@ Espacio del cliente autenticado: resumen, pedidos, cotizaciones, perfil personal
 | `/cuenta/pedidos` | `AccountOrdersPage` | |
 | `/cuenta/pedidos/:id` | `AccountOrderDetailPage` | |
 | `/cuenta/cotizaciones` | `ClientQuotesPage` (quotes) | Montada en App |
+| `/cuenta/favoritos` | `AccountFavoritesPage` (favorites) | Corazón en catálogo |
 | `/cuenta/perfil` | `AccountProfilePage` | Nombre, teléfono, avatar, 2FA |
 | `/cuenta/empresa` | `AccountCompanyPage` | DNI/RUC + razón social (Decolecta blur) |
 

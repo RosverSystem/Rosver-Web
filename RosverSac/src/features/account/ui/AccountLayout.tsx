@@ -6,6 +6,7 @@ const TABS = [
   { name: 'Resumen', link: '/cuenta' },
   { name: 'Mis pedidos', link: '/cuenta/pedidos' },
   { name: 'Cotizaciones', link: '/cuenta/cotizaciones' },
+  { name: 'Favoritos', link: '/cuenta/favoritos' },
   { name: 'Mis reseñas', link: '/cuenta/resenas' },
   { name: 'Mi perfil', link: '/cuenta/perfil' },
   { name: 'Mi empresa', link: '/cuenta/empresa' },

@@ -16,6 +16,10 @@ import {
   AccountReviewsPage,
 } from '@/features/account'
 import {
+  AccountFavoritesPage,
+  FavoritesProvider,
+} from '@/features/favorites'
+import {
   AuthProvider,
   LoginPage,
   RegisterPage,
@@ -147,6 +151,7 @@ export function App() {
     <BrowserRouter>
       <ToastProvider>
         <AuthProvider>
+          <FavoritesProvider>
           <CartProvider>
             <CatalogProvider>
               <DocumentTitle />
@@ -175,6 +180,7 @@ export function App() {
                     <Route path="pedidos" element={<AccountOrdersPage />} />
                     <Route path="pedidos/:id" element={<AccountOrderDetailPage />} />
                     <Route path="cotizaciones" element={<ClientQuotesPage />} />
+                    <Route path="favoritos" element={<AccountFavoritesPage />} />
                     <Route path="reseñas" element={<AccountReviewsPage />} />
                     <Route path="perfil" element={<AccountProfilePage />} />
                     <Route path="empresa" element={<AccountCompanyPage />} />
@@ -254,6 +260,7 @@ export function App() {
               </Routes>
             </CatalogProvider>
           </CartProvider>
+          </FavoritesProvider>
         </AuthProvider>
       </ToastProvider>
     </BrowserRouter>

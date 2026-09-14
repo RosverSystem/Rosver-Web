@@ -9,7 +9,7 @@ Gestionar clientes registrados: ver interés en productos (frecuentes y últimos
 
 ## Alcance
 
-- Incluido: listado `/admin/clientes`, detalle `/admin/clientes/:id`, track de vistas con sesión, WhatsApp/email con mensaje de oferta.
+- Incluido: listado `/admin/clientes`, detalle `/admin/clientes/:id`, track de vistas con sesión, favoritos del cliente, WhatsApp/email con mensaje de oferta.
 - Fuera: CRM completo, campañas masivas, segmentación automática.
 
 ## API pública
@@ -35,6 +35,7 @@ Gestionar clientes registrados: ver interés en productos (frecuentes y últimos
 
 - [ ] Cliente logueado abre fichas → filas en `user_product_views`
 - [ ] Admin ve listado y «Ver detalles»
-- [ ] Tabs frecuentes / últimos vistos
+- [ ] Tabs frecuentes / últimos vistos / favoritos
+- [ ] Contador de favoritos en listado de clientes
 - [ ] WhatsApp / email con mensaje de oferta
 - [ ] Móvil / tablet / desktop

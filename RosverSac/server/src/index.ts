@@ -28,6 +28,7 @@ import { quotesRoutes, adminQuotesRoutes } from './routes/quotes.js'
 import { ordersRoutes, adminOrdersRoutes } from './routes/orders.js'
 import { adminAnalyticsRoutes } from './routes/admin-analytics.js'
 import { adminClientsRoutes } from './routes/admin-clients.js'
+import { favoritesRoutes } from './routes/favorites.js'
 import { adminPromosRoutes } from './routes/admin-promos.js'
 import { adminLeadsRoutes } from './routes/admin-leads.js'
 import { adminContentRoutes, contentPublicRoutes } from './routes/admin-content.js'
@@ -97,6 +98,7 @@ app.route('/api/admin', adminCatalogRoutes)
 app.route('/api/admin', adminStorageRoutes)
 app.route('/api/media', mediaRoutes)
 app.route('/api/catalog', catalogRoutes)
+app.route('/api/favorites', favoritesRoutes)
 app.route('/api/complaints', complaintsRoutes)
 app.route('/api/admin/complaints', adminComplaintsRoutes)
 app.route('/api/peru', peruRoutes)

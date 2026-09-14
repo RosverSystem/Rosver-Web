@@ -31,6 +31,7 @@ Fuente de verdad para el agente al implementar UI y, después, lógica.
 | `/cuenta/pedidos` | Historial de pedidos | `account` |
 | `/cuenta/pedidos/:id` | Detalle pedido | `account` |
 | `/cuenta/cotizaciones` | Cotizaciones propias | `account` / `quotes` |
+| `/cuenta/favoritos` | Productos favoritos del cliente | `favorites` |
 | `/cuenta/perfil` | Datos de cuenta | `account` |
 
 ### Gestión (`/admin`) — SystemRSV

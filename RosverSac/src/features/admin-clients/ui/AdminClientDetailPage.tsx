@@ -5,6 +5,7 @@ import {
 } from '@/features/admin-clients/model/api'
 import type {
   ClientDetail,
+  ClientFavoriteProduct,
   ClientInterestProduct,
 } from '@/features/admin-clients/model/types'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
@@ -31,7 +32,7 @@ export function AdminClientDetailPage() {
   const { toasts, showErrors, dismiss } = useFormToasts()
   const [client, setClient] = useState<ClientDetail | null>(null)
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<'frequent' | 'recent'>('frequent')
+  const [tab, setTab] = useState<'frequent' | 'recent' | 'favorites'>('frequent')
 
   useEffect(() => {
     if (!id) return
@@ -59,7 +60,13 @@ export function AdminClientDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
-  const interest = tab === 'frequent' ? client?.frequentProducts : client?.recentProducts
+  const interest =
+    tab === 'frequent'
+      ? client?.frequentProducts
+      : tab === 'recent'
+        ? client?.recentProducts
+        : null
+  const favorites = client?.favoriteProducts ?? []
   const offerProducts = useMemo(
     () => client?.frequentProducts?.slice(0, 5) ?? [],
     [client],
@@ -173,8 +180,9 @@ export function AdminClientDetailPage() {
           </div>
         </div>
 
-        <div className="grid gap-4 p-4 sm:grid-cols-3 sm:p-5">
+        <div className="grid gap-4 p-4 sm:grid-cols-4 sm:p-5">
           <Stat label="Productos vistos" value={client.frequentProducts.length} />
+          <Stat label="Favoritos" value={client.favoriteCount ?? 0} />
           <Stat label="Pedidos" value={client.orders.length} />
           <Stat label="Cotizaciones" value={client.quotes.length} />
         </div>
@@ -199,10 +207,27 @@ export function AdminClientDetailPage() {
               onClick={() => setTab('recent')}
               label="Últimos vistos"
             />
+            <TabBtn
+              active={tab === 'favorites'}
+              onClick={() => setTab('favorites')}
+              label={`Favoritos (${client.favoriteCount ?? 0})`}
+            />
           </div>
         </div>
 
-        {!interest?.length ? (
+        {tab === 'favorites' ? (
+          !favorites.length ? (
+            <p className="rounded-xl border border-dashed border-rosver-line bg-rosver-soft/30 px-4 py-10 text-center text-sm text-rosver-muted">
+              Este cliente aún no guardó productos favoritos.
+            </p>
+          ) : (
+            <ul className="grid gap-2 sm:grid-cols-2">
+              {favorites.map((p) => (
+                <FavoriteRow key={p.id} product={p} />
+              ))}
+            </ul>
+          )
+        ) : !interest?.length ? (
           <EmptyInterest />
         ) : (
           <ul className="grid gap-2 sm:grid-cols-2">
@@ -238,6 +263,56 @@ export function AdminClientDetailPage() {
         />
       </div>
     </div>
+  )
+}
+
+function FavoriteRow({ product }: { product: ClientFavoriteProduct }) {
+  return (
+    <li className="flex gap-3 rounded-xl border border-rosver-line bg-rosver-soft/30 p-3 transition hover:border-rosver-ink/20 hover:bg-white">
+      <div className="size-14 shrink-0 overflow-hidden rounded-lg border border-rosver-line bg-white">
+        {product.imageUrl ? (
+          <img
+            src={product.imageUrl}
+            alt=""
+            width={56}
+            height={56}
+            className="size-full object-cover"
+            loading="lazy"
+            decoding="async"
+          />
+        ) : (
+          <div className="flex size-full items-center justify-center text-[10px] font-bold text-rosver-muted">
+            SKU
+          </div>
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <Link
+          to={`/producto/${product.slug}`}
+          target="_blank"
+          rel="noreferrer"
+          className="line-clamp-2 text-sm font-bold text-rosver-ink hover:text-rosver-red"
+        >
+          {product.name}
+        </Link>
+        <p className="mt-0.5 text-[11px] text-rosver-muted">
+          {product.sku}
+          {product.price != null ? ` · S/ ${product.price.toFixed(2)}` : ''}
+        </p>
+        <p className="mt-1 text-[11px] font-semibold text-rosver-red">
+          Guardado: {DATE_FMT.format(new Date(product.favoritedAt))}
+        </p>
+      </div>
+      <Link
+        to={`/producto/${product.slug}`}
+        target="_blank"
+        rel="noreferrer"
+        className="self-center text-rosver-muted hover:text-rosver-red"
+        aria-label="Ver producto"
+      >
+        <ArrowRight size={18} color="currentColor" strokeWidth={2} />
+      </Link>
+    </li>
   )
 }
 

@@ -1,3 +1,4 @@
+import { FavoriteButton } from '@/features/favorites'
 import { useCatalog } from '@/features/catalog/model/catalog-store'
 import { compareTrendProducts } from '@/features/catalog/lib/product-analytics-client'
 import {
@@ -6,7 +7,7 @@ import {
 } from '@/features/catalog/model/mocks'
 import { prefersReducedMotion } from '@/shared/lib/gsap'
 import { cn } from '@/shared/lib'
-import { ArrowRight, Heart, StarGrow } from 'cssvg-icons'
+import { ArrowRight, StarGrow } from 'cssvg-icons'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
@@ -192,8 +193,13 @@ function WholesaleHotCard({
         >
           #{rank} TOP
         </span>
-        <span className="absolute top-3 right-3 flex size-8 items-center justify-center rounded-full bg-white/90 text-rosver-ink shadow-sm">
-          <Heart size={16} color="currentColor" strokeWidth={2} />
+        <span className="absolute top-3 right-3">
+          <FavoriteButton
+            productId={product.id}
+            slug={product.slug}
+            size={16}
+            className="size-8"
+          />
         </span>
         <span className="absolute bottom-3 left-3 inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[10px] font-bold text-rosver-red shadow-sm">
           <StarGrow size={12} color="currentColor" strokeWidth={2} />

@@ -1,6 +1,7 @@
 import { PublicNavOverlay } from '@/app/layout/PublicNavOverlay'
 import { SessionAccountMenu } from '@/features/auth'
 import { useCart, visibleCartItemCount } from '@/features/cart'
+import { useOptionalFavorites } from '@/features/favorites'
 import {
   filterProductsByQuery,
   findExactSkuProduct,
@@ -10,8 +11,7 @@ import {
 import { cn } from '@/shared/lib'
 import { attachNestedScrollWheel } from '@/shared/lib/nested-scroll-wheel'
 import { IconBag, IconChevronDown, IconSearch } from '@/shared/ui/icons'
-import { Check, Compass, Menu, Message, Phone } from 'cssvg-icons'
-import { Heart } from 'lucide-react'
+import { Check, Compass, Heart, Menu, Message, Phone } from 'cssvg-icons'
 import {
   type FormEvent,
   type KeyboardEvent,
@@ -37,6 +37,8 @@ export function PublicNavbar() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const { lines } = useCart()
+  const favorites = useOptionalFavorites()
+  const favoriteCount = favorites?.ids.size ?? 0
   const { categories, products, offerCombos } = useCatalog()
   const itemCount = useMemo(
     () =>
@@ -249,13 +251,22 @@ export function PublicNavbar() {
 
         <div className="flex shrink-0 items-center justify-end gap-1.5 justify-self-end sm:gap-2">
           <SessionAccountMenu variant="desktop" />
-          <button
-            type="button"
-            aria-label="Favoritos"
-            className="hidden size-10 items-center justify-center rounded-full text-rosver-ink transition hover:bg-rosver-soft sm:inline-flex"
+          <Link
+            to="/cuenta/favoritos"
+            aria-label={
+              favoriteCount > 0
+                ? `Favoritos (${favoriteCount})`
+                : 'Favoritos'
+            }
+            className="relative hidden size-10 items-center justify-center rounded-full text-rosver-ink transition hover:bg-rosver-soft sm:inline-flex"
           >
-            <Heart className="size-5" />
-          </button>
+            <Heart size={20} color="currentColor" strokeWidth={2} />
+            {favoriteCount > 0 ? (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rosver-red px-1 text-[10px] font-bold text-white">
+                {favoriteCount > 99 ? '99+' : favoriteCount}
+              </span>
+            ) : null}
+          </Link>
           <Link
             to="/carrito"
             aria-label={`Mi carrito${itemCount ? `, ${itemCount} ítems` : ''}`}

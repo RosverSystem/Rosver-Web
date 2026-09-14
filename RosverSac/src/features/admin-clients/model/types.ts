@@ -14,6 +14,7 @@ export type ClientListItem = {
   lastViewedAt: string | null
   orderCount: number
   quoteCount: number
+  favoriteCount: number
 }
 
 export type ClientInterestProduct = {
@@ -27,6 +28,17 @@ export type ClientInterestProduct = {
   viewCount: number
   lastViewedAt: string
   firstViewedAt: string
+}
+
+export type ClientFavoriteProduct = {
+  id: string
+  slug: string
+  name: string
+  sku: string
+  imageUrl?: string
+  rating: number
+  price: number | null
+  favoritedAt: string
 }
 
 export type ClientDetail = {
@@ -43,6 +55,8 @@ export type ClientDetail = {
   createdAt: string
   frequentProducts: ClientInterestProduct[]
   recentProducts: ClientInterestProduct[]
+  favoriteProducts: ClientFavoriteProduct[]
+  favoriteCount: number
   orders: {
     id: string
     code: string

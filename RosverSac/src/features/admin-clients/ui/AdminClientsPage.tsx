@@ -127,10 +127,11 @@ export function AdminClientsPage() {
                   </div>
                 </div>
 
-                <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                <div className="mt-3 grid grid-cols-4 gap-2 text-center">
                   <MiniStat label="Vistas" value={c.totalViews} />
                   <MiniStat label="SKUs" value={c.viewProductCount} />
                   <MiniStat label="Pedidos" value={c.orderCount} />
+                  <MiniStat label="Favs" value={c.favoriteCount ?? 0} />
                 </div>
 
                 <p className="mt-3 text-[11px] text-rosver-muted">

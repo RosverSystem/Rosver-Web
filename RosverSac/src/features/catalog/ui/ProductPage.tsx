@@ -10,6 +10,7 @@ import { getWholesalePrice } from '@/features/catalog/model/mocks'
 import { ProductCard } from '@/features/catalog/ui/ProductCard'
 import { ProductImage } from '@/features/catalog/ui/ProductImage'
 import { ProductRatingStars } from '@/features/catalog/ui/ProductRatingStars'
+import { FavoriteButton } from '@/features/favorites'
 import { useCart, addInputFromProduct } from '@/features/cart'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { ApiError } from '@/shared/lib/api'
@@ -476,7 +477,7 @@ export function ProductPage() {
               ) : null}
             </div>
 
-            <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
               <button
                 type="button"
                 onClick={onAddToCart}
@@ -485,6 +486,12 @@ export function ProductPage() {
                 <IconBag className="size-4" />
                 Agregar al carrito
               </button>
+              <FavoriteButton
+                productId={product.id}
+                slug={product.slug}
+                size={20}
+                className="size-12 shrink-0 border border-rosver-line"
+              />
               <a
                 href={`https://wa.me/51980202591`}
                 target="_blank"

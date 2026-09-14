@@ -1,4 +1,5 @@
 import { pool } from '../db.js'
+import { listFavorites, countFavorites } from './product-favorites.js'
 
 export type ClientListItem = {
   id: string
@@ -16,6 +17,7 @@ export type ClientListItem = {
   lastViewedAt: string | null
   orderCount: number
   quoteCount: number
+  favoriteCount: number
 }
 
 export type ClientInterestProduct = {
@@ -56,7 +58,8 @@ export async function listClients(opts?: {
             COALESCE(v.total_views, 0)::int AS total_views,
             v.last_viewed_at,
             COALESCE(o.order_count, 0)::int AS order_count,
-            COALESCE(q.quote_count, 0)::int AS quote_count
+            COALESCE(q.quote_count, 0)::int AS quote_count,
+            COALESCE(f.fav_count, 0)::int AS favorite_count
      FROM users u
      JOIN roles r ON r.id = u.role_id
      LEFT JOIN LATERAL (
@@ -76,6 +79,11 @@ export async function listClients(opts?: {
        FROM quote_requests qq
        WHERE qq.user_id = u.id
      ) q ON true
+     LEFT JOIN LATERAL (
+       SELECT COUNT(*)::int AS fav_count
+       FROM product_favorites pf
+       WHERE pf.user_id = u.id
+     ) f ON true
      WHERE ${filter}
      ORDER BY COALESCE(v.last_viewed_at, u.created_at) DESC`,
     params,
@@ -97,6 +105,7 @@ export async function listClients(opts?: {
     lastViewedAt: row.last_viewed_at ? String(row.last_viewed_at) : null,
     orderCount: Number(row.order_count ?? 0),
     quoteCount: Number(row.quote_count ?? 0),
+    favoriteCount: Number(row.favorite_count ?? 0),
   }))
 }
 
@@ -155,26 +164,29 @@ export async function getClientDetail(userId: string) {
   const u = rows[0]
   if (!u) return null
 
-  const [frequent, recent, orders, quotes] = await Promise.all([
-    interestProducts(userId, 'freq', 12),
-    interestProducts(userId, 'recent', 12),
-    pool.query(
-      `SELECT id, code, status, total_estimated, created_at, business_name
-       FROM order_requests
-       WHERE user_id = $1
-       ORDER BY created_at DESC
-       LIMIT 8`,
-      [userId],
-    ),
-    pool.query(
-      `SELECT id, code, status, total_estimated, created_at, business_name, public_slug
-       FROM quote_requests
-       WHERE user_id = $1
-       ORDER BY created_at DESC
-       LIMIT 8`,
-      [userId],
-    ),
-  ])
+  const [frequent, recent, favorites, favoriteCount, orders, quotes] =
+    await Promise.all([
+      interestProducts(userId, 'freq', 12),
+      interestProducts(userId, 'recent', 12),
+      listFavorites(userId, 60),
+      countFavorites(userId),
+      pool.query(
+        `SELECT id, code, status, total_estimated, created_at, business_name
+         FROM order_requests
+         WHERE user_id = $1
+         ORDER BY created_at DESC
+         LIMIT 8`,
+        [userId],
+      ),
+      pool.query(
+        `SELECT id, code, status, total_estimated, created_at, business_name, public_slug
+         FROM quote_requests
+         WHERE user_id = $1
+         ORDER BY created_at DESC
+         LIMIT 8`,
+        [userId],
+      ),
+    ])
 
   return {
     id: String(u.id),
@@ -190,6 +202,8 @@ export async function getClientDetail(userId: string) {
     createdAt: String(u.created_at),
     frequentProducts: frequent,
     recentProducts: recent,
+    favoriteProducts: favorites,
+    favoriteCount,
     orders: orders.rows.map((o) => ({
       id: String(o.id),
       code: String(o.code),

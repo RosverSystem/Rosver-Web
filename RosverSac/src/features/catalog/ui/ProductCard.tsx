@@ -2,6 +2,7 @@ import type { Product } from '@/features/catalog/model/mocks'
 import { getWholesalePrice } from '@/features/catalog/model/mocks'
 import { ProductImage } from '@/features/catalog/ui/ProductImage'
 import { ProductRatingStars } from '@/features/catalog/ui/ProductRatingStars'
+import { FavoriteButton } from '@/features/favorites'
 import { useCart, addInputFromProduct } from '@/features/cart'
 import { useFormToasts } from '@/shared/hooks/use-form-toasts'
 import { IconBag } from '@/shared/ui/icons'
@@ -86,11 +87,21 @@ export function ProductCard({
               </span>
             ) : null}
           </div>
-          {discountPercent ? (
-            <span className="rounded-md bg-rosver-red px-2 py-1 text-[10px] font-black text-white shadow-sm">
-              −{discountPercent}%
-            </span>
-          ) : null}
+          <div className="pointer-events-auto flex items-center gap-1.5">
+            {discountPercent ? (
+              <span className="rounded-md bg-rosver-red px-2 py-1 text-[10px] font-black text-white shadow-sm">
+                −{discountPercent}%
+              </span>
+            ) : null}
+            {!preview ? (
+              <FavoriteButton
+                productId={product.id}
+                slug={product.slug}
+                size={16}
+                className="size-8"
+              />
+            ) : null}
+          </div>
         </div>
       </div>
 
@@ -141,19 +152,29 @@ export function ProductCard({
           )}
         </div>
 
-        <button
-          type="button"
-          disabled={preview}
-          onClick={() => {
-            if (preview) return
-            addItem(addInputFromProduct(product, 1))
-            showSuccess(['Agregado al carrito'])
-          }}
-          className="mt-3 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-rosver-red px-3 text-sm font-bold text-white transition hover:bg-rosver-red-dark disabled:cursor-default disabled:opacity-90"
-        >
-          <IconBag className="size-4" />
-          Agregar al carrito
-        </button>
+        <div className="mt-3 flex items-center gap-2">
+          <button
+            type="button"
+            disabled={preview}
+            onClick={() => {
+              if (preview) return
+              addItem(addInputFromProduct(product, 1))
+              showSuccess(['Agregado al carrito'])
+            }}
+            className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-rosver-red px-3 text-sm font-bold text-white transition hover:bg-rosver-red-dark disabled:cursor-default disabled:opacity-90"
+          >
+            <IconBag className="size-4" />
+            Agregar al carrito
+          </button>
+          {!preview ? (
+            <FavoriteButton
+              productId={product.id}
+              slug={product.slug}
+              size={18}
+              className="size-11 shrink-0 border border-rosver-line"
+            />
+          ) : null}
+        </div>
       </div>
     </article>
   )
