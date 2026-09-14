@@ -1,4 +1,5 @@
 import {
+  HERO_PANEL_DESIGNER_SPECS,
   HOME_HERO_CTA,
   HOME_HERO_PANELS,
   panelsFromCmsSlides,
@@ -13,10 +14,14 @@ import {
   Award,
   Compass,
   Download,
+  Image as ImageIcon,
   Verified,
 } from 'cssvg-icons'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+
+/** Slots de imagen del strip (diseñador: 5 paneles 800×1200). */
+const PLACEHOLDER_SLOTS = 5
 
 const TRUST = [
   { icon: Verified, label: 'El mejor precio desde unidad' },
@@ -76,11 +81,11 @@ export function HeroWaveSlider() {
   }, [])
 
   const items = panels
-  const hasPanels = items.length > 0
-  // Sin paneles de imagen: CTA a ancho completo (no una franja estrecha).
-  const total = hasPanels ? 1 + items.length : 1
-  const effectiveVisible = hasPanels ? visible : 1
-  const scrollMax = Math.max(0, total - effectiveVisible)
+  const usePlaceholders = items.length === 0
+  const slotCount = usePlaceholders ? PLACEHOLDER_SLOTS : items.length
+  // CTA + paneles (reales o placeholders).
+  const total = 1 + slotCount
+  const scrollMax = Math.max(0, total - visible)
 
   useEffect(() => {
     setIndex((i) => Math.min(i, scrollMax))
@@ -138,7 +143,7 @@ export function HeroWaveSlider() {
     }
   }
 
-  const trackWidthPct = (total / effectiveVisible) * 100
+  const trackWidthPct = (total / visible) * 100
   const itemWidthPct = 100 / total
   const translatePct = (index / total) * 100
 
@@ -181,19 +186,26 @@ export function HeroWaveSlider() {
           >
             <HeroCtaPanel
               widthPct={itemWidthPct}
-              fullBleed={!hasPanels}
               pdfBusy={pdfBusy}
               onDownload={() => void downloadPdf()}
             />
 
-            {items.map((panel, i) => (
-              <HeroImagePanel
-                key={panel.id}
-                panel={panel}
-                eager={i < effectiveVisible}
-                widthPct={itemWidthPct}
-              />
-            ))}
+            {usePlaceholders
+              ? Array.from({ length: PLACEHOLDER_SLOTS }, (_, i) => (
+                  <HeroPlaceholderPanel
+                    key={`ph-${i}`}
+                    index={i + 1}
+                    widthPct={itemWidthPct}
+                  />
+                ))
+              : items.map((panel, i) => (
+                  <HeroImagePanel
+                    key={panel.id}
+                    panel={panel}
+                    eager={i < visible}
+                    widthPct={itemWidthPct}
+                  />
+                ))}
           </div>
         </div>
 
@@ -241,130 +253,116 @@ export function HeroWaveSlider() {
 
 function HeroCtaPanel({
   widthPct,
-  fullBleed,
   pdfBusy,
   onDownload,
 }: {
   widthPct: number
-  fullBleed: boolean
   pdfBusy: boolean
   onDownload: () => void
 }) {
   return (
     <div
-      className={cn(
-        'relative flex h-full shrink-0 flex-col justify-center overflow-hidden bg-rosver-ink',
-        fullBleed
-          ? 'px-6 py-10 sm:px-10 sm:py-12 lg:px-16 lg:py-14'
-          : 'justify-end px-5 py-8 sm:px-7 sm:py-10',
-      )}
+      className="relative flex h-full shrink-0 flex-col justify-end overflow-hidden bg-rosver-ink px-5 py-8 sm:px-6 sm:py-10 lg:px-7"
       style={{ width: `${widthPct}%` }}
     >
       <div
         className="pointer-events-none absolute inset-0"
         style={{
-          background: fullBleed
-            ? 'radial-gradient(ellipse 80% 70% at 18% 28%, rgba(227,6,19,0.42), transparent 58%), radial-gradient(ellipse 50% 40% at 85% 80%, rgba(30,58,95,0.35), transparent 55%), linear-gradient(165deg, #0D0D0D 0%, #161616 55%, #0D0D0D 100%)'
-            : 'radial-gradient(ellipse at 25% 15%, rgba(227,6,19,0.48), transparent 58%), linear-gradient(160deg, #0D0D0D 0%, #1a1a1a 100%)',
+          background:
+            'radial-gradient(ellipse at 25% 15%, rgba(227,6,19,0.48), transparent 58%), linear-gradient(160deg, #0D0D0D 0%, #1a1a1a 100%)',
         }}
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute top-0 left-0 h-full w-1 bg-rosver-red sm:w-1.5"
+        className="pointer-events-none absolute top-0 left-0 h-full w-1 bg-rosver-red"
         aria-hidden
       />
       <div
-        className="pointer-events-none absolute inset-0 opacity-[0.07]"
+        className="pointer-events-none absolute inset-0 opacity-[0.06]"
         style={{
           backgroundImage:
             'linear-gradient(rgba(255,255,255,0.35) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.35) 1px, transparent 1px)',
-          backgroundSize: '28px 28px',
+          backgroundSize: '24px 24px',
         }}
         aria-hidden
       />
 
-      <div
-        className={cn(
-          'relative z-[1]',
-          fullBleed
-            ? 'mx-auto w-full max-w-3xl sm:mx-0'
-            : 'max-w-[15.5rem] sm:max-w-[17rem]',
-        )}
-      >
-        <p className="mb-3 text-[10px] font-bold tracking-[0.22em] text-rosver-red uppercase sm:mb-4 sm:text-[11px]">
+      <div className="relative z-[1] max-w-[15rem] sm:max-w-[16.5rem]">
+        <p className="mb-2.5 text-[10px] font-bold tracking-[0.2em] text-rosver-red uppercase">
           Rosver SAC
         </p>
-
-        <h2
-          className={cn(
-            'font-display font-bold tracking-tight text-white uppercase',
-            fullBleed
-              ? 'text-3xl leading-[1.08] sm:text-4xl md:text-5xl lg:text-[3.25rem]'
-              : 'text-xl leading-[1.1] sm:text-2xl lg:text-[1.65rem]',
-          )}
-        >
-          {fullBleed ? (
-            <>
-              Despachos
-              <br />
-              <span className="text-white/90">y catálogo</span>
-              <br />
-              <span className="text-rosver-red">oficial</span>
-            </>
-          ) : (
-            HOME_HERO_CTA.title
-          )}
+        <h2 className="font-display text-xl leading-[1.08] font-bold tracking-tight text-white uppercase sm:text-2xl lg:text-[1.7rem]">
+          Despachos
+          <br />
+          <span className="text-white/90">y catálogo</span>
+          <br />
+          <span className="text-rosver-red">oficial</span>
         </h2>
-
-        {fullBleed ? (
-          <p className="mt-4 max-w-md text-sm leading-relaxed text-white/70 sm:mt-5 sm:text-base">
-            Precios desde unidad, envíos a todo el Perú y el listado completo
-            listo para cotizar.
-          </p>
-        ) : null}
-
-        <div
-          className={cn(
-            'flex flex-wrap items-center gap-3',
-            fullBleed ? 'mt-7 sm:mt-8' : 'mt-5 sm:mt-6',
-          )}
-        >
+        <p className="mt-3 text-[11px] leading-snug text-white/65 sm:text-xs">
+          Precios desde unidad y envíos a todo el Perú.
+        </p>
+        <div className="mt-5 flex flex-col gap-2.5 sm:mt-6">
           <button
             type="button"
             disabled={pdfBusy}
             onClick={onDownload}
-            className={cn(
-              'inline-flex items-center justify-center gap-2.5 rounded-full bg-white font-extrabold tracking-wide text-rosver-ink uppercase whitespace-nowrap transition',
-              'hover:bg-rosver-soft focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white',
-              'disabled:opacity-70',
-              fullBleed
-                ? 'min-h-12 px-6 py-3 text-sm sm:px-7 sm:text-[0.95rem]'
-                : 'min-h-11 px-4 py-2.5 text-[11px] sm:px-5 sm:text-xs',
-            )}
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-white px-4 py-2.5 text-[11px] font-extrabold tracking-wide text-rosver-ink uppercase whitespace-nowrap transition hover:bg-rosver-soft disabled:opacity-70 sm:text-xs"
           >
-            <Download
-              size={fullBleed ? 18 : 15}
-              color="currentColor"
-              strokeWidth={2}
-            />
+            <Download size={15} color="currentColor" strokeWidth={2} />
             <span>{pdfBusy ? 'Generando…' : HOME_HERO_CTA.ctaLabel}</span>
-            <ArrowRight
-              size={fullBleed ? 18 : 15}
-              color="currentColor"
-              strokeWidth={2}
-            />
+            <ArrowRight size={15} color="currentColor" strokeWidth={2} />
           </button>
-
-          {fullBleed ? (
-            <Link
-              to="/catalogo"
-              className="inline-flex min-h-12 items-center gap-2 rounded-full border border-white/35 px-5 py-3 text-sm font-bold tracking-wide text-white uppercase transition hover:border-white hover:bg-white/10 sm:px-6"
-            >
-              Ver catálogo
-              <ArrowRight size={16} color="currentColor" strokeWidth={2} />
-            </Link>
-          ) : null}
+          <Link
+            to="/catalogo"
+            className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-full border border-white/35 px-4 py-2 text-[11px] font-bold tracking-wide text-white uppercase transition hover:border-white hover:bg-white/10 sm:text-xs"
+          >
+            Ver catálogo
+            <ArrowRight size={14} color="currentColor" strokeWidth={2} />
+          </Link>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function HeroPlaceholderPanel({
+  index,
+  widthPct,
+}: {
+  index: number
+  widthPct: number
+}) {
+  const { width, height } = HERO_PANEL_DESIGNER_SPECS.panelPx
+  return (
+    <div
+      className="relative flex h-full shrink-0 flex-col items-center justify-center overflow-hidden border-l border-white/10 bg-[#141414]"
+      style={{ width: `${widthPct}%` }}
+      aria-label={`Espacio para imagen ${index} (${width}×${height})`}
+    >
+      <div
+        className="pointer-events-none absolute inset-0 opacity-40"
+        style={{
+          background:
+            'linear-gradient(160deg, #1a1a1a 0%, #0D0D0D 50%, #161616 100%)',
+        }}
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-3 rounded-sm border border-dashed border-white/20 sm:inset-4"
+        aria-hidden
+      />
+      <div className="relative z-[1] flex flex-col items-center gap-2 px-3 text-center">
+        <span className="flex size-10 items-center justify-center rounded-full bg-white/8 text-white/55 sm:size-11">
+          <ImageIcon size={20} color="currentColor" strokeWidth={1.75} />
+        </span>
+        <p className="font-display text-[11px] font-bold tracking-wide text-white/70 uppercase sm:text-xs">
+          Panel {index}
+        </p>
+        <p className="text-[10px] leading-tight text-white/40">
+          {width}×{height}
+          <br />
+          WebP
+        </p>
       </div>
     </div>
   )
