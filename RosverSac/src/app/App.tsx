@@ -41,6 +41,7 @@ import { ToastProvider } from '@/shared/ui/toast-provider'
 import { WhatsAppFloatingButton } from '@/shared/ui/whatsapp-floating-button'
 import { CatalogPdfFloatingButton } from '@/shared/ui/catalog-pdf-floating-button'
 import { CookieConsentFloat } from '@/shared/ui/cookie-consent-float'
+import { Toaster as SileoToaster } from 'sileo'
 import { lazy } from 'react'
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 
@@ -124,6 +125,11 @@ function PublicLayout() {
       <CatalogPdfFloatingButton />
       <WhatsAppFloatingButton />
       <CookieConsentFloat />
+      <SileoToaster
+        position="bottom-center"
+        theme="dark"
+        offset={{ bottom: 88 }}
+      />
     </div>
   )
 }

@@ -283,3 +283,32 @@ button {
   background-color: color-mix(in srgb, var(--color-rosver-soft) 85%, white);
 }
 
+/* ── Sileo toasts (cookies / permisos) — acento Rosver ── */
+[data-sileo-viewport] {
+  z-index: 70;
+  --sileo-state-action: #e30613;
+  --sileo-width: min(350px, calc(100vw - 1.5rem));
+}
+
+.sileo-rosver-btn {
+  --sileo-btn-color: #e30613 !important;
+  --sileo-btn-bg: color-mix(in srgb, #e30613 12%, white) !important;
+  --sileo-btn-bg-hover: color-mix(in srgb, #e30613 22%, white) !important;
+  font-weight: 700 !important;
+}
+
+.sileo-rosver-title {
+  color: #e30613 !important;
+  text-transform: none !important;
+  font-weight: 700 !important;
+}
+
+.sileo-rosver-badge {
+  color: #e30613 !important;
+  background-color: color-mix(in srgb, #e30613 15%, white) !important;
+}
+
+.sileo-rosver-desc {
+  color: #6b7280 !important;
+}
+

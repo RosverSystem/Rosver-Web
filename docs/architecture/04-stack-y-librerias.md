@@ -19,6 +19,7 @@ App: `RosverSac/` · Alias: `@` → `RosverSac/src`
 | Rutas | `react-router-dom` v7 | BrowserRouter, Link, Routes |
 | Class names | `clsx` + `tailwind-merge` | Helper `cn()` en `@/shared/lib` |
 | Validación UI | `FloatingToasts` + `useFormToasts` (shared) | Sin bubbles nativos; regla `10-form-toasts` |
+| Cookies / permisos | **`sileo`** | Toast físico bubble+tab (`sileo.action`); `CookieConsentFloat` |
 | API auth | Hono (`RosverSac/server`) | Sesiones cookie, RBAC, OTP, TOTP, Google OAuth |
 | DB | `pg` + Postgres Railway | Migraciones SQL en `server/sql/` |
 | Caché | `ioredis` + Redis Railway | Destacados home (`rosver:catalog:featured:v1`, TTL 90s); opcional |
