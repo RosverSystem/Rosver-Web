@@ -48,6 +48,23 @@ export async function listFavoriteIds(userId: string): Promise<string[]> {
   return rows.map((r) => String(r.product_id))
 }
 
+/** IDs + slugs para que el front marque el corazón aunque el card use slug. */
+export async function listFavoriteKeys(
+  userId: string,
+): Promise<{ ids: string[]; slugs: string[] }> {
+  const { rows } = await pool.query(
+    `SELECT pf.product_id, p.slug
+     FROM product_favorites pf
+     JOIN products p ON p.id = pf.product_id
+     WHERE pf.user_id = $1 AND p.visible = true`,
+    [userId],
+  )
+  return {
+    ids: rows.map((r) => String(r.product_id)),
+    slugs: rows.map((r) => String(r.slug)),
+  }
+}
+
 export async function listFavorites(
   userId: string,
   limit = 100,

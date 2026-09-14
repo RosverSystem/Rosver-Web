@@ -3,6 +3,7 @@ import { z } from 'zod'
 import {
   addFavorite,
   listFavoriteIds,
+  listFavoriteKeys,
   listFavorites,
   removeFavorite,
   resolveFavoriteProductId,
@@ -30,8 +31,8 @@ favoritesRoutes.use('*', requireAuth)
 favoritesRoutes.get('/ids', async (c) => {
   const user = c.get('user')
   try {
-    const ids = await listFavoriteIds(user.id)
-    return c.json({ ok: true, ids, count: ids.length })
+    const { ids, slugs } = await listFavoriteKeys(user.id)
+    return c.json({ ok: true, ids, slugs, count: ids.length })
   } catch (err) {
     console.error('favorites ids', err)
     return c.json({ error: 'No se pudieron cargar favoritos.' }, 500)
@@ -74,8 +75,15 @@ favoritesRoutes.post('/', async (c) => {
       return c.json({ error: 'Producto no encontrado.' }, 404)
     }
     await addFavorite(user.id, productId)
-    const ids = await listFavoriteIds(user.id)
-    return c.json({ ok: true, favorited: true, productId, ids, count: ids.length })
+    const { ids, slugs } = await listFavoriteKeys(user.id)
+    return c.json({
+      ok: true,
+      favorited: true,
+      productId,
+      ids,
+      slugs,
+      count: ids.length,
+    })
   } catch (err) {
     console.error('favorites add', err)
     return c.json({ error: 'No se pudo guardar el favorito.' }, 500)
@@ -104,8 +112,15 @@ favoritesRoutes.post('/toggle', async (c) => {
       await addFavorite(user.id, productId)
       favorited = true
     }
-    const ids = await listFavoriteIds(user.id)
-    return c.json({ ok: true, favorited, productId, ids, count: ids.length })
+    const { ids, slugs } = await listFavoriteKeys(user.id)
+    return c.json({
+      ok: true,
+      favorited,
+      productId,
+      ids,
+      slugs,
+      count: ids.length,
+    })
   } catch (err) {
     console.error('favorites toggle', err)
     return c.json({ error: 'No se pudo actualizar el favorito.' }, 500)
@@ -121,12 +136,13 @@ favoritesRoutes.delete(
     const productId = c.req.param('productId')
     try {
       await removeFavorite(user.id, productId)
-      const ids = await listFavoriteIds(user.id)
+      const { ids, slugs } = await listFavoriteKeys(user.id)
       return c.json({
         ok: true,
         favorited: false,
         productId,
         ids,
+        slugs,
         count: ids.length,
       })
     } catch (err) {

@@ -38,7 +38,7 @@ export function PublicNavbar() {
   const [searchParams] = useSearchParams()
   const { lines } = useCart()
   const favorites = useOptionalFavorites()
-  const favoriteCount = favorites?.ids.size ?? 0
+  const favoriteCount = favorites?.count ?? 0
   const { categories, products, offerCombos } = useCatalog()
   const itemCount = useMemo(
     () =>

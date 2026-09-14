@@ -1,6 +1,6 @@
 # Pendientes — Rosver Web
 
-Última actualización: 2026-09-14 (0263 favoritos producto · v0.1.66)
+Última actualización: 2026-09-14 (0264 corazón favorito visual · v0.1.67)
 
 ## Cómo leer esta tabla
 
@@ -48,6 +48,7 @@
 | Campaña: 2ª fila con 2 imágenes a ancho doble | 0261 |
 | PDF Chromium Railway + home más aireado | 0262 |
 | Favoritos producto (API + cuenta + admin clientes) | 0263 |
+| Corazón favorito: relleno rojo vs outline | 0264 |
 
 ### Pendiente de auditoría 0240 (no crítico, para siguiente sesión)
 
