@@ -64,8 +64,9 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "==> Postgres"
 railway add --database postgres 2>&1 | Out-Host
 
-Write-Host "==> up (commit=$CommitSha)"
-railway up --detach
+Write-Host "==> redeploy from GitHub source (commit=$CommitSha)"
+# Preferir GitHub: `railway up` local falló en Metal builders (Failed to read app source directory).
+railway redeploy --from-source -y
 
 Write-Host "==> domain"
 railway domain 2>&1 | Out-Host

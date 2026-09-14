@@ -46,3 +46,4 @@ El corazón de la tienda no persistía nada; hacía falta lógica completa, vist
 - [ ] Sin sesión el corazón redirige a login
 - [ ] Móvil / tablet / desktop
 - [ ] Deploy Railway responde; migración 043 aplicada en boot
+- [ ] Preferir `railway redeploy --from-source` (GitHub); `railway up` local falló en Metal builder (app source dir)

@@ -39,6 +39,7 @@ Ideas útiles **no pedidas** aún. No implementar solas; esperar OK del usuario.
 | R35 | Habilitar dominio público R2 (`r2.dev` o custom) y set `R2_PUBLIC_BASE_URL` | Hoy logos de mail usan CDN del sitio; media R2 seguiría vía `/api/media` | baja |
 | R36 | Sustituir placeholders Unsplash del hero multipanel por fotos finales del diseñador (R2) | UI 0248 lista; faltan assets reales 800×1200 | alta |
 | R37 | Enviar email / WhatsApp al cliente cuando un favorito baje de precio o entre en oferta | Comercial; requiere job periódico + reglas | baja |
+| R38 | Actualizar `scripts/railway-deploy.ps1` para usar `redeploy --from-source` (GitHub) | Cubierto en 0263 (mismo change) | hecho |
 
 
 
