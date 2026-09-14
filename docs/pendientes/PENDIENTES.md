@@ -1,6 +1,6 @@
 # Pendientes — Rosver Web
 
-Última actualización: 2026-09-13 (0256 categoría carousel UX · v0.1.58)
+Última actualización: 2026-09-13 (0256 categoría carousel UX · v0.1.59)
 
 ## Cómo leer esta tabla
 
@@ -49,6 +49,7 @@
 | P131 | Code-split real de `quotes`/`complaints-book` (hoy importados estático + dinámico a la vez, el lazy no separa el chunk) | Auditoría 0240 (`INEFFECTIVE_DYNAMIC_IMPORT` en build) | pendiente | Bundle principal 634 KB; decidir si quitar el import estático en `App.tsx` |
 | P132 | Validar magic bytes reales (no solo MIME del cliente) en subida de avatar (`profile.ts`) y evidencias de pedido | Auditoría 0240 | pendiente | Riesgo bajo, mismo patrón que se corrigió en PDFs de pedidos/cotizaciones |
 | P134 | Entregar 5 fotos hero 800×1200 WebP y subir a R2 | Pedido banner 0248 | pendiente | Specs en `06-banners-hero-y-assets.md` §0 |
+| P135 | Restaurar / crear categorías raíz reales (herramientas, ferretería…) en admin — hoy live solo ESCOLAR+TIZAS | Fix 0256 UX vacío | pendiente | El carrusel ya se centra con 1 card; falta dato de negocio |
 
 | ID | Ítem | Origen | Estado | Notas / bloqueo |
 | --- | --- | --- | --- | --- |

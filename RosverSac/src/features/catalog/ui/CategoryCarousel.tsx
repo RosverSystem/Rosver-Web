@@ -65,12 +65,22 @@ export function CategoryCarousel({ categories }: { categories: Category[] }) {
   return (
     <section aria-label="Busca por categoría" className="relative min-w-0">
       <div className="mb-5 flex items-end justify-between gap-3 sm:mb-7">
-        <div className="min-w-0 flex-1 text-center sm:text-left">
+        <div
+          className={cn(
+            'min-w-0 flex-1',
+            items.length <= 2 ? 'text-center' : 'text-center sm:text-left',
+          )}
+        >
           <h2 className="font-display text-3xl font-bold tracking-tight text-rosver-ink sm:text-4xl">
             Busca por categoría
             <span className="text-rosver-red">.</span>
           </h2>
-          <p className="mx-auto mt-2 max-w-lg text-sm text-rosver-muted sm:mx-0 sm:text-base">
+          <p
+            className={cn(
+              'mt-2 max-w-lg text-sm text-rosver-muted sm:text-base',
+              items.length <= 2 ? 'mx-auto' : 'mx-auto sm:mx-0',
+            )}
+          >
             Encuentra rápido lo que buscas, organizado para tu negocio.
           </p>
         </div>
@@ -105,9 +115,9 @@ export function CategoryCarousel({ categories }: { categories: Category[] }) {
           onMouseLeave={() => setPaused(false)}
           className={cn(
             'hide-scrollbar flex gap-4 overflow-x-auto overflow-y-visible py-3 snap-x snap-mandatory sm:gap-5 sm:py-4',
-            // Espacio para que ring/sombra no se corten con el overflow del main
-            'px-2 sm:px-1',
-            items.length <= 2 && 'justify-center',
+            // Espacio para que ring/sombra no se corten con el overflow del layout
+            'px-3 sm:px-2',
+            items.length <= 3 && 'justify-center',
           )}
         >
           {items.map((category, i) => (
@@ -115,8 +125,13 @@ export function CategoryCarousel({ categories }: { categories: Category[] }) {
               key={category.id}
               category={category}
               toneIndex={i}
-              highlighted={i === active}
-              className="w-[min(70vw,16rem)] shrink-0 snap-start sm:w-[15.5rem] md:w-[16.25rem] lg:w-[17rem]"
+              highlighted={i === active || items.length === 1}
+              className={cn(
+                'shrink-0 snap-start',
+                items.length === 1
+                  ? 'w-[min(82vw,20rem)] sm:w-[19rem] lg:w-[20rem]'
+                  : 'w-[min(70vw,16rem)] sm:w-[15.5rem] md:w-[16.25rem] lg:w-[17rem]',
+              )}
             />
           ))}
         </div>

@@ -5,19 +5,20 @@
 
 ## Qué cambió
 
-- Carrusel ya no recorta cards: se quitó `overflow-x-hidden` del `<main>` home y padding vertical para ring/sombra.
-- Flechas fuera de la card (header en tablet/desktop; laterales solo en móvil, sin tapar el contenido).
-- Si hay &lt; 3 categorías con `showOnHome`, se completan con el resto de raíces visibles (evita 1 card + vacío enorme).
+- Carrusel ya no recorta cards: se quitó `overflow-x-hidden` del `<main>` home y padding vertical/horizontal para ring/sombra.
+- Flechas fuera de la card (header en tablet/desktop; laterales solo en móvil).
+- Si hay &lt; 3 categorías con `showOnHome`, se completan con el resto de raíces visibles.
+- Con 1–2 cards: centradas, más grandes, sin flechas engañosas; título centrado.
 - Cards: `object-center`, ring con offset, sombra más suave, fondo ink.
-- Versión `0.1.58`.
+- Versión `0.1.59`.
 
 ## Por qué
 
-Rosa reportó la sección recortada y con errores UX (flecha encima, hueco vacío, card cortada). En prod solo «ESCOLAR» tenía `showOnHome`.
+Rosa reportó la sección recortada y con errores UX. En prod el catálogo live solo tenía **ESCOLAR** como raíz (`showOnHome`), y las flechas + overflow dejaban la card cortada y el hueco vacío.
 
 ## Cómo
 
-Misma pauta de flechas que «mayoristas»; fallback de datos en el filtro del carrusel.
+Misma pauta de flechas que «mayoristas»; fallback de datos; layout adaptativo según cantidad.
 
 ## Archivos
 
@@ -30,9 +31,8 @@ Misma pauta de flechas que «mayoristas»; fallback de datos en el filtro del ca
 
 ## Cómo verificar
 
-- [ ] `/` → «Busca por categoría» muestra varias cards (no solo una aislada)
-- [ ] Cards completas, sin corte de sombra/borde rojo
-- [ ] Flechas no tapan la foto (desktop: arriba a la derecha)
-- [ ] Móvil: se puede deslizar y ver peeks de la siguiente card
-- [ ] Tablet / desktop OK
+- [ ] `/` → card ESCOLAR centrada, completa, sin flecha encima
+- [ ] Ring rojo y sombra visibles sin corte
+- [ ] Si hay ≥3 raíces: carrusel horizontal con flechas en el header (desktop)
+- [ ] Móvil / tablet / desktop
 - [ ] Deploy rosversac.com
