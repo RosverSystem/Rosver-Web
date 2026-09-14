@@ -1,7 +1,9 @@
 /**
- * Paneles del hero multipanel.
- * Sin mocks: paneles solo desde CMS con `imageUrl` real (R2 / CDN).
- * Medidas diseñador: HERO_PANEL_DESIGNER_SPECS + docs/changes/0248.
+ * Paneles del hero multipanel (referencia Katrina → Rosver).
+ * Medidas: HERO_PANEL_DESIGNER_SPECS + docs/architecture/06-banners-hero-y-assets.md
+ *
+ * Demo local: 4 paneles con foto hasta que CMS / R2 tenga assets finales.
+ * CMS real: `panelsFromCmsSlides` solo acepta imageUrl no-Unsplash.
  */
 
 export const HERO_PANEL_DESIGNER_SPECS = {
@@ -43,13 +45,62 @@ export type HomeHeroSlide = {
   sortOrder?: number
 }
 
-/** Vacío a propósito: no Unsplash ni demos. */
-export const HOME_HERO_PANELS: HomeHeroPanel[] = []
+/**
+ * Demo visual (estructura del ejemplo Katrina, paleta Rosver).
+ * Sustituir por fotos propias 800×1200 en CMS / R2 (P134).
+ */
+export const HOME_HERO_PANELS: HomeHeroPanel[] = [
+  {
+    id: 'hero-01',
+    title: 'CATÁLOGO DIGITAL 2026',
+    badgeLeft: 'Directa\nDescarga PDF',
+    badgeRight: 'Lista Completa\nB2B',
+    imageUrl:
+      'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?auto=format&fit=crop&w=800&h=1200&q=72',
+    href: '/catalogo',
+    visible: true,
+    sortOrder: 1,
+  },
+  {
+    id: 'hero-02',
+    title: 'ENVÍOS AGENCIA SHALOM',
+    badgeLeft: 'Hoy mismo\nDespacho diario',
+    badgeRight: 'A Todo\nel Perú',
+    imageUrl:
+      'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=800&h=1200&q=72',
+    href: '/contacto',
+    visible: true,
+    sortOrder: 2,
+  },
+  {
+    id: 'hero-03',
+    title: 'FLETES AGENCIA MARVISUR',
+    badgeLeft: 'Tarifa B2B\nPreferencial',
+    badgeRight: 'Envíos\nProvinciales',
+    imageUrl:
+      'https://images.unsplash.com/photo-1553413077-190dd305871c?auto=format&fit=crop&w=800&h=1200&q=72',
+    href: '/contacto',
+    visible: true,
+    sortOrder: 3,
+  },
+  {
+    id: 'hero-04',
+    title: 'COURIER PUERTA A PUERTA',
+    badgeLeft: 'Llega mañana\nLima y Callao',
+    badgeRight: 'Entrega\nExpress',
+    imageUrl:
+      'https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?auto=format&fit=crop&w=800&h=1200&q=72',
+    href: '/contacto',
+    visible: true,
+    sortOrder: 4,
+  },
+]
 
 export const HOME_HERO_SLIDES: HomeHeroSlide[] = []
 
 /**
- * Solo acepta slides CMS con imagen real (sin relleno mock).
+ * Slides CMS con imagen real. Si el CMS trae Unsplash, se ignora esa fila
+ * (el demo local cubre hasta tener assets R2).
  */
 export function panelsFromCmsSlides(raw: unknown): HomeHeroPanel[] | null {
   if (!raw || typeof raw !== 'object') return null

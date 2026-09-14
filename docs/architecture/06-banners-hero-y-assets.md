@@ -40,7 +40,9 @@ El hero es un **strip** de columnas: 1 panel CTA (solo tipografía CSS, sin foto
 
 `hero-panel-01.webp` … `hero-panel-04.webp`
 
-Código: `HeroWaveSlider` + `HERO_PANEL_DESIGNER_SPECS` en `home-hero-slides.ts`. Change: `0248` / `0259`.
+Código: `HeroWaveSlider` + `HERO_PANEL_DESIGNER_SPECS` / `HOME_HERO_PANELS` (demo) en `home-hero-slides.ts`. Changes: `0248` / `0259` / `0260`.
+
+Hasta fotos finales en R2, el home usa **4 paneles demo** (estructura del ejemplo Katrina, pills `rosver-red` | blanco).
 
 ---
 

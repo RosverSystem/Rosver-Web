@@ -1,5 +1,4 @@
 import {
-  HERO_PANEL_DESIGNER_SPECS,
   HOME_HERO_CTA,
   HOME_HERO_PANELS,
   panelsFromCmsSlides,
@@ -13,15 +12,10 @@ import {
   ArrowRight,
   Award,
   Compass,
-  Download,
-  Image as ImageIcon,
   Verified,
 } from 'cssvg-icons'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-
-/** Slots de imagen del strip (diseñador: 4 paneles 800×1200). */
-const PLACEHOLDER_SLOTS = 4
 
 const TRUST = [
   { icon: Verified, label: 'El mejor precio desde unidad' },
@@ -33,10 +27,9 @@ function useVisiblePanels() {
   const [visible, setVisible] = useState(1)
   useEffect(() => {
     const update = () => {
-      // CTA + 4 paneles = 5 columnas a pantallas grandes
-      if (window.matchMedia('(min-width: 1280px)').matches) setVisible(5)
-      else if (window.matchMedia('(min-width: 1024px)').matches) setVisible(4)
-      else if (window.matchMedia('(min-width: 768px)').matches) setVisible(2)
+      // CTA + 4 paneles = 5 columnas (como el ejemplo)
+      if (window.matchMedia('(min-width: 1100px)').matches) setVisible(5)
+      else if (window.matchMedia('(min-width: 768px)').matches) setVisible(3)
       else setVisible(1)
     }
     update()
@@ -47,8 +40,8 @@ function useVisiblePanels() {
 }
 
 /**
- * Hero multipanel (strip vertical + CTA oscuro + pills rojo/gris).
- * Referencia Katrina → paleta Rosver (`rosver-red` / `rosver-ink`).
+ * Hero multipanel estilo Katrina → Rosver.
+ * CTA oscuro + 4 paneles foto + pills partido rojo/blanco + trust bar.
  */
 export function HeroWaveSlider() {
   const toasts = useOptionalToasts()
@@ -74,7 +67,7 @@ export function HeroWaveSlider() {
         }
       })
       .catch(() => {
-        /* fallback local */
+        /* demo local */
       })
     return () => {
       cancelled = true
@@ -82,10 +75,7 @@ export function HeroWaveSlider() {
   }, [])
 
   const items = panels
-  const usePlaceholders = items.length === 0
-  const slotCount = usePlaceholders ? PLACEHOLDER_SLOTS : items.length
-  // CTA + paneles (reales o placeholders).
-  const total = 1 + slotCount
+  const total = 1 + items.length
   const scrollMax = Math.max(0, total - visible)
 
   useEffect(() => {
@@ -149,7 +139,7 @@ export function HeroWaveSlider() {
   const translatePct = (index / total) * 100
 
   return (
-    <section className="relative isolate bg-rosver-ink text-white">
+    <section className="relative isolate bg-[#1a1224] text-white">
       <div className="relative">
         {scrollMax > 0 ? (
           <>
@@ -157,19 +147,19 @@ export function HeroWaveSlider() {
               type="button"
               aria-label="Panel anterior"
               onClick={() => go(-1)}
-              className="absolute top-1/2 left-2 z-20 flex size-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/40 bg-black/35 text-white backdrop-blur-sm transition hover:bg-rosver-red sm:left-3 sm:size-11"
+              className="absolute top-1/2 left-1 z-20 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition hover:bg-rosver-red sm:left-2 sm:size-10"
             >
               <span className="inline-flex rotate-180">
-                <ArrowRight size={20} color="currentColor" strokeWidth={2} />
+                <ArrowRight size={18} color="currentColor" strokeWidth={2} />
               </span>
             </button>
             <button
               type="button"
               aria-label="Panel siguiente"
               onClick={() => go(1)}
-              className="absolute top-1/2 right-2 z-20 flex size-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/40 bg-black/35 text-white backdrop-blur-sm transition hover:bg-rosver-red sm:right-3 sm:size-11"
+              className="absolute top-1/2 right-1 z-20 flex size-9 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-sm transition hover:bg-rosver-red sm:right-2 sm:size-10"
             >
-              <ArrowRight size={20} color="currentColor" strokeWidth={2} />
+              <ArrowRight size={18} color="currentColor" strokeWidth={2} />
             </button>
           </>
         ) : null}
@@ -177,7 +167,7 @@ export function HeroWaveSlider() {
         <div className="overflow-hidden">
           <div
             className={cn(
-              'flex h-[min(58dvh,480px)] sm:h-[min(62dvh,560px)] lg:h-[min(68dvh,640px)]',
+              'flex h-[min(52dvh,420px)] sm:h-[min(58dvh,520px)] lg:h-[min(62dvh,560px)]',
               reduceMotion ? '' : 'transition-transform duration-500 ease-out',
             )}
             style={{
@@ -191,27 +181,19 @@ export function HeroWaveSlider() {
               onDownload={() => void downloadPdf()}
             />
 
-            {usePlaceholders
-              ? Array.from({ length: PLACEHOLDER_SLOTS }, (_, i) => (
-                  <HeroPlaceholderPanel
-                    key={`ph-${i}`}
-                    index={i + 1}
-                    widthPct={itemWidthPct}
-                  />
-                ))
-              : items.map((panel, i) => (
-                  <HeroImagePanel
-                    key={panel.id}
-                    panel={panel}
-                    eager={i < visible}
-                    widthPct={itemWidthPct}
-                  />
-                ))}
+            {items.map((panel, i) => (
+              <HeroImagePanel
+                key={panel.id}
+                panel={panel}
+                eager={i < visible}
+                widthPct={itemWidthPct}
+              />
+            ))}
           </div>
         </div>
 
         {scrollMax > 0 ? (
-          <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 gap-1.5 sm:bottom-4">
+          <div className="pointer-events-none absolute bottom-2 left-1/2 z-20 flex -translate-x-1/2 items-center gap-0 sm:bottom-3">
             {Array.from({ length: scrollMax + 1 }).map((_, i) => (
               <button
                 key={i}
@@ -220,10 +202,10 @@ export function HeroWaveSlider() {
                 aria-current={i === index}
                 onClick={() => setIndex(i)}
                 className={cn(
-                  'h-1 rounded-full transition-all',
+                  'pointer-events-auto h-0.5 transition-all',
                   i === index
-                    ? 'w-8 bg-white'
-                    : 'w-4 bg-white/40 hover:bg-white/70',
+                    ? 'w-10 bg-rosver-red sm:w-12'
+                    : 'w-8 bg-white/35 hover:bg-white/55 sm:w-10',
                 )}
               />
             ))}
@@ -236,12 +218,10 @@ export function HeroWaveSlider() {
           {TRUST.map(({ icon: Icon, label }) => (
             <li
               key={label}
-              className="flex flex-1 items-center justify-center gap-2.5 px-4 py-3 text-center sm:py-3.5"
+              className="flex flex-1 items-center justify-center gap-2.5 px-4 py-2.5 text-center sm:py-3"
             >
-              <span className="flex size-8 items-center justify-center rounded-full bg-rosver-red/15 text-rosver-red">
-                <Icon size={16} color="currentColor" strokeWidth={2} />
-              </span>
-              <span className="text-[11px] font-semibold tracking-wide text-white/90 sm:text-xs">
+              <Icon size={16} color="currentColor" strokeWidth={2} className="text-white/90" />
+              <span className="text-[11px] font-medium tracking-wide text-white/90 sm:text-xs">
                 {label}
               </span>
             </li>
@@ -252,6 +232,7 @@ export function HeroWaveSlider() {
   )
 }
 
+/** Panel CTA — como el ejemplo: tipografía blanca + pill PDF. */
 function HeroCtaPanel({
   widthPct,
   pdfBusy,
@@ -263,107 +244,28 @@ function HeroCtaPanel({
 }) {
   return (
     <div
-      className="relative flex h-full shrink-0 flex-col justify-end overflow-hidden bg-rosver-ink px-5 py-8 sm:px-6 sm:py-10 lg:px-7"
+      className="relative flex h-full shrink-0 flex-col justify-end bg-[#1a1224] px-5 py-8 sm:px-6 sm:py-10 lg:px-7 lg:py-12"
       style={{ width: `${widthPct}%` }}
     >
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            'radial-gradient(ellipse at 25% 15%, rgba(227,6,19,0.48), transparent 58%), linear-gradient(160deg, #0D0D0D 0%, #1a1a1a 100%)',
-        }}
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute top-0 left-0 h-full w-1 bg-rosver-red"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.06]"
-        style={{
-          backgroundImage:
-            'linear-gradient(rgba(255,255,255,0.35) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.35) 1px, transparent 1px)',
-          backgroundSize: '24px 24px',
-        }}
-        aria-hidden
-      />
-
-      <div className="relative z-[1] max-w-[15rem] sm:max-w-[16.5rem]">
-        <p className="mb-2.5 text-[10px] font-bold tracking-[0.2em] text-rosver-red uppercase">
-          Rosver SAC
-        </p>
-        <h2 className="font-display text-xl leading-[1.08] font-bold tracking-tight text-white uppercase sm:text-2xl lg:text-[1.7rem]">
+      <div className="relative z-[1] max-w-[13.5rem] sm:max-w-[15rem]">
+        <h2 className="font-display text-[1.35rem] leading-[1.05] font-bold tracking-tight text-white uppercase sm:text-2xl lg:text-[1.75rem]">
           Despachos
           <br />
-          <span className="text-white/90">y catálogo</span>
+          y catálogo
           <br />
-          <span className="text-rosver-red">oficial</span>
+          oficial
         </h2>
-        <p className="mt-3 text-[11px] leading-snug text-white/65 sm:text-xs">
-          Precios desde unidad y envíos a todo el Perú.
-        </p>
-        <div className="mt-5 flex flex-col gap-2.5 sm:mt-6">
-          <button
-            type="button"
-            disabled={pdfBusy}
-            onClick={onDownload}
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-white px-4 py-2.5 text-[11px] font-extrabold tracking-wide text-rosver-ink uppercase whitespace-nowrap transition hover:bg-rosver-soft disabled:opacity-70 sm:text-xs"
-          >
-            <Download size={15} color="currentColor" strokeWidth={2} />
-            <span>{pdfBusy ? 'Generando…' : HOME_HERO_CTA.ctaLabel}</span>
-            <ArrowRight size={15} color="currentColor" strokeWidth={2} />
-          </button>
-          <Link
-            to="/catalogo"
-            className="inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-full border border-white/35 px-4 py-2 text-[11px] font-bold tracking-wide text-white uppercase transition hover:border-white hover:bg-white/10 sm:text-xs"
-          >
-            Ver catálogo
-            <ArrowRight size={14} color="currentColor" strokeWidth={2} />
-          </Link>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function HeroPlaceholderPanel({
-  index,
-  widthPct,
-}: {
-  index: number
-  widthPct: number
-}) {
-  const { width, height } = HERO_PANEL_DESIGNER_SPECS.panelPx
-  return (
-    <div
-      className="relative flex h-full shrink-0 flex-col items-center justify-center overflow-hidden border-l border-white/10 bg-[#141414]"
-      style={{ width: `${widthPct}%` }}
-      aria-label={`Espacio para imagen ${index} (${width}×${height})`}
-    >
-      <div
-        className="pointer-events-none absolute inset-0 opacity-40"
-        style={{
-          background:
-            'linear-gradient(160deg, #1a1a1a 0%, #0D0D0D 50%, #161616 100%)',
-        }}
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute inset-3 rounded-sm border border-dashed border-white/20 sm:inset-4"
-        aria-hidden
-      />
-      <div className="relative z-[1] flex flex-col items-center gap-2 px-3 text-center">
-        <span className="flex size-10 items-center justify-center rounded-full bg-white/8 text-white/55 sm:size-11">
-          <ImageIcon size={20} color="currentColor" strokeWidth={1.75} />
-        </span>
-        <p className="font-display text-[11px] font-bold tracking-wide text-white/70 uppercase sm:text-xs">
-          Panel {index}
-        </p>
-        <p className="text-[10px] leading-tight text-white/40">
-          {width}×{height}
-          <br />
-          WebP
-        </p>
+        <button
+          type="button"
+          disabled={pdfBusy}
+          onClick={onDownload}
+          className="mt-6 inline-flex min-h-10 items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[11px] font-extrabold tracking-wide text-rosver-ink uppercase whitespace-nowrap transition hover:bg-rosver-soft disabled:opacity-70 sm:mt-7 sm:min-h-11 sm:text-xs"
+        >
+          {pdfBusy ? 'Generando…' : HOME_HERO_CTA.ctaLabel}
+          <span aria-hidden className="text-base leading-none">
+            ›
+          </span>
+        </button>
       </div>
     </div>
   )
@@ -391,11 +293,11 @@ function HeroImagePanel({
         className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-[1.03]"
       />
       <div
-        className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent"
+        className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"
         aria-hidden
       />
-      <div className="relative z-[1] flex flex-col items-start gap-3 px-4 pb-10 sm:px-5 sm:pb-12">
-        <p className="max-w-[14rem] font-display text-sm leading-tight font-bold tracking-wide text-white uppercase sm:text-base lg:text-lg">
+      <div className="relative z-[1] flex flex-col items-start gap-2.5 px-3 pb-8 sm:gap-3 sm:px-4 sm:pb-10">
+        <p className="max-w-[12rem] font-display text-[13px] leading-tight font-bold tracking-wide text-white uppercase sm:max-w-[14rem] sm:text-sm lg:text-[0.95rem]">
           {panel.title}
         </p>
         <SplitPill left={panel.badgeLeft} right={panel.badgeRight} />
@@ -404,7 +306,7 @@ function HeroImagePanel({
   )
 
   const className =
-    'group relative flex h-full shrink-0 flex-col justify-end overflow-hidden border-l border-white/10'
+    'group relative flex h-full shrink-0 flex-col justify-end overflow-hidden'
 
   if (panel.href) {
     return (
@@ -425,13 +327,14 @@ function HeroImagePanel({
   )
 }
 
+/** Pill partido rojo | blanco (en el ejemplo era rosa Katrina). */
 function SplitPill({ left, right }: { left: string; right: string }) {
   return (
-    <span className="inline-flex max-w-full overflow-hidden rounded-full text-[9px] leading-[1.15] font-extrabold tracking-wide uppercase sm:text-[10px]">
+    <span className="inline-flex max-w-full overflow-hidden rounded-full text-[8px] leading-[1.2] font-extrabold tracking-wide uppercase sm:text-[9px]">
       <span className="bg-rosver-red px-2.5 py-1.5 whitespace-pre-line text-white sm:px-3 sm:py-2">
         {left}
       </span>
-      <span className="bg-rosver-soft px-2.5 py-1.5 whitespace-pre-line text-rosver-ink sm:px-3 sm:py-2">
+      <span className="bg-white px-2.5 py-1.5 whitespace-pre-line text-rosver-ink sm:px-3 sm:py-2">
         {right}
       </span>
     </span>

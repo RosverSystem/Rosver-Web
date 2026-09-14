@@ -1,6 +1,6 @@
 # Pendientes — Rosver Web
 
-Última actualización: 2026-09-13 (0259 hero 4 paneles · v0.1.62)
+Última actualización: 2026-09-13 (0260 hero ≈ Katrina · v0.1.63)
 
 ## Cómo leer esta tabla
 
@@ -44,6 +44,7 @@
 | Hero CTA full-bleed (despachos / PDF) | 0257 |
 | Hero: restaurar 5 slots imagen + ocultar scrollbar | 0258 |
 | Hero: 4 paneles de imagen (más ancho) | 0259 |
+| Hero alineado al ejemplo Katrina (fotos + pills) | 0260 |
 
 ### Pendiente de auditoría 0240 (no crítico, para siguiente sesión)
 
