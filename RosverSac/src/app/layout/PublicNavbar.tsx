@@ -257,22 +257,20 @@ export function PublicNavbar() {
             <Heart className="size-5" />
           </button>
           <Link
-            to="/cotizar"
-            className="relative hidden items-center gap-2 rounded-full bg-rosver-red px-3.5 py-2 text-xs font-bold text-white transition hover:bg-rosver-red-dark sm:inline-flex sm:px-4 sm:text-sm"
-          >
-            <IconBag className="size-4 text-white" />
-            <span className="hidden md:inline">Mi cotización</span>
-            <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-white px-1.5 py-0.5 text-[10px] font-black text-rosver-red">
-              {itemCount > 99 ? '99+' : itemCount}
-            </span>
-          </Link>
-          <Link
             to="/carrito"
-            aria-label="Carrito"
-            className="relative inline-flex size-10 items-center justify-center rounded-full text-rosver-ink transition hover:bg-rosver-soft sm:hidden"
+            aria-label={`Mi carrito${itemCount ? `, ${itemCount} ítems` : ''}`}
+            className="group inline-flex h-10 max-w-full items-center gap-2 rounded-full bg-rosver-red pl-3 pr-1.5 text-white shadow-sm transition hover:bg-rosver-red-dark hover:shadow-md active:scale-[0.98] sm:h-11 sm:gap-2.5 sm:pl-3.5 sm:pr-2"
           >
-            <IconBag />
-            <span className="absolute top-0.5 right-0.5 inline-flex size-4 items-center justify-center rounded-full bg-rosver-red text-[10px] font-bold text-white">
+            <IconBag className="size-[18px] shrink-0 text-white sm:size-5" />
+            <span className="hidden whitespace-nowrap text-[13px] font-bold leading-none tracking-tight sm:inline">
+              Mi carrito
+            </span>
+            <span
+              className={cn(
+                'inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-white text-[11px] font-black tabular-nums sm:size-8 sm:text-xs',
+                itemCount > 0 ? 'text-rosver-red' : 'text-rosver-ink',
+              )}
+            >
               {itemCount > 99 ? '99+' : itemCount}
             </span>
           </Link>
