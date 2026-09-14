@@ -49,23 +49,23 @@ export function CampaignLatestSection({
 
   return (
     <section aria-label="Lo último de campaña" className="min-w-0">
-      <div className="mb-6 text-center sm:mb-8">
+      <div className="mb-8 text-center sm:mb-10">
         <h2 className="font-display text-3xl font-bold tracking-tight text-rosver-ink sm:text-4xl">
           Lo último de campaña
           <span className="text-rosver-red">.</span>
         </h2>
-        <p className="mx-auto mt-2 max-w-lg text-sm text-rosver-muted sm:text-base">
+        <p className="mx-auto mt-3 max-w-lg text-sm text-rosver-muted sm:text-base">
           Selección actual de importaciones y líneas con stock para tu negocio.
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-5">
         {row1.map((tile) => (
           <CampaignTile key={tile.id} tile={tile} />
         ))}
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-3 sm:mt-4 sm:gap-4 lg:grid-cols-4">
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:mt-4 sm:gap-4 lg:mt-5 lg:grid-cols-4 lg:gap-5">
         {row2.map((tile) => (
           <CampaignTile
             key={tile.id}
@@ -77,7 +77,7 @@ export function CampaignLatestSection({
 
       <Link
         to="/catalogo"
-        className="mt-4 flex flex-col items-stretch justify-between gap-3 rounded-2xl bg-rosver-red px-5 py-4 text-white transition hover:bg-rosver-red-dark sm:mt-5 sm:flex-row sm:items-center sm:rounded-full sm:px-6 sm:py-3.5"
+        className="mt-6 flex flex-col items-stretch justify-between gap-3 rounded-2xl bg-rosver-red px-5 py-4 text-white transition hover:bg-rosver-red-dark sm:mt-8 sm:flex-row sm:items-center sm:rounded-full sm:px-6 sm:py-3.5"
       >
         <span className="text-sm font-bold tracking-wide uppercase sm:text-base">
           lo último en{' '}

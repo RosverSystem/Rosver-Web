@@ -263,8 +263,14 @@ catalogRoutes.get('/pdf', async (c) => {
     })
   } catch (err) {
     console.error('catalog PDF', err)
-    const message =
+    const raw =
       err instanceof Error ? err.message : 'No se pudo generar el catálogo PDF.'
+    // No filtrar el stack técnico de Puppeteer al cliente.
+    const message = /Could not find Chrome|Executable|puppeteer|Chromium/i.test(
+      raw,
+    )
+      ? 'No se pudo generar el catálogo ahora. Reintentá en unos minutos.'
+      : raw
     return c.json({ error: message }, 500)
   }
 })

@@ -24,11 +24,11 @@ export function BrandCarousel() {
 
   return (
     <section
-      className="relative overflow-hidden border-y border-rosver-ink/15 bg-white"
+      className="relative overflow-hidden border-y border-rosver-ink/10 bg-white"
       aria-label="Marcas que importamos"
     >
-      <div className="mx-auto flex w-full max-w-7xl items-stretch gap-4 px-4 sm:gap-6 lg:px-6">
-        <div className="flex shrink-0 flex-col justify-center py-4 text-rosver-red sm:py-5">
+      <div className="mx-auto flex w-full max-w-7xl items-stretch gap-4 px-5 py-1 sm:gap-6 sm:px-6 lg:px-8">
+        <div className="flex shrink-0 flex-col justify-center py-6 text-rosver-red sm:py-7">
           <p className="font-display text-[11px] leading-tight font-bold tracking-[0.12em] uppercase sm:text-xs">
             Marcas
             <br />
@@ -42,7 +42,7 @@ export function BrandCarousel() {
           />
         </div>
 
-        <div className="group relative min-w-0 flex-1 overflow-hidden py-4 sm:py-5">
+        <div className="group relative min-w-0 flex-1 overflow-hidden py-6 sm:py-7">
           <div
             className="pointer-events-none absolute inset-y-0 left-0 z-[1] w-8 bg-gradient-to-r from-white to-transparent sm:w-12"
             aria-hidden

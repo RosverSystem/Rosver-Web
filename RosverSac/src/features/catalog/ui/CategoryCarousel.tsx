@@ -64,7 +64,7 @@ export function CategoryCarousel({ categories }: { categories: Category[] }) {
 
   return (
     <section aria-label="Busca por categoría" className="relative min-w-0">
-      <div className="mb-5 flex items-end justify-between gap-3 sm:mb-7">
+      <div className="mb-8 flex items-end justify-between gap-3 sm:mb-10">
         <div
           className={cn(
             'min-w-0 flex-1',
@@ -77,7 +77,7 @@ export function CategoryCarousel({ categories }: { categories: Category[] }) {
           </h2>
           <p
             className={cn(
-              'mt-2 max-w-lg text-sm text-rosver-muted sm:text-base',
+              'mt-3 max-w-lg text-sm text-rosver-muted sm:text-base',
               items.length <= 2 ? 'mx-auto' : 'mx-auto sm:mx-0',
             )}
           >

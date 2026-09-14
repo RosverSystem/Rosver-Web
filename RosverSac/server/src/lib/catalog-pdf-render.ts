@@ -2,7 +2,6 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { PDFDocument } from 'pdf-lib'
-import puppeteer from 'puppeteer'
 import { config } from '../config.js'
 import { pool } from '../db.js'
 import { queryStoreProducts } from './catalog-products.js'
@@ -39,6 +38,57 @@ async function loadCategories(): Promise<PdfCategory[]> {
 }
 
 /**
+ * Railway / Linux: Chromium empaquetado (`@sparticuz/chromium`).
+ * Local (Windows/macOS): Puppeteer con su Chrome descargado.
+ */
+async function launchBrowser() {
+  const useServerChrome =
+    Boolean(process.env.RAILWAY_ENVIRONMENT) ||
+    process.env.USE_SERVER_CHROMIUM === '1' ||
+    (process.platform === 'linux' && process.env.USE_LOCAL_CHROME !== '1')
+
+  if (useServerChrome) {
+    const chromium = (await import('@sparticuz/chromium')).default
+    const puppeteerCore = (await import('puppeteer-core')).default
+    const executablePath = await chromium.executablePath()
+    return puppeteerCore.launch({
+      args: [
+        ...chromium.args,
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--font-render-hinting=none',
+        '--disable-dev-shm-usage',
+      ],
+      defaultViewport: chromium.defaultViewport,
+      executablePath,
+      headless: true,
+    })
+  }
+
+  const puppeteer = (await import('puppeteer')).default
+  return puppeteer.launch({
+    headless: true,
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--font-render-hinting=none',
+      '--disable-dev-shm-usage',
+    ],
+  })
+}
+
+function friendlyPdfError(err: unknown): Error {
+  const raw = err instanceof Error ? err.message : String(err)
+  if (/Could not find Chrome|Executable doesn't exist|Failed to launch/i.test(raw)) {
+    return new Error(
+      'No se pudo iniciar el generador del catálogo. Reintentá en unos minutos.',
+    )
+  }
+  if (err instanceof Error) return err
+  return new Error('No se pudo generar el catálogo PDF.')
+}
+
+/**
  * Genera catálogo PDF (HTML + Chromium) y antepone Caratula.pdf.
  */
 export async function generateCatalogPdfBuffer(): Promise<Uint8Array> {
@@ -68,10 +118,13 @@ export async function generateCatalogPdfBuffer(): Promise<Uint8Array> {
     },
   })
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--font-render-hinting=none'],
-  })
+  let browser
+  try {
+    browser = await launchBrowser()
+  } catch (err) {
+    console.error('[catalog-pdf] launch browser', err)
+    throw friendlyPdfError(err)
+  }
 
   let bodyPdf: Uint8Array
   try {
@@ -87,8 +140,11 @@ export async function generateCatalogPdfBuffer(): Promise<Uint8Array> {
       preferCSSPageSize: true,
     })
     bodyPdf = new Uint8Array(buf)
+  } catch (err) {
+    console.error('[catalog-pdf] render page', err)
+    throw friendlyPdfError(err)
   } finally {
-    await browser.close()
+    await browser.close().catch(() => undefined)
   }
 
   const out = await PDFDocument.create()

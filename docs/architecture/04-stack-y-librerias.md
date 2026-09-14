@@ -30,7 +30,7 @@ App: `RosverSac/` · Alias: `@` → `RosverSac/src`
 | 2FA | `otplib` + `qrcode` | TOTP autenticador |
 | Validación API | `zod` | Schemas en server |
 | PDF cotización / pedido | `jspdf` | Plantilla factura (carrito / cotizar) |
-| PDF catálogo | **Puppeteer** (HTML/CSS → A4) + `pdf-lib` | `GET /api/catalog/pdf`; carátula `Caratula.pdf` |
+| PDF catálogo | **Puppeteer** + **`@sparticuz/chromium`** (Railway) + `pdf-lib` | `GET /api/catalog/pdf`; carátula `Caratula.pdf` |
 | Direcciones Perú | **Geoapify** (freemium) + Nominatim fallback; opcional Google Places | `/cotizar`; `GEOAPIFY_API_KEY` |
 | Ubigeo Perú | JSON `server/data/ubigeo` (padrón **2026**) + tablas `peru_*` | `npm run db:build-ubigeo` / `db:seed-ubigeo` |
 | Tablas admin | `BootstrapTable` (clases Bootstrap `table-*` + tokens Rosver) | Sin Bootstrap CSS completo |
@@ -198,11 +198,13 @@ Al elegir librería (paso 1 arriba): preferir la opción más liviana que cumpla
 
 - (Legacy cliente) prototipo de catálogo; **producción del catálogo** usa Puppeteer.
 
-### `puppeteer` + `pdf-lib` (catálogo)
+### `puppeteer` + `@sparticuz/chromium` + `pdf-lib` (catálogo)
 
 - HTML/CSS moderno (flex/grid) → PDF A4 vía Chromium.
 - `GET /api/catalog/pdf`; fusiona `public/CatalagoPDF/Caratula.pdf`.
-- FAB descarga el endpoint. En Railway hace falta Chromium disponible (revisar deploy).
+- **Local:** Puppeteer con Chrome propio.
+- **Railway / Linux:** `@sparticuz/chromium` + `puppeteer-core` (sin depender del cache `/root/.cache/puppeteer`).
+- FAB / hero CTA descargan el endpoint. Errores técnicos de Chrome no se exponen al usuario.
 
 ---
 

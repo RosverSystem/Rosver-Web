@@ -70,16 +70,16 @@ export function TrendingProducts() {
 
   return (
     <section aria-label="Más cotizados por mayoristas">
-      <div className="mb-5 flex items-end justify-between gap-3 sm:mb-6">
+      <div className="mb-8 flex items-end justify-between gap-3 sm:mb-10">
         <div>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-rosver-red/10 px-3 py-1 text-[11px] font-bold tracking-wide text-rosver-red uppercase">
             <StarGrow size={14} color="currentColor" strokeWidth={2} />
             Tendencia mayorista
           </span>
-          <h2 className="mt-2 font-display text-2xl font-bold tracking-tight text-rosver-ink sm:text-3xl">
+          <h2 className="mt-3 font-display text-2xl font-bold tracking-tight text-rosver-ink sm:text-3xl">
             Los más cotizados por mayoristas
           </h2>
-          <p className="mt-1 max-w-xl text-sm text-rosver-muted">
+          <p className="mt-2 max-w-xl text-sm text-rosver-muted">
             Productos de mayor rotación con márgenes recomendados para tu
             negocio.
           </p>

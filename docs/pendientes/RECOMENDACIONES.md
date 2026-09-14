@@ -29,7 +29,7 @@ Ideas útiles **no pedidas** aún. No implementar solas; esperar OK del usuario.
 | R25 | Confirmar URL exacta de Instagram Rosver | Se usó `instagram.com/rosver.sac` alineado a TikTok; Rosa puede corregir el handle | media |
 | R26 | Email automático al registrar/responder hoja del libro de reclamaciones | Hoy solo constancia en pantalla + bandeja admin (0159) | media |
 | R27 | Guardar mensajes de contacto (incl. DNI/RUC) en Postgres | Cubierto en 0172 / P91 | hecho |
-| R28 | Chromium en Railway para `GET /api/catalog/pdf` (Puppeteer) | Local OK; prod puede fallar sin Chrome | alta — al desplegar |
+| R28 | Chromium en Railway para `GET /api/catalog/pdf` (Puppeteer) | Local OK; prod puede fallar sin Chrome | hecho (0262, `@sparticuz/chromium` + `puppeteer-core` en Linux/Railway) |
 | R29 | Volver Kanban de pedidos como vista alternativa (toggle tabla/tablero) | Tabla es la vista activa (0197); Kanban quedó documentado en 0192–0194 | baja |
 | R30 | Alta de pedido desde admin (hoy solo desde carrito / link público) | Completar Create en ERP si lo piden | baja |
 | R31 | Diseñar contenido de `/admin/pedidos/vista` (detalle completo del pedido) | Cubierto en 0202–0203 (pipeline + productos + evidencias) | hecho |

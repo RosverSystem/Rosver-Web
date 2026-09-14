@@ -57,7 +57,7 @@ export function TrustStatsSection() {
   return (
     <section
       aria-label="Rosver en números"
-      className="relative overflow-hidden rounded-[1.75rem] bg-rosver-ink px-4 py-10 text-white sm:rounded-[2rem] sm:px-8 sm:py-12"
+      className="relative overflow-hidden rounded-[1.75rem] bg-rosver-ink px-5 py-12 text-white sm:rounded-[2rem] sm:px-10 sm:py-14 lg:px-12 lg:py-16"
     >
       <div
         className="pointer-events-none absolute inset-0 opacity-50"
@@ -68,16 +68,16 @@ export function TrustStatsSection() {
         aria-hidden
       />
 
-      <div className="relative z-[1] mb-6 flex items-end justify-between gap-3 sm:mb-8">
+      <div className="relative z-[1] mb-8 flex items-end justify-between gap-3 sm:mb-10">
         <div>
           <p className="text-[11px] font-bold tracking-[0.18em] text-rosver-red uppercase">
             Confianza Rosver
           </p>
-          <h2 className="mt-1 font-display text-2xl font-bold tracking-tight sm:text-3xl">
+          <h2 className="mt-2 font-display text-2xl font-bold tracking-tight sm:text-3xl">
             Números que respaldan tu compra
             <span className="text-rosver-red">.</span>
           </h2>
-          <p className="mt-2 max-w-md text-sm text-white/65">
+          <p className="mt-3 max-w-md text-sm text-white/65">
             Experiencia, clientes y logística al servicio de tu negocio.
           </p>
         </div>

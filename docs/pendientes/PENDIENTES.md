@@ -1,6 +1,6 @@
 # Pendientes — Rosver Web
 
-Última actualización: 2026-09-14 (0261 campaña 2ª fila · v0.1.64)
+Última actualización: 2026-09-14 (0262 PDF Chromium + home spacing · v0.1.65)
 
 ## Cómo leer esta tabla
 
@@ -46,6 +46,7 @@
 | Hero: 4 paneles de imagen (más ancho) | 0259 |
 | Hero alineado al ejemplo Katrina (fotos + pills) | 0260 |
 | Campaña: 2ª fila con 2 imágenes a ancho doble | 0261 |
+| PDF Chromium Railway + home más aireado | 0262 |
 
 ### Pendiente de auditoría 0240 (no crítico, para siguiente sesión)
 

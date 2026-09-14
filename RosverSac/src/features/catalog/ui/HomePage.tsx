@@ -8,6 +8,7 @@ import { useCatalog } from '@/features/catalog/model/catalog-store'
 
 /**
  * Home Rosver: hero + marcas + categorías + mayoristas + campaña + cifras.
+ * Espaciado amplio entre bloques (no “todo pegado”).
  */
 export function HomePage() {
   const { categories } = useCatalog()
@@ -17,7 +18,7 @@ export function HomePage() {
       <HeroWaveSlider />
       <BrandCarousel />
 
-      <main className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-14 px-4 py-12 sm:gap-16 sm:py-14 sm:pb-28">
+      <main className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-20 px-5 py-16 sm:gap-24 sm:px-6 sm:py-20 lg:gap-28 lg:px-8 lg:py-24 lg:pb-32">
         <CategoryCarousel categories={categories} />
         <TrendingProducts />
         <CampaignLatestSection categories={categories} />
