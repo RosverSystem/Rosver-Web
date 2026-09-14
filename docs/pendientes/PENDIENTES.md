@@ -1,6 +1,6 @@
 # Pendientes — Rosver Web
 
-Última actualización: 2026-09-13 (0251 home Katrina/campaña · v0.1.53)
+Última actualización: 2026-09-13 (0252 home solo slider + cookies · v0.1.54)
 
 ## Cómo leer esta tabla
 
@@ -36,6 +36,7 @@
 | Menú overlay oscuro (hamburguesa) con animaciones abrir/cerrar | 0249 |
 | Pill header «Mi carrito» una línea + badge | 0250 |
 | Home Katrina: categorías lifestyle + mayoristas + lo último de campaña | 0251 |
+| Home solo slider + CookieConsentFloat (permisos) | 0252 |
 
 ### Pendiente de auditoría 0240 (no crítico, para siguiente sesión)
 

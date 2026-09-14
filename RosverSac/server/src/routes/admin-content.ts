@@ -5,27 +5,10 @@ import { requireAuth, requireRole, type AuthVariables } from '../middleware/auth
 
 /**
  * Default seed for home_hero if no DB row exists yet.
- * Matches the HOME_HERO_SLIDES array used on the React side.
+ * Sin slides mock: el front muestra solo el panel CTA hasta cargar imágenes reales.
  */
 const HOME_HERO_DEFAULT: Record<string, unknown> = {
-  slides: [
-    {
-      id: 'hero-1',
-      tag: 'Importación directa',
-      title: 'Herramientas y ferretería de calidad',
-      subtitle: 'Catálogo actualizado con precios al detalle y por mayor.',
-      cta: 'Ver catálogo',
-      ctaLink: '/catalogo',
-    },
-    {
-      id: 'hero-2',
-      tag: 'B2B y Mayorista',
-      title: 'Precios especiales para distribuidores',
-      subtitle: 'Solicita tu cotización personalizada y recibe atención directa.',
-      cta: 'Cotizar ahora',
-      ctaLink: '/cotizar',
-    },
-  ],
+  slides: [],
 }
 
 /** Public routes — no auth required */

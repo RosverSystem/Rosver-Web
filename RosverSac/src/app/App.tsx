@@ -40,6 +40,7 @@ import { PageTransition } from '@/shared/ui/page-transition'
 import { ToastProvider } from '@/shared/ui/toast-provider'
 import { WhatsAppFloatingButton } from '@/shared/ui/whatsapp-floating-button'
 import { CatalogPdfFloatingButton } from '@/shared/ui/catalog-pdf-floating-button'
+import { CookieConsentFloat } from '@/shared/ui/cookie-consent-float'
 import { lazy } from 'react'
 import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 
@@ -122,6 +123,7 @@ function PublicLayout() {
       </div>
       <CatalogPdfFloatingButton />
       <WhatsAppFloatingButton />
+      <CookieConsentFloat />
     </div>
   )
 }
