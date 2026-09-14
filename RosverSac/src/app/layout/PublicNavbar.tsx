@@ -1,3 +1,4 @@
+import { PublicNavOverlay } from '@/app/layout/PublicNavOverlay'
 import { SessionAccountMenu } from '@/features/auth'
 import { useCart, visibleCartItemCount } from '@/features/cart'
 import {
@@ -9,8 +10,8 @@ import {
 import { cn } from '@/shared/lib'
 import { attachNestedScrollWheel } from '@/shared/lib/nested-scroll-wheel'
 import { IconBag, IconChevronDown, IconSearch } from '@/shared/ui/icons'
-import { Check, Compass, Message, Phone } from 'cssvg-icons'
-import { Heart, Menu, X } from 'lucide-react'
+import { Check, Compass, Menu, Message, Phone } from 'cssvg-icons'
+import { Heart } from 'lucide-react'
 import {
   type FormEvent,
   type KeyboardEvent,
@@ -231,15 +232,6 @@ export function PublicNavbar() {
 
       <div className="mx-auto grid max-w-7xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3 lg:grid-cols-[1fr_minmax(12rem,28rem)_1fr] lg:gap-6 lg:px-6">
         <div className="flex items-center gap-1 lg:justify-self-start">
-          <button
-            type="button"
-            onClick={() => setMobileOpen((v) => !v)}
-            className="inline-flex size-10 items-center justify-center rounded-full text-rosver-ink transition hover:bg-rosver-soft lg:hidden"
-            aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
-            aria-expanded={mobileOpen}
-          >
-            {mobileOpen ? <X className="size-5" /> : <Menu className="size-5" />}
-          </button>
           <RosverLogo />
         </div>
 
@@ -255,7 +247,7 @@ export function PublicNavbar() {
           />
         </div>
 
-        <div className="flex shrink-0 items-center justify-end gap-1 justify-self-end">
+        <div className="flex shrink-0 items-center justify-end gap-1.5 justify-self-end sm:gap-2">
           <SessionAccountMenu variant="desktop" />
           <button
             type="button"
@@ -265,15 +257,35 @@ export function PublicNavbar() {
             <Heart className="size-5" />
           </button>
           <Link
+            to="/cotizar"
+            className="relative hidden items-center gap-2 rounded-full bg-rosver-red px-3.5 py-2 text-xs font-bold text-white transition hover:bg-rosver-red-dark sm:inline-flex sm:px-4 sm:text-sm"
+          >
+            <IconBag className="size-4 text-white" />
+            <span className="hidden md:inline">Mi cotización</span>
+            <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-white px-1.5 py-0.5 text-[10px] font-black text-rosver-red">
+              {itemCount > 99 ? '99+' : itemCount}
+            </span>
+          </Link>
+          <Link
             to="/carrito"
             aria-label="Carrito"
-            className="relative inline-flex size-10 items-center justify-center rounded-full text-rosver-ink transition hover:bg-rosver-soft"
+            className="relative inline-flex size-10 items-center justify-center rounded-full text-rosver-ink transition hover:bg-rosver-soft sm:hidden"
           >
             <IconBag />
             <span className="absolute top-0.5 right-0.5 inline-flex size-4 items-center justify-center rounded-full bg-rosver-red text-[10px] font-bold text-white">
               {itemCount > 99 ? '99+' : itemCount}
             </span>
           </Link>
+          <button
+            type="button"
+            onClick={() => setMobileOpen(true)}
+            className="inline-flex size-10 items-center justify-center rounded-full text-rosver-ink transition hover:bg-rosver-soft"
+            aria-label="Abrir menú"
+            aria-expanded={mobileOpen}
+            aria-haspopup="dialog"
+          >
+            <Menu size={22} color="currentColor" strokeWidth={2} />
+          </button>
         </div>
       </div>
 
@@ -302,7 +314,7 @@ export function PublicNavbar() {
               categoriesOpen && 'bg-white/15',
             )}
           >
-            <Menu className="size-4" />
+            <Menu size={18} color="currentColor" strokeWidth={2} />
             Ver categorías
             <IconChevronDown className={cn('size-3 transition-transform', categoriesOpen && 'rotate-180')} />
           </button>
@@ -419,68 +431,11 @@ export function PublicNavbar() {
         </div>
       </nav>
 
-      {mobileOpen ? (
-        <div className="border-t border-rosver-line bg-white px-4 py-4 lg:hidden">
-          <ul className="flex flex-col divide-y divide-rosver-line">
-            {NAV_LINKS.map((item) => (
-              <li key={item.name}>
-                <Link
-                  to={item.link}
-                  onClick={() => setMobileOpen(false)}
-                  className={cn(
-                    'flex items-center gap-2 py-2.5 text-sm font-bold uppercase',
-                    pathname === item.link ? 'text-rosver-red' : 'text-rosver-ink',
-                  )}
-                >
-                  {item.name}
-                  {'tag' in item ? (
-                    <span className="rounded bg-rosver-red px-1 py-0.5 text-[9px] font-black text-white">
-                      {item.tag}
-                    </span>
-                  ) : null}
-                </Link>
-              </li>
-            ))}
-            <li>
-              <SessionAccountMenu
-                variant="compact"
-                onNavigate={() => setMobileOpen(false)}
-              />
-            </li>
-          </ul>
-          <div className="mt-3 border-t border-rosver-line pt-3">
-            <p className="mb-2 text-xs font-bold text-rosver-muted uppercase">Categorías</p>
-            <div className="grid grid-cols-1 gap-2">
-              {navCategories.map(({ root, children }) => (
-                <div key={root.id}>
-                  <Link
-                    to={`/catalogo/${root.slug}`}
-                    onClick={() => setMobileOpen(false)}
-                    className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs font-semibold text-rosver-ink hover:bg-rosver-soft"
-                  >
-                    <root.icon className="size-4 text-rosver-red" />
-                    {root.name}
-                  </Link>
-                  {children.length ? (
-                    <div className="ml-6 space-y-0.5">
-                      {children.map((ch) => (
-                        <Link
-                          key={ch.id}
-                          to={`/catalogo/${ch.slug}`}
-                          onClick={() => setMobileOpen(false)}
-                          className="block py-1 text-[11px] text-rosver-muted"
-                        >
-                          {ch.name}
-                        </Link>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <PublicNavOverlay
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        itemCount={itemCount}
+      />
     </header>
   )
 }

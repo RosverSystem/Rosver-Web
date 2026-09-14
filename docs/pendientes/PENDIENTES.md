@@ -1,6 +1,6 @@
 # Pendientes — Rosver Web
 
-Última actualización: 2026-09-13 (0248 hero multipanel · v0.1.50)
+Última actualización: 2026-09-13 (0249 nav overlay Katrina · v0.1.51)
 
 ## Cómo leer esta tabla
 
@@ -33,6 +33,7 @@
 | Auditoría técnica (IDOR PDF pedidos/cotizaciones + cortina de intro colgada) | 0240 |
 | Logo OTP roto en Gmail (APP_URL Railway 404) → CDN `rosversac.com/logo_*.png` | 0247 |
 | Hero multipanel estilo Katrina + paleta Rosver + specs diseñador 800×1200 | 0248 |
+| Menú overlay oscuro (hamburguesa) con animaciones abrir/cerrar | 0249 |
 
 ### Pendiente de auditoría 0240 (no crítico, para siguiente sesión)
 
