@@ -8,13 +8,16 @@ const FALLBACK = [
   'https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=900&h=700&q=75',
   'https://images.unsplash.com/photo-1572981779307-38b8cabb2407?auto=format&fit=crop&w=900&h=700&q=75',
   'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1200&h=700&q=75',
-  'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?auto=format&fit=crop&w=900&h=700&q=75',
-  'https://images.unsplash.com/photo-1530124566582-a618bc2615dc?auto=format&fit=crop&w=900&h=700&q=75',
+  'https://images.unsplash.com/photo-1581092918056-0c4c3acd3789?auto=format&fit=crop&w=1200&h=700&q=75',
 ] as const
 
+const ROW1_COUNT = 4
+const ROW2_COUNT = 2
+const TOTAL = ROW1_COUNT + ROW2_COUNT
+
 /**
- * «Lo último de campaña» — grid bento estilo Katrina (antes «Pantalones»).
- * Usa categorías raíz visibles; si hay pocas, rellena con las disponibles.
+ * «Lo último de campaña» — grid bento:
+ * fila 1 = 4 cards; fila 2 = 2 cards a ancho doble (col-span-2).
  */
 export function CampaignLatestSection({
   categories,
@@ -28,21 +31,21 @@ export function CampaignLatestSection({
 
   if (!roots.length) return null
 
-  // Hasta 7 tiles: 4 arriba + 1 ancha + 2
-  const tiles = Array.from({ length: Math.min(7, Math.max(roots.length, 4)) }, (_, i) => {
+  const tiles = Array.from({ length: TOTAL }, (_, i) => {
     const cat = roots[i % roots.length]!
+    const wide = i >= ROW1_COUNT
     return {
       id: `${cat.id}-${i}`,
       name: cat.name,
       slug: cat.slug,
       image: cat.imageUrl?.trim() || FALLBACK[i % FALLBACK.length]!,
-      wide: i === 4,
-      badge: i === 4 ? 'Campaña Rosver' : undefined,
+      wide,
+      badge: wide && i === ROW1_COUNT ? 'Campaña Rosver' : undefined,
     }
   })
 
-  const row1 = tiles.slice(0, 4)
-  const row2 = tiles.slice(4)
+  const row1 = tiles.slice(0, ROW1_COUNT)
+  const row2 = tiles.slice(ROW1_COUNT)
 
   return (
     <section aria-label="Lo último de campaña" className="min-w-0">
@@ -62,17 +65,15 @@ export function CampaignLatestSection({
         ))}
       </div>
 
-      {row2.length > 0 ? (
-        <div className="mt-3 grid grid-cols-2 gap-3 sm:mt-4 sm:gap-4 lg:grid-cols-4">
-          {row2.map((tile) => (
-            <CampaignTile
-              key={tile.id}
-              tile={tile}
-              className={tile.wide ? 'col-span-2' : undefined}
-            />
-          ))}
-        </div>
-      ) : null}
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:mt-4 sm:gap-4 lg:grid-cols-4">
+        {row2.map((tile) => (
+          <CampaignTile
+            key={tile.id}
+            tile={tile}
+            className="col-span-1 lg:col-span-2"
+          />
+        ))}
+      </div>
 
       <Link
         to="/catalogo"
@@ -108,16 +109,23 @@ function CampaignTile({
     <Link
       to={`/catalogo/${tile.slug}`}
       className={cn(
-        'group relative aspect-[4/5] overflow-hidden rounded-2xl sm:rounded-3xl lg:aspect-[5/6]',
-        tile.wide && 'lg:aspect-[10/6]',
+        'group relative overflow-hidden rounded-2xl sm:rounded-3xl',
+        tile.wide
+          ? 'aspect-[16/10] sm:aspect-[2/1]'
+          : 'aspect-[4/5] lg:aspect-[5/6]',
         className,
       )}
+      aria-label={
+        tile.badge
+          ? `${tile.badge} lo último en ${tile.name}`
+          : `lo último en ${tile.name}`
+      }
     >
       <img
         src={tile.image}
         alt=""
         width={tile.wide ? 1200 : 900}
-        height={700}
+        height={tile.wide ? 600 : 900}
         loading="lazy"
         decoding="async"
         className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-105"
