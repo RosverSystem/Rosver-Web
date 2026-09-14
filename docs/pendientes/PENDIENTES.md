@@ -1,6 +1,6 @@
 # Pendientes — Rosver Web
 
-Última actualización: 2026-09-14 (0265 habilitar productos + modales · v0.1.68)
+Última actualización: 2026-09-14 (0266 fix presentación precio · v0.1.69)
 
 ## Cómo leer esta tabla
 
@@ -50,6 +50,7 @@
 | Favoritos producto (API + cuenta + admin clientes) | 0263 |
 | Corazón favorito: relleno rojo vs outline | 0264 |
 | Habilitar/ocultar/eliminar + modales aviso ERP | 0265 |
+| Fix agregar presentación/precio (label null) | 0266 |
 
 ### Pendiente de auditoría 0240 (no crítico, para siguiente sesión)
 

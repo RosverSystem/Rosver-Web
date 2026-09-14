@@ -256,10 +256,10 @@ export function AdminProductWorkspacePage() {
 
   const availablePresentations = useMemo(() => {
     const used = new Set(
-      packagings.map((p) => `${p.unitTypeId}:${p.contentQty}`),
+      packagings.map((p) => `${p.unitTypeId}:${Number(p.contentQty)}`),
     )
     return catalogPresentations.filter(
-      (p) => !used.has(`${p.unitTypeId}:${p.contentQty}`),
+      (p) => !used.has(`${p.unitTypeId}:${Number(p.contentQty)}`),
     )
   }, [catalogPresentations, packagings])
 
@@ -298,10 +298,10 @@ export function AdminProductWorkspacePage() {
     usedPacks: Packaging[] = packagings,
   ) {
     const used = new Set(
-      usedPacks.map((p) => `${p.unitTypeId}:${p.contentQty}`),
+      usedPacks.map((p) => `${p.unitTypeId}:${Number(p.contentQty)}`),
     )
     const avail = rows.filter(
-      (p) => !used.has(`${p.unitTypeId}:${p.contentQty}`),
+      (p) => !used.has(`${p.unitTypeId}:${Number(p.contentQty)}`),
     )
     if (avail.length === 0) {
       setPriceUnitTypeId('')
@@ -775,7 +775,7 @@ export function AdminProductWorkspacePage() {
     const already = packagings.some(
       (p) =>
         p.unitTypeId === template.unitTypeId &&
-        p.contentQty === template.contentQty,
+        Number(p.contentQty) === Number(template.contentQty),
     )
     if (already) {
       showMessages(['Esa presentación ya está en este producto'])
@@ -802,14 +802,17 @@ export function AdminProductWorkspacePage() {
     }
     setBusy(true)
     try {
+      const contentQty = Number(template.contentQty)
       const created = await api<{ packaging: { id: string } }>(
         `/api/admin/products/${selectedId}/packagings`,
         {
           method: 'POST',
           body: JSON.stringify({
             unitTypeId: template.unitTypeId,
-            contentQty: template.contentQty,
-            label: template.label,
+            contentQty,
+            ...(template.label?.trim()
+              ? { label: template.label.trim() }
+              : {}),
             isDefault: packagings.length === 0,
           }),
         },
@@ -845,7 +848,7 @@ export function AdminProductWorkspacePage() {
           id: packId,
           unitTypeId: template.unitTypeId,
           unitName: template.unitName,
-          contentQty: template.contentQty,
+          contentQty,
           label: template.label,
           isDefault: packagings.length === 0,
         },

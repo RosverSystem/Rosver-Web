@@ -1420,13 +1420,18 @@ adminCatalogRoutes.post('/products/:id/packagings', async (c) => {
   const body = z
     .object({
       unitTypeId: z.string().uuid(),
-      contentQty: z.number().positive(),
-      label: z.string().trim().max(120).optional(),
-      barcode: z.string().trim().max(80).optional(),
+      contentQty: z.coerce.number().positive(),
+      label: z.string().trim().max(120).optional().nullable(),
+      barcode: z.string().trim().max(80).optional().nullable(),
       isDefault: z.boolean().optional(),
     })
     .safeParse(await c.req.json().catch(() => null))
-  if (!body.success) return c.json({ error: 'Datos inválidos' }, 400)
+  if (!body.success) {
+    return c.json(
+      { error: body.error.issues[0]?.message ?? 'Datos inválidos' },
+      400,
+    )
+  }
 
   const client = await pool.connect()
   try {
@@ -1458,7 +1463,7 @@ adminCatalogRoutes.post('/products/:id/packagings', async (c) => {
         body.data.unitTypeId,
         qty,
         label,
-        body.data.barcode || null,
+        body.data.barcode?.trim() || null,
         body.data.isDefault ?? false,
       ],
     )
@@ -1499,12 +1504,17 @@ adminCatalogRoutes.patch('/products/:id/packagings/:packagingId', async (c) => {
   const body = z
     .object({
       unitTypeId: z.string().uuid().optional(),
-      contentQty: z.number().positive().optional(),
+      contentQty: z.coerce.number().positive().optional(),
       label: z.string().trim().max(120).optional().nullable(),
       isDefault: z.boolean().optional(),
     })
     .safeParse(await c.req.json().catch(() => null))
-  if (!body.success) return c.json({ error: 'Datos inválidos' }, 400)
+  if (!body.success) {
+    return c.json(
+      { error: body.error.issues[0]?.message ?? 'Datos inválidos' },
+      400,
+    )
+  }
   const d = body.data
   const client = await pool.connect()
   try {
@@ -1569,12 +1579,12 @@ adminCatalogRoutes.post('/products/:id/prices', async (c) => {
       id: z.string().uuid().optional(),
       packagingId: z.string().uuid(),
       priceKind: z.enum(['list', 'wholesale', 'offer', 'custom']).default('list'),
-      minQty: z.number().positive().default(1),
-      maxQty: z.number().positive().nullable().optional(),
-      amount: z.number().min(0),
-      compareAtAmount: z.number().min(0).nullable().optional(),
+      minQty: z.coerce.number().positive().default(1),
+      maxQty: z.coerce.number().positive().nullable().optional(),
+      amount: z.coerce.number().min(0),
+      compareAtAmount: z.coerce.number().min(0).nullable().optional(),
       currency: z.string().default('PEN'),
-      notes: z.string().max(300).optional(),
+      notes: z.string().max(300).optional().nullable(),
       saveAsNew: z.boolean().default(false),
       /** ISO datetime; solo relevante para ofertas. null = sin límite. */
       validFrom: z.string().min(1).nullable().optional(),
