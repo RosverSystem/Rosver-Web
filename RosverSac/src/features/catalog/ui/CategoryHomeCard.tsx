@@ -60,7 +60,7 @@ export function CategoryHomeCard({
           height={1000}
           loading="lazy"
           decoding="async"
-          className="absolute inset-0 size-full object-cover transition duration-500 group-hover:scale-105"
+          className="absolute inset-0 size-full object-cover object-center transition duration-500 group-hover:scale-[1.03]"
         />
       ) : (
         <>
@@ -71,16 +71,16 @@ export function CategoryHomeCard({
             height={1000}
             loading="lazy"
             decoding="async"
-            className="absolute inset-0 size-full object-cover opacity-90 transition duration-500 group-hover:scale-105"
+            className="absolute inset-0 size-full object-cover object-center opacity-90 transition duration-500 group-hover:scale-[1.03]"
           />
           <Icon className="absolute top-4 right-4 size-8 text-white/25" />
         </>
       )}
       <div
-        className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent"
+        className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/5"
         aria-hidden
       />
-      <div className="relative z-[1] px-4 pb-5 text-center sm:pb-6">
+      <div className="relative z-[1] px-4 pb-5 pt-16 text-center sm:pb-6">
         <p className="text-[11px] font-medium tracking-wide text-white/85 lowercase">
           lo último{' '}
           <span className="font-extrabold text-rosver-red uppercase">en</span>
@@ -93,9 +93,10 @@ export function CategoryHomeCard({
   )
 
   const shell = cn(
-    'group relative flex aspect-[3/4] w-full flex-col justify-end overflow-hidden rounded-2xl sm:rounded-3xl',
-    highlighted && 'ring-2 ring-rosver-red shadow-[0_12px_40px_rgba(227,6,19,0.35)]',
-    !highlighted && 'shadow-sm',
+    'group relative flex aspect-[3/4] w-full flex-col justify-end overflow-hidden rounded-2xl bg-rosver-ink sm:rounded-[1.35rem]',
+    highlighted &&
+      'ring-2 ring-rosver-red ring-offset-2 ring-offset-white shadow-[0_8px_28px_rgba(227,6,19,0.28)]',
+    !highlighted && 'shadow-md shadow-black/10',
     className,
   )
 

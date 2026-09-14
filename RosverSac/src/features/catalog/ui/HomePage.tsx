@@ -17,7 +17,7 @@ export function HomePage() {
       <HeroWaveSlider />
       <BrandCarousel />
 
-      <main className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-14 overflow-x-hidden px-4 py-12 sm:gap-16 sm:py-14 sm:pb-28">
+      <main className="mx-auto flex w-full min-w-0 max-w-7xl flex-col gap-14 px-4 py-12 sm:gap-16 sm:py-14 sm:pb-28">
         <CategoryCarousel categories={categories} />
         <TrendingProducts />
         <CampaignLatestSection categories={categories} />
