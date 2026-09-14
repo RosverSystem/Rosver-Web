@@ -1,6 +1,6 @@
 # Pendientes — Rosver Web
 
-Última actualización: 2026-09-13 (0252 home solo slider + cookies · v0.1.54)
+Última actualización: 2026-09-13 (0253 home marcas + stats · v0.1.55)
 
 ## Cómo leer esta tabla
 
@@ -37,6 +37,7 @@
 | Pill header «Mi carrito» una línea + badge | 0250 |
 | Home Katrina: categorías lifestyle + mayoristas + lo último de campaña | 0251 |
 | Home solo slider + CookieConsentFloat (permisos) | 0252 |
+| Home: secciones Katrina + marcas + TrustStats (+3a / 30k / 20k) | 0253 |
 
 ### Pendiente de auditoría 0240 (no crítico, para siguiente sesión)
 

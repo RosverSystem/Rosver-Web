@@ -126,11 +126,15 @@ Cada vista debe construirse con estos bloques (aunque el dato sea mock).
 
 ### Home
 
-- Header — **implementado:** `PublicNavbar` + overlay + pill Mi carrito
-- Hero multipanel — **implementado:** `HeroWaveSlider` (CTA + paneles solo con imagen CMS; sin mocks Unsplash)
-- Noti cookies — **implementado:** `CookieConsentFloat` (0252)
+- Header — `PublicNavbar` + overlay + Mi carrito
+- Hero multipanel — `HeroWaveSlider` (paneles con imagen CMS)
+- Marcas — `BrandCarousel`
+- Categorías lifestyle — `CategoryCarousel`
+- Más cotizados mayoristas — `TrendingProducts`
+- Lo último de campaña — `CampaignLatestSection`
+- Cifras — `TrustStatsSection` (+3 años / +30 mil clientes / +20 mil envíos)
+- Noti cookies — `CookieConsentFloat`
 - Footer
-- _Secciones Katrina (categorías / mayoristas / campaña) quedan en código pero **no montadas** en home hasta datos reales (0251→0252)._
 
 ### Listado ofertas
 
