@@ -1,6 +1,6 @@
 # Pendientes — Rosver Web
 
-Última actualización: 2026-09-13 (0254 Sileo cookies · v0.1.56)
+Última actualización: 2026-09-13 (0255 Sileo offset ↓ · v0.1.57)
 
 ## Cómo leer esta tabla
 
@@ -39,6 +39,7 @@
 | Home solo slider + CookieConsentFloat (permisos) | 0252 |
 | Home: secciones Katrina + marcas + TrustStats (+3a / 30k / 20k) | 0253 |
 | Cookie consent con librería **sileo** (action toast) | 0254 |
+| Sileo cookies: bajar offset bottom 88→24 | 0255 |
 
 ### Pendiente de auditoría 0240 (no crítico, para siguiente sesión)
 

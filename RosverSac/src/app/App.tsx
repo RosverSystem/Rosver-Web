@@ -128,7 +128,7 @@ function PublicLayout() {
       <SileoToaster
         position="bottom-center"
         theme="dark"
-        offset={{ bottom: 88 }}
+        offset={{ bottom: 24 }}
       />
     </div>
   )
