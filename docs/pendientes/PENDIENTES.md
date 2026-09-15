@@ -1,6 +1,6 @@
 # Pendientes — Rosver Web
 
-Última actualización: 2026-09-14 (0267 módulo Slider hero · v0.1.70)
+Última actualización: 2026-09-14 (0268 Google site verification · v0.1.71)
 
 ## Cómo leer esta tabla
 
@@ -52,6 +52,7 @@
 | Habilitar/ocultar/eliminar + modales aviso ERP | 0265 |
 | Fix agregar presentación/precio (label null) | 0266 |
 | Módulo Contenido → Slider (CMS hero + vínculos) | 0267 |
+| Meta Google site verification (Merchant Center) | 0268 |
 
 ### Pendiente de auditoría 0240 (no crítico, para siguiente sesión)
 
