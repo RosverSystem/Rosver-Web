@@ -9,6 +9,7 @@
 | [quotes](./quotes.md) | Cotizaciones (público + admin) | activa (cotizar + carrito) |
 | [contact](./contact.md) | Contacto / WhatsApp / leads | activa (wireframe) |
 | [complaints-book](./complaints-book.md) | Libro de reclamaciones (Perú) | activa (API + UI) |
+| [legal](./legal.md) | Política de devoluciones (Merchant Center) | activa |
 | [auth](./auth.md) | Login, registro, roles | activa (diseño visual) |
 | [account](./account.md) | Área cliente | activa (wireframe) |
 | [admin-catalog](./admin-catalog.md) | Productos, precios, marcas, categorías ERP | activa (v1 API+UI) |

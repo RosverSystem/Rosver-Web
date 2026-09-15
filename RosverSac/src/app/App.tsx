@@ -38,6 +38,7 @@ import {
 } from '@/features/catalog'
 import { ContactPage } from '@/features/contact'
 import { ComplaintsBookPage } from '@/features/complaints-book'
+import { ReturnsPolicyPage } from '@/features/legal'
 import { ClientQuotesPage, PublicQuotePage, QuoteRequestPage, AdminQuoteWorkspacePage } from '@/features/quotes'
 import { AdminOrdersPage, AdminOrderWorkspacePage } from '@/features/admin-orders'
 import { PageTransition } from '@/shared/ui/page-transition'
@@ -170,6 +171,14 @@ export function App() {
                   <Route
                     path="libro-reclamaciones"
                     element={<ComplaintsBookPage />}
+                  />
+                  <Route
+                    path="politica-de-devoluciones"
+                    element={<ReturnsPolicyPage />}
+                  />
+                  <Route
+                    path="return-policy"
+                    element={<Navigate to="/politica-de-devoluciones" replace />}
                   />
                   <Route path="cotizar" element={<QuoteRequestPage />} />
                   <Route path="c/:slug" element={<PublicQuotePage />} />

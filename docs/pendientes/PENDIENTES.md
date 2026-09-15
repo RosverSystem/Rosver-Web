@@ -1,6 +1,6 @@
 # Pendientes — Rosver Web
 
-Última actualización: 2026-09-14 (0268 Google site verification · v0.1.71)
+Última actualización: 2026-09-14 (0269 política devoluciones · v0.1.72)
 
 ## Cómo leer esta tabla
 
@@ -53,6 +53,7 @@
 | Fix agregar presentación/precio (label null) | 0266 |
 | Módulo Contenido → Slider (CMS hero + vínculos) | 0267 |
 | Meta Google site verification (Merchant Center) | 0268 |
+| Política de devoluciones pública + URL | 0269 |
 
 ### Pendiente de auditoría 0240 (no crítico, para siguiente sesión)
 

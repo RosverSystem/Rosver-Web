@@ -166,6 +166,14 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link
+                  to="/politica-de-devoluciones"
+                  className="transition hover:text-rosver-red"
+                >
+                  Política de devoluciones
+                </Link>
+              </li>
+              <li>
                 <a
                   href={`mailto:${co.email}`}
                   className="transition hover:text-rosver-red"
